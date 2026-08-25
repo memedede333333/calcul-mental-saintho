@@ -22,6 +22,10 @@ const ALLOWED_DOMAIN = SCRIPT_PROPERTIES.getProperty('ALLOWED_DOMAIN') || 'saint
 
 // ========== Point d'entrée ==========
 
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, status: 'Active' })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
     // Vérifier le secret proxy

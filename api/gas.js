@@ -46,8 +46,16 @@ export default async function handler(req, res) {
 
         clearTimeout(timeout);
 
-        const data = await response.json();
-        return res.status(200).json(data);
+        const rawText = await response.text();
+
+        try {
+            const data = JSON.parse(rawText);
+            return res.status(200).json(data);
+        } catch (jsonErr) {
+            console.error('La réponse n est pas du JSON valide:', rawText.substring(0, 500));
+            return res.status(502).json({ ok: false, error: 'Erreur inattendue du proxy. Vérifier les permissions côté Google.' });
+        }
+
     } catch (err) {
         if (err.name === 'AbortError') {
             return res.status(504).json({ ok: false, error: 'Le serveur met trop de temps à répondre (timeout 25s). Réessaie dans quelques secondes.' });
