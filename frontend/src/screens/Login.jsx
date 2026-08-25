@@ -131,7 +131,7 @@ export default function Login({ onLogin }) {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
-                            placeholder="prenom.nom@saintho.org"
+                            placeholder="prenom.nom@saintho.fr"
                             autoComplete="email"
                             style={{
                                 width: '100%', padding: '14px 16px', borderRadius: 14,
@@ -230,7 +230,7 @@ export default function Login({ onLogin }) {
                                 type="email"
                                 value={forgotEmail}
                                 onChange={e => setForgotEmail(e.target.value)}
-                                placeholder="prenom.nom@saintho.org"
+                                placeholder="prenom.nom@saintho.fr"
                                 style={{
                                     flex: 1, padding: '10px 14px', borderRadius: 12,
                                     border: '2px solid var(--border)', fontSize: 14,
@@ -264,7 +264,7 @@ export default function Login({ onLogin }) {
                         style={{ fontSize: 14, padding: '10px 20px' }}
                         onClick={() => onLogin({
                             id: 'demo',
-                            email: 'demo@saintho.org',
+                            email: 'demo@saintho.fr',
                             nom: 'Démo',
                             prénom: 'Élève',
                             classe: '6A',
