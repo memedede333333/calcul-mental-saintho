@@ -1,0 +1,18 @@
+{
+    "name": "Calcul Mental Saintho",
+    "short_name": "Saintho Maths",
+    "description": "Maîtrise les tables de multiplication avec la méthode Singapour — Collège Saint-Honoré d'Eylau",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#FAF6EE",
+    "theme_color": "#1B2A4A",
+    "icons": [
+        {
+            "src": "/logo-saintho.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
