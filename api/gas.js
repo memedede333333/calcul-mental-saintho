@@ -3,7 +3,7 @@
  * 
  * iPad → Vercel /api/gas → GAS Web App
  * 
- * - Ajoute le header X-Proxy-Secret (variable d'env Vercel)
+ * - Gère la redirection 302 de Google (comportement standard des Web Apps GAS)
  * - Timeout 25s (cold start GAS)
  * - Transmet le body JSON tel quel, renvoie la réponse
  */
@@ -32,28 +32,51 @@ export default async function handler(req, res) {
 
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
+        const timeout = setTimeout(() => controller.abort(), 25000);
 
+        // Étape 1 : POST vers GAS sans suivre la redirection
+        // Google renvoie un 302 vers googleusercontent.com avec le résultat
         const response = await fetch(GAS_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Proxy-Secret': PROXY_SECRET,
-            },
-            body: JSON.stringify(req.body),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...req.body, _secret: PROXY_SECRET }),
             signal: controller.signal,
+            redirect: 'manual',
         });
 
         clearTimeout(timeout);
 
-        const rawText = await response.text();
+        // Étape 2 : Si 302, suivre la redirection manuellement avec GET
+        if (response.status === 302) {
+            const location = response.headers.get('location');
+            if (!location) {
+                return res.status(502).json({ ok: false, error: 'Redirection sans URL.' });
+            }
 
+            const controller2 = new AbortController();
+            const timeout2 = setTimeout(() => controller2.abort(), 15000);
+
+            const redirectResponse = await fetch(location, { signal: controller2.signal });
+            clearTimeout(timeout2);
+
+            const text = await redirectResponse.text();
+            try {
+                const data = JSON.parse(text);
+                return res.status(200).json(data);
+            } catch (e) {
+                console.error('Réponse non-JSON après redirect:', text.substring(0, 300));
+                return res.status(502).json({ ok: false, error: 'Réponse inattendue du serveur.' });
+            }
+        }
+
+        // Étape 2b : Pas de redirection (réponse directe)
+        const rawText = await response.text();
         try {
             const data = JSON.parse(rawText);
             return res.status(200).json(data);
-        } catch (jsonErr) {
-            console.error('La réponse n est pas du JSON valide:', rawText.substring(0, 500));
-            return res.status(502).json({ ok: false, error: 'Erreur inattendue du proxy. Vérifier les permissions côté Google.' });
+        } catch (e) {
+            console.error('Réponse non-JSON directe:', rawText.substring(0, 300));
+            return res.status(502).json({ ok: false, error: 'Réponse inattendue du serveur.' });
         }
 
     } catch (err) {
