@@ -23,7 +23,14 @@ const ALLOWED_DOMAIN = SCRIPT_PROPERTIES.getProperty('ALLOWED_DOMAIN') || 'saint
 // ========== Point d'entrée ==========
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, status: 'Active' })).setMimeType(ContentService.MimeType.JSON);
+  const secret = PropertiesService.getScriptProperties().getProperty('PROXY_SECRET');
+  return ContentService.createTextOutput(JSON.stringify({ 
+    ok: true, 
+    status: 'Active',
+    secretLength: secret ? secret.length : 0,
+    secretPreview: secret ? secret.substring(0, 4) + '***' : 'NOT SET',
+    domain: PropertiesService.getScriptProperties().getProperty('ALLOWED_DOMAIN') || 'NOT SET'
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
