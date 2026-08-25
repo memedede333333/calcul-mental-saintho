@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         const response = await fetch(GAS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...req.body, _secret: PROXY_SECRET }),
+            body: JSON.stringify(req.body),
             signal: controller.signal,
             redirect: 'manual',
         });
