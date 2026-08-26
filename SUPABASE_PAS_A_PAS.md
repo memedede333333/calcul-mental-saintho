@@ -67,18 +67,31 @@ et signale-le : le jeton risquerait de partir sur GitHub.
 
 ## Partie 2 — Brancher Antigravity sur Supabase
 
-Dans Antigravity, projet ouvert :
+**C'est le chemin qui fonctionne, testé le 26 août 2026.**
 
-1. Bouton **…** en haut du panneau agent › **MCP Servers**
-2. Soit tu installes **Supabase** depuis le MCP Store intégré, soit
-   **Manage MCP Servers › View raw config** et tu colles le contenu de ton
-   `.agents/mcp_config.json`
-3. Attends que le serveur passe en **connecté**
+1. Dans Antigravity : bouton **…** en haut du panneau agent › **MCP Servers**
+2. Installe **Supabase** depuis le MCP Store intégré
+3. Sur la fiche du serveur, clique sur **Authenticate** (à droite de
+   « Configure ») — une fenêtre de navigateur s'ouvre
+4. Autorise l'accès à ton compte Supabase
+5. Reviens dans Antigravity, clique **Refresh**
 
-Si rien ne se connecte : le plus souvent c'est une virgule ou un guillemet
-manquant dans le JSON, ou le jeton mal collé.
+Le serveur doit alors afficher un nombre d'outils au lieu de l'erreur
+« Unauthorized ».
 
----
+### Ce qu'il faut savoir
+
+Ce serveur est la version **hébergée** : il ne lit pas
+`.agents/mcp_config.json`, il fonctionne par autorisation navigateur.
+
+En contrepartie, cette autorisation donne accès à **tout le compte
+Supabase**, pas à un seul projet. Sans conséquence tant qu'il n'y a que la
+base de développement — **à revoir impérativement le jour où la base de
+production existera**, pour que l'agent ne puisse pas l'atteindre.
+
+Le fichier `.agents/mcp_config.example.json` décrit la version locale
+(npx + jeton personnel), qui permet de limiter l'agent à un seul projet.
+C'est la solution de repli à ressortir à ce moment-là.
 
 ## Partie 3 — Avec Antigravity, une instruction à la fois
 
