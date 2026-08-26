@@ -1,0 +1,704 @@
+<title>Écrans et défis Saintho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+:root{
+  --ground:#EEF2F8; --surface:#FFFFFF; --app:#FAF6EE; --app-line:#E6DCC6;
+  --ink:#16233D; --soft:#556482; --faint:#8B97AE;
+  --line:#DBE2EE;
+  --navy:#1B2A4A; --navy-mid:#2D4A7A; --gold:#B08D18; --gold-bright:#C9A227;
+  --sky:#2F87BC; --mint:#00947C; --coral:#D93A3F; --purple:#6B5BC4;
+  --shadow:0 1px 2px rgba(22,35,61,.05), 0 8px 24px -12px rgba(22,35,61,.18);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1526; --surface:#18223A; --app:#1D2740; --app-line:#33415F;
+    --ink:#E9EEF8; --soft:#A0AEC9; --faint:#6E7D9B; --line:#293754;
+    --navy:#C9D6EE; --navy-mid:#9DB3D8; --gold:#E2BE4C; --gold-bright:#E2BE4C;
+    --sky:#6FBEE8; --mint:#3AD3B6; --coral:#FF7176; --purple:#A99BF0;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1526; --surface:#18223A; --app:#1D2740; --app-line:#33415F;
+  --ink:#E9EEF8; --soft:#A0AEC9; --faint:#6E7D9B; --line:#293754;
+  --navy:#C9D6EE; --navy-mid:#9DB3D8; --gold:#E2BE4C; --gold-bright:#E2BE4C;
+  --sky:#6FBEE8; --mint:#3AD3B6; --coral:#FF7176; --purple:#A99BF0;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:Nunito,system-ui,-apple-system,sans-serif;
+  font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 24px 96px}
+.col{max-width:680px}
+
+h1,h2,h3,h4{font-family:"Bricolage Grotesque",Nunito,sans-serif; text-wrap:balance; margin:0}
+h1{font-size:clamp(34px,5.5vw,54px); font-weight:800; letter-spacing:-.025em; line-height:1.05}
+h2{font-size:clamp(24px,3.4vw,32px); font-weight:800; letter-spacing:-.02em; line-height:1.15}
+h3{font-size:19px; font-weight:700; letter-spacing:-.01em}
+h4{font-size:15px; font-weight:700}
+p{margin:0}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
+}
+.lede{font-size:19px; color:var(--soft); max-width:640px}
+.stack{display:flex; flex-direction:column}
+.g8{gap:8px} .g12{gap:12px} .g16{gap:16px} .g24{gap:24px} .g32{gap:32px} .g48{gap:48px}
+
+header.hero{
+  padding:72px 0 40px; border-bottom:1px solid var(--line); margin-bottom:56px;
+}
+section{padding:56px 0; border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:none}
+
+.sec-head{display:flex; flex-direction:column; gap:10px; margin-bottom:32px}
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:22px 24px; box-shadow:var(--shadow);
+}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px}
+.grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px}
+
+/* ---------- device mockups ---------- */
+.screens{display:grid; grid-template-columns:repeat(auto-fit,minmax(232px,1fr)); gap:20px}
+.device{display:flex; flex-direction:column; gap:9px}
+.device__label{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--faint);
+}
+.screen{
+  background:var(--app); border:1px solid var(--app-line); border-radius:18px;
+  padding:14px; display:flex; flex-direction:column; gap:9px; min-height:250px;
+  font-size:13px; line-height:1.35;
+}
+.screen--dark{background:var(--navy-mid); border-color:var(--navy-mid)}
+.s-top{
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--faint); padding-bottom:2px;
+}
+.s-title{font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:16px; letter-spacing:-.01em}
+.tile{
+  border-radius:11px; padding:9px 11px; color:#fff; font-weight:700;
+  display:flex; align-items:center; gap:9px; font-size:13px;
+}
+.tile small{display:block; font-weight:600; font-size:10.5px; opacity:.85; letter-spacing:0}
+.tile .em{font-size:17px; line-height:1}
+.t-gold{background:linear-gradient(135deg,#C9A227,#9E7C12)}
+.t-sky{background:linear-gradient(135deg,#4DA8DA,#2A6E96)}
+.t-mint{background:linear-gradient(135deg,#00C9A7,#00806C)}
+.t-coral{background:linear-gradient(135deg,#FF5A5F,#B93034)}
+.t-purple{background:linear-gradient(135deg,#8478DC,#544896)}
+.t-navy{background:linear-gradient(135deg,#2D4A7A,#1B2A4A)}
+
+.chip{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:26px; height:26px; padding:0 7px; border-radius:8px;
+  border:1.5px solid var(--app-line); background:transparent;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  color:var(--soft);
+}
+.chip--on{background:var(--gold-bright); border-color:var(--gold-bright); color:#1B2A4A}
+.chip--off{opacity:.35}
+.chips{display:flex; flex-wrap:wrap; gap:5px}
+
+.grp{font-size:10px; font-weight:700; color:var(--faint); letter-spacing:.06em; text-transform:uppercase; margin-top:3px}
+
+.qbox{
+  background:var(--surface); border:1px solid var(--app-line); border-radius:11px;
+  padding:13px; text-align:center;
+}
+.qbox .q{font-family:"Bricolage Grotesque",sans-serif; font-size:27px; font-weight:800; letter-spacing:-.02em}
+.qbox .a{
+  font-family:"IBM Plex Mono",monospace; font-size:19px; font-weight:600;
+  color:var(--sky); margin-top:5px; letter-spacing:.1em;
+}
+.row{display:flex; align-items:center; gap:8px; font-size:12px}
+.row + .row{border-top:1px solid var(--app-line); padding-top:6px; margin-top:6px}
+.row .rk{font-family:"IBM Plex Mono",monospace; font-weight:600; width:19px; color:var(--faint); font-size:11px}
+.row .nm{flex:1; font-weight:700}
+.row .vl{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:12px}
+.row--me{background:rgba(201,162,39,.16); border-radius:7px; padding:5px 7px; margin:4px -4px 0}
+
+.bigcode{
+  font-family:"IBM Plex Mono",monospace; font-weight:600; letter-spacing:.22em;
+  font-size:30px; text-align:center; color:#fff; padding:10px 0 4px;
+}
+.meter{height:6px; border-radius:3px; background:var(--app-line); overflow:hidden}
+.meter i{display:block; height:100%; background:var(--gold-bright)}
+
+/* ---------- figure / svg ---------- */
+figure{margin:0; display:flex; flex-direction:column; gap:12px}
+.figbox{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:22px 18px; overflow-x:auto; box-shadow:var(--shadow);
+}
+figure svg{display:block; max-width:100%; height:auto; margin:0 auto; color:var(--soft)}
+figcaption{font-size:14px; color:var(--soft); max-width:640px}
+.svg-strong{fill:var(--ink)} .svg-soft{fill:var(--soft)} .svg-faint{fill:var(--faint)}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:560px}
+th,td{padding:12px 16px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--faint);
+  background:var(--ground);
+}
+tbody tr:last-child td{border-bottom:none}
+td strong{font-weight:800}
+.yes{color:var(--mint); font-weight:800}
+.no{color:var(--faint)}
+
+/* ---------- misc ---------- */
+.note{
+  border-left:3px solid var(--gold-bright); padding:2px 0 2px 18px;
+  color:var(--soft); font-size:15.5px; max-width:640px;
+}
+.kbd{
+  font-family:"IBM Plex Mono",monospace; font-size:.86em; font-weight:600;
+  background:var(--ground); border:1px solid var(--line); border-radius:5px; padding:1px 6px;
+  color:var(--ink);
+}
+.bars{display:flex; flex-direction:column; gap:14px; max-width:520px}
+.bar__head{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; margin-bottom:5px}
+.bar__head b{font-family:"IBM Plex Mono",monospace; font-weight:600; font-variant-numeric:tabular-nums}
+.bar__track{height:26px; border-radius:7px; background:var(--ground); overflow:hidden; border:1px solid var(--line)}
+.bar__fill{height:100%; border-radius:6px 0 0 6px}
+ul.clean{margin:0; padding-left:20px; color:var(--soft)}
+ul.clean li{margin-bottom:5px}
+ul.clean li::marker{color:var(--gold)}
+.tag{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; border:1px solid currentColor;
+}
+.tag--solo{color:var(--sky)} .tag--amis{color:var(--purple)} .tag--classe{color:var(--gold)}
+a{color:var(--sky)}
+:focus-visible{outline:2px solid var(--gold-bright); outline-offset:3px; border-radius:4px}
+@media (prefers-reduced-motion:no-preference){
+  .card,.screen{transition:none}
+}
+</style>
+
+<div class="wrap">
+
+<header class="hero stack g16">
+  <span class="eyebrow">Calcul Mental Saintho · Conception</span>
+  <h1>Ce que voient<br>les élèves et les profs</h1>
+  <p class="lede">Les écrans imaginés pour chaque rôle, et les trois façons dont un élève peut se mesurer aux autres — seul, entre copains, ou avec toute la classe.</p>
+</header>
+
+<!-- ================= 1. DEUX ACCUEILS ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">01 · Le principe</span>
+    <h2>Une seule application, deux accueils</h2>
+    <p class="lede">Pas de site séparé pour les profs. C'est la même app : l'écran d'accueil change selon qui se connecte.</p>
+  </div>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 720 250" role="img" aria-label="Après la connexion, l'application affiche l'accueil élève ou l'accueil professeur selon le compte reconnu.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g font-family="Nunito, sans-serif" font-size="12.5">
+          <rect x="10" y="98" width="132" height="54" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="76" y="120" text-anchor="middle" class="svg-strong" font-weight="700">Connexion</text>
+          <text x="76" y="137" text-anchor="middle" class="svg-faint" font-size="11">code reçu par mail</text>
+
+          <line x1="146" y1="125" x2="212" y2="125" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+
+          <rect x="216" y="98" width="150" height="54" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="291" y="120" text-anchor="middle" class="svg-strong" font-weight="700">Qui es-tu ?</text>
+          <text x="291" y="137" text-anchor="middle" class="svg-faint" font-size="11">lu dans la base</text>
+
+          <path d="M370 118 C 400 118, 400 62, 432 62" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <path d="M370 132 C 400 132, 400 188, 432 188" fill="none" stroke="#B08D18" stroke-width="1.5" marker-end="url(#ar)"/>
+
+          <text x="398" y="88" text-anchor="middle" class="svg-faint" font-size="10.5">élève</text>
+          <text x="400" y="168" text-anchor="middle" font-size="10.5" fill="#B08D18">prof</text>
+
+          <rect x="436" y="34" width="270" height="58" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="452" y="56" class="svg-strong" font-weight="700">Accueil élève</text>
+          <text x="452" y="76" class="svg-faint" font-size="11">Apprendre · S'entraîner · Défis · Classements</text>
+
+          <rect x="436" y="160" width="270" height="58" rx="10" fill="none" stroke="#B08D18" stroke-width="1.5"/>
+          <text x="452" y="182" font-weight="700" fill="#B08D18">Accueil prof</text>
+          <text x="452" y="202" class="svg-faint" font-size="11">Mode classe · Ma classe · Administration</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>Un prof peut aussi jouer : son accueil garde les modes élève, avec « Mode classe » en plus. Un élève ne voit jamais les écrans prof — c'est la base de données qui décide, pas le code de l'interface.</figcaption>
+  </figure>
+</section>
+
+<!-- ================= 2. ÉLÈVE ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">02 · Côté élève</span>
+    <h2>Le parcours d'un élève</h2>
+    <p class="lede">Cinq destinations depuis l'accueil. Un collégien doit atteindre le jeu en deux tapes maximum.</p>
+  </div>
+
+  <div class="screens" style="margin-bottom:34px">
+
+    <div class="device">
+      <span class="device__label">Accueil</span>
+      <div class="screen">
+        <div class="s-top"><span>6ᵉ A</span><span>🌟 Alice</span></div>
+        <div class="s-title">Salut Alice !</div>
+        <div class="tile t-sky"><span class="em">📚</span><span>Apprendre<small>Découvrir une table</small></span></div>
+        <div class="tile t-mint"><span class="em">🎯</span><span>S'entraîner<small>À mon rythme</small></span></div>
+        <div class="tile t-gold"><span class="em">⚔️</span><span>Défis<small>Seul ou à plusieurs</small></span></div>
+        <div class="tile t-purple"><span class="em">🏆</span><span>Classements</span></div>
+        <div class="tile t-navy"><span class="em">🌟</span><span>Mon profil</span></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">Choix des tables</span>
+      <div class="screen">
+        <div class="s-top"><span>← Retour</span><span>Niveau 10</span></div>
+        <div class="s-title">Quelles tables ?</div>
+        <div class="chips">
+          <span class="chip chip--on">Mes tables faibles</span>
+          <span class="chip">Toutes</span>
+          <span class="chip">Classiques</span>
+        </div>
+        <div class="grp">Les faciles</div>
+        <div class="chips"><span class="chip">1</span><span class="chip">2</span><span class="chip">5</span><span class="chip">10</span></div>
+        <div class="grp">Le cœur</div>
+        <div class="chips"><span class="chip">3</span><span class="chip">4</span><span class="chip chip--on">6</span><span class="chip chip--on">7</span><span class="chip chip--on">8</span><span class="chip chip--on">9</span></div>
+        <div class="grp">Les grandes 🔒</div>
+        <div class="chips"><span class="chip chip--off">11</span><span class="chip chip--off">12</span><span class="chip chip--off">13</span><span class="chip chip--off">…</span></div>
+        <div class="tile t-gold" style="margin-top:auto"><span>Difficulté ×2,4 — c'est parti !</span></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">En jeu</span>
+      <div class="screen">
+        <div class="s-top"><span>⚡ Sprint</span><span>12/20 · ❌ 1</span></div>
+        <div class="meter"><i style="width:60%"></i></div>
+        <div class="qbox">
+          <div class="q">7 × 8</div>
+          <div class="a">5 6 _</div>
+        </div>
+        <div style="text-align:center; color:var(--mint); font-weight:800; font-size:13px">Bravo !</div>
+        <div class="chips" style="margin-top:auto; justify-content:center">
+          <span class="chip" style="width:44px;height:34px">1</span><span class="chip" style="width:44px;height:34px">2</span><span class="chip" style="width:44px;height:34px">3</span>
+          <span class="chip" style="width:44px;height:34px">4</span><span class="chip" style="width:44px;height:34px">5</span><span class="chip" style="width:44px;height:34px">6</span>
+          <span class="chip" style="width:44px;height:34px">7</span><span class="chip" style="width:44px;height:34px">8</span><span class="chip" style="width:44px;height:34px">9</span>
+          <span class="chip" style="width:44px;height:34px">⌫</span><span class="chip" style="width:44px;height:34px">0</span><span class="chip chip--on" style="width:44px;height:34px">✓</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">Ma grille de maîtrise</span>
+      <div class="screen">
+        <div class="s-top"><span>← Profil</span><span>🌟 Alice</span></div>
+        <div class="s-title">Où j'en suis</div>
+        <svg viewBox="0 0 200 132" role="img" aria-label="Grille de maîtrise : chaque case est un fait multiplicatif, coloré du rouge au vert selon la maîtrise.">
+          <g>
+            <!-- ligne d'en-tête -->
+            <text x="8" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">×</text>
+            <text x="30" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">2</text>
+            <text x="52" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">3</text>
+            <text x="74" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">4</text>
+            <text x="96" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">5</text>
+            <text x="118" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">6</text>
+            <text x="140" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">7</text>
+            <text x="162" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">8</text>
+            <text x="184" y="12" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">9</text>
+          </g>
+          <g>
+            <text x="6" y="30" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">2</text>
+            <rect x="24" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="68" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="90" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="134" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="156" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="178" y="22" width="16" height="12" rx="2.5" fill="#00C9A7"/>
+            <text x="6" y="48" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">3</text>
+            <rect x="24" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="68" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="90" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="40" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="134" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="156" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="178" y="40" width="16" height="12" rx="2.5" fill="#00C9A7"/>
+            <text x="6" y="66" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">6</text>
+            <rect x="24" y="58" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="58" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="68" y="58" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="90" y="58" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="58" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="134" y="58" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="156" y="58" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="178" y="58" width="16" height="12" rx="2.5" fill="#F5C542"/>
+            <text x="6" y="84" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">7</text>
+            <rect x="24" y="76" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="76" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="68" y="76" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="90" y="76" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="76" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="134" y="76" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="156" y="76" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="178" y="76" width="16" height="12" rx="2.5" fill="#F5C542"/>
+            <text x="6" y="102" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">8</text>
+            <rect x="24" y="94" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="94" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="68" y="94" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="90" y="94" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="94" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="134" y="94" width="16" height="12" rx="2.5" fill="#FF5A5F"/><rect x="156" y="94" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="178" y="94" width="16" height="12" rx="2.5" fill="#00C9A7"/>
+            <text x="6" y="120" font-size="7" fill="#8B97AE" font-family="IBM Plex Mono, monospace">9</text>
+            <rect x="24" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="46" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="68" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="90" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="112" y="112" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="134" y="112" width="16" height="12" rx="2.5" fill="#F5C542"/><rect x="156" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/><rect x="178" y="112" width="16" height="12" rx="2.5" fill="#00C9A7"/>
+          </g>
+        </svg>
+        <div style="font-size:11px; color:var(--soft); font-weight:700; text-align:center">
+          🔴 à revoir &nbsp; 🟡 en cours &nbsp; 🟢 acquis
+        </div>
+        <div class="tile t-mint" style="margin-top:auto"><span>Réviser mes 4 cases rouges</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">Le bouton <b>« Réviser mes cases rouges »</b> est le fil rouge de tout le projet : la grille de maîtrise n'est pas qu'un joli tableau, elle alimente le tirage des questions. Un élève ne devrait jamais avoir à décider lui-même ce qu'il doit travailler.</p>
+</section>
+
+<!-- ================= 3. PROF ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">03 · Côté prof</span>
+    <h2>Deux endroits très différents</h2>
+    <p class="lede">Le piège serait de tout mettre dans un panneau d'administration que personne n'ouvrira. On sépare ce qui sert chaque semaine de ce qui sert deux fois par an.</p>
+  </div>
+
+  <div class="grid2" style="margin-bottom:34px">
+    <div class="card stack g8">
+      <span class="eyebrow" style="color:var(--gold)">Utilisé chaque semaine</span>
+      <h3>Mode classe</h3>
+      <p style="color:var(--soft); font-size:15px">Sur l'accueil du prof, en gros. Trois tapes : le mode, les tables, c'est parti. Le code s'affiche assez grand pour être lu du fond de la salle.</p>
+    </div>
+    <div class="card stack g8">
+      <span class="eyebrow" style="color:var(--soft)">Utilisé deux fois par an</span>
+      <h3>Administration</h3>
+      <p style="color:var(--soft); font-size:15px">Import des élèves, plafonds de tables, comptes, export. Réservé à l'administrateur — les autres profs n'en ont pas besoin.</p>
+    </div>
+  </div>
+
+  <div class="screens" style="margin-bottom:34px">
+
+    <div class="device">
+      <span class="device__label">Accueil prof</span>
+      <div class="screen">
+        <div class="s-top"><span>Mme Calcul</span><span>6ᵉA · 6ᵉB</span></div>
+        <div class="s-title">Bonjour</div>
+        <div class="tile t-gold" style="padding:14px 12px"><span class="em">⚔️</span><span>Lancer un défi<small>Toute la classe, maintenant</small></span></div>
+        <div class="tile t-sky"><span class="em">📊</span><span>Ma classe<small>Où en sont-ils ?</small></span></div>
+        <div class="tile t-navy"><span class="em">⚙️</span><span>Administration</span></div>
+        <div style="border-top:1px solid var(--app-line); padding-top:9px; margin-top:6px">
+          <div class="grp" style="margin:0 0 6px">Défis récents</div>
+          <div class="row"><span class="rk">⚡</span><span class="nm">6ᵉA · mardi</span><span class="vl">24/27</span></div>
+          <div class="row"><span class="rk">⏱</span><span class="nm">6ᵉB · lundi</span><span class="vl">26/28</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">Code projeté au tableau</span>
+      <div class="screen screen--dark" style="justify-content:center; align-items:center; text-align:center; color:#fff">
+        <div style="font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.7">Contre-la-montre · 2 min</div>
+        <div style="font-size:12px; opacity:.8">Tables 6, 7, 8, 9</div>
+        <div class="bigcode">K R 7 M P</div>
+        <div style="font-size:12px; opacity:.85">Saisissez ce code dans « Défis »</div>
+        <div style="margin-top:14px; background:rgba(255,255,255,.14); border-radius:9px; padding:8px 16px; font-weight:800; font-size:15px">
+          18 élèves ont rejoint
+        </div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">Classement qui se remplit</span>
+      <div class="screen">
+        <div class="s-top"><span>⏱ 6ᵉA</span><span>21 / 27 terminés</span></div>
+        <div class="meter"><i style="width:78%"></i></div>
+        <div class="s-title" style="font-size:14px">Classement en direct</div>
+        <div class="row"><span class="rk">🥇</span><span class="nm">Clara B.</span><span class="vl">412 pts</span></div>
+        <div class="row"><span class="rk">🥈</span><span class="nm">Alice D.</span><span class="vl">388 pts</span></div>
+        <div class="row"><span class="rk">🥉</span><span class="nm">David P.</span><span class="vl">351 pts</span></div>
+        <div class="row"><span class="rk">4</span><span class="nm">Bob M.</span><span class="vl">340 pts</span></div>
+        <div class="row"><span class="rk">5</span><span class="nm">Léa F.</span><span class="vl">318 pts</span></div>
+        <div class="row"><span class="rk">6</span><span class="nm">Hugo L.</span><span class="vl">295 pts</span></div>
+        <div class="tile t-navy" style="margin-top:auto"><span>Clore le défi</span></div>
+      </div>
+    </div>
+
+    <div class="device">
+      <span class="device__label">Ma classe · maîtrise</span>
+      <div class="screen">
+        <div class="s-top"><span>6ᵉ A</span><span>27 élèves</span></div>
+        <div class="s-title" style="font-size:15px">Qui bloque sur quoi</div>
+        <svg viewBox="0 0 200 118" role="img" aria-label="Part d'élèves maîtrisant chaque table dans la classe : les tables 7 et 8 sont largement en échec.">
+          <g font-family="IBM Plex Mono, monospace" font-size="8" fill="#8B97AE">
+            <text x="2" y="16">×2</text><text x="2" y="32">×3</text><text x="2" y="48">×6</text>
+            <text x="2" y="64">×7</text><text x="2" y="80">×8</text><text x="2" y="96">×9</text>
+          </g>
+          <g>
+            <rect x="26" y="8" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="8" width="155" height="10" rx="3" fill="#00C9A7"/>
+            <rect x="26" y="24" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="24" width="141" height="10" rx="3" fill="#00C9A7"/>
+            <rect x="26" y="40" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="40" width="94" height="10" rx="3" fill="#F5C542"/>
+            <rect x="26" y="56" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="56" width="53" height="10" rx="3" fill="#FF5A5F"/>
+            <rect x="26" y="72" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="72" width="66" height="10" rx="3" fill="#FF5A5F"/>
+            <rect x="26" y="88" width="160" height="10" rx="3" fill="#E6DCC6"/><rect x="26" y="88" width="118" height="10" rx="3" fill="#00C9A7"/>
+          </g>
+          <g font-family="IBM Plex Mono, monospace" font-size="7.5" fill="#8B97AE">
+            <text x="190" y="16" text-anchor="end" fill="#00947C">97%</text>
+            <text x="190" y="64" text-anchor="end" fill="#D93A3F">33%</text>
+            <text x="190" y="80" text-anchor="end" fill="#D93A3F">41%</text>
+          </g>
+        </svg>
+        <p style="font-size:12px; color:var(--soft); font-weight:700; line-height:1.4">
+          18 élèves sur 27 bloquent sur la table de 7.
+        </p>
+        <div class="tile t-gold" style="margin-top:auto"><span>Lancer un défi sur les tables 7 et 8</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">Ce dernier écran est celui qui décide de l'adoption. Un prof de maths qui lit « 18 élèves sur 27 bloquent sur la table de 7 » puis lance un défi ciblé <b>en une tape</b> a une raison concrète de rouvrir l'outil la semaine suivante. Sans lui, l'app reste un jeu que les élèves font chez eux — ou pas.</p>
+</section>
+
+<!-- ================= 4. LES DÉFIS ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">04 · Les défis</span>
+    <h2>Trois façons de se mesurer</h2>
+    <p class="lede">Même moteur de jeu à chaque fois. Ce qui change : qui crée le défi, qui peut y entrer, et où le résultat va s'afficher.</p>
+  </div>
+
+  <figure style="margin-bottom:36px">
+    <div class="figbox">
+      <svg viewBox="0 0 760 300" role="img" aria-label="Comparaison des trois types de défi : seul sans code alimentant les classements permanents, entre copains avec un code partagé de main à main, et défi de classe avec un code donné par le professeur.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ar2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#B08D18"/>
+          </marker>
+          <marker id="ar2p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#6B5BC4"/>
+          </marker>
+        </defs>
+        <g font-family="Nunito, sans-serif" font-size="12">
+
+          <!-- colonne 1 : seul -->
+          <text x="20" y="22" font-size="12.5" font-weight="800" fill="#2F87BC" font-family="Bricolage Grotesque, sans-serif">SEUL</text>
+          <rect x="20" y="38" width="180" height="42" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="110" y="57" text-anchor="middle" class="svg-strong" font-weight="700">Je choisis mes tables</text>
+          <text x="110" y="72" text-anchor="middle" class="svg-faint" font-size="10.5">aucun code</text>
+          <line x1="110" y1="84" x2="110" y2="118" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+          <rect x="20" y="122" width="180" height="38" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="110" y="146" text-anchor="middle" class="svg-strong" font-weight="700">Je joue</text>
+          <line x1="110" y1="164" x2="110" y2="198" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+          <rect x="20" y="202" width="180" height="52" rx="9" fill="none" stroke="#2F87BC" stroke-width="1.6"/>
+          <text x="110" y="223" text-anchor="middle" font-weight="700" fill="#2F87BC">Classements</text>
+          <text x="110" y="240" text-anchor="middle" class="svg-faint" font-size="10.5">semaine · mois · année</text>
+          <text x="110" y="275" text-anchor="middle" class="svg-faint" font-size="10.5">Je me compare à tous,</text>
+          <text x="110" y="289" text-anchor="middle" class="svg-faint" font-size="10.5">quand je veux.</text>
+
+          <!-- colonne 2 : copains -->
+          <text x="290" y="22" font-size="12.5" font-weight="800" fill="#6B5BC4" font-family="Bricolage Grotesque, sans-serif">ENTRE COPAINS</text>
+          <rect x="290" y="38" width="180" height="42" rx="9" fill="none" stroke="#6B5BC4" stroke-width="1.6"/>
+          <text x="380" y="57" text-anchor="middle" font-weight="700" fill="#6B5BC4">Un élève crée</text>
+          <text x="380" y="72" text-anchor="middle" class="svg-faint" font-size="10.5">code KR7MP · 24 h</text>
+          <line x1="380" y1="84" x2="380" y2="118" stroke="#6B5BC4" stroke-width="1.4" marker-end="url(#ar2p)"/>
+          <rect x="290" y="122" width="180" height="38" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="380" y="140" text-anchor="middle" class="svg-strong" font-weight="700">Il donne le code</text>
+          <text x="380" y="154" text-anchor="middle" class="svg-faint" font-size="10.5">de vive voix, à la récré</text>
+          <line x1="380" y1="164" x2="380" y2="198" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+          <rect x="290" y="202" width="180" height="52" rx="9" fill="none" stroke="#6B5BC4" stroke-width="1.6"/>
+          <text x="380" y="223" text-anchor="middle" font-weight="700" fill="#6B5BC4">Classement du défi</text>
+          <text x="380" y="240" text-anchor="middle" class="svg-faint" font-size="10.5">+ compte pour les classements</text>
+          <text x="380" y="275" text-anchor="middle" class="svg-faint" font-size="10.5">Aucun prof impliqué.</text>
+          <text x="380" y="289" text-anchor="middle" class="svg-faint" font-size="10.5">Mêmes questions pour tous.</text>
+
+          <!-- colonne 3 : classe -->
+          <text x="560" y="22" font-size="12.5" font-weight="800" fill="#B08D18" font-family="Bricolage Grotesque, sans-serif">DÉFI DE CLASSE</text>
+          <rect x="560" y="38" width="180" height="42" rx="9" fill="none" stroke="#B08D18" stroke-width="1.6"/>
+          <text x="650" y="57" text-anchor="middle" font-weight="700" fill="#B08D18">Le prof crée</text>
+          <text x="650" y="72" text-anchor="middle" class="svg-faint" font-size="10.5">choisit les tables · 7 j</text>
+          <line x1="650" y1="84" x2="650" y2="118" stroke="#B08D18" stroke-width="1.4" marker-end="url(#ar2g)"/>
+          <rect x="560" y="122" width="180" height="38" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <text x="650" y="140" text-anchor="middle" class="svg-strong" font-weight="700">Code au tableau</text>
+          <text x="650" y="154" text-anchor="middle" class="svg-faint" font-size="10.5">« c'est parti »</text>
+          <line x1="650" y1="164" x2="650" y2="198" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar2)"/>
+          <rect x="560" y="202" width="180" height="52" rx="9" fill="none" stroke="#B08D18" stroke-width="1.6"/>
+          <text x="650" y="223" text-anchor="middle" font-weight="700" fill="#B08D18">Classement projeté</text>
+          <text x="650" y="240" text-anchor="middle" class="svg-faint" font-size="10.5">+ compte pour les classements</text>
+          <text x="650" y="275" text-anchor="middle" class="svg-faint" font-size="10.5">Le prof voit qui a joué</text>
+          <text x="650" y="289" text-anchor="middle" class="svg-faint" font-size="10.5">et clôt quand il veut.</text>
+
+          <line x1="245" y1="30" x2="245" y2="260" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity=".35"/>
+          <line x1="515" y1="30" x2="515" y2="260" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity=".35"/>
+        </g>
+      </svg>
+    </div>
+    <figcaption>La seule vraie différence est <b>qui fabrique le code et à qui il est donné</b>. Le reste du système — le jeu, l'enregistrement, les points — est identique dans les trois cas.</figcaption>
+  </figure>
+
+  <div class="tablewrap" style="margin-bottom:36px">
+    <table>
+      <thead>
+        <tr><th>&nbsp;</th><th>Seul</th><th>Entre copains</th><th>Défi de classe</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Qui le crée</strong></td><td>Personne</td><td>Un élève</td><td>Un prof</td></tr>
+        <tr><td><strong>Comment on entre</strong></td><td>Directement</td><td>Code donné de main à main</td><td>Code écrit au tableau</td></tr>
+        <tr><td><strong>Mêmes questions ?</strong></td><td class="no">Non — tirage perso</td><td class="yes">Oui</td><td class="yes">Oui</td></tr>
+        <tr><td><strong>Durée de vie</strong></td><td>—</td><td>24 heures</td><td>7 jours</td></tr>
+        <tr><td><strong>Modes possibles</strong></td><td>Les 4</td><td>Sprint · Contre-la-montre</td><td>Sprint · Contre-la-montre</td></tr>
+        <tr><td><strong>Le prof voit quelque chose ?</strong></td><td>Dans « Ma classe »</td><td class="no">Non — c'est autonome</td><td class="yes">Oui, en direct</td></tr>
+        <tr><td><strong>Nourrit les classements</strong></td><td class="yes">Oui</td><td class="yes">Oui</td><td class="yes">Oui</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-bottom:14px">Ce qui se passe pendant un défi de classe</h3>
+
+  <figure style="margin-bottom:26px">
+    <div class="figbox">
+      <svg viewBox="0 0 740 230" role="img" aria-label="Chronologie d'un défi de classe sur cinq minutes : le professeur crée et projette le code, les élèves le saisissent puis jouent deux minutes, chacun voit le classement se remplir en finissant, le professeur clôt.">
+        <g font-family="Nunito, sans-serif" font-size="12">
+          <line x1="88" y1="118" x2="716" y2="118" stroke="currentColor" stroke-width="1" opacity=".3"/>
+
+          <text x="14" y="62" font-size="10.5" font-weight="800" fill="#B08D18" font-family="IBM Plex Mono, monospace">PROF</text>
+          <text x="14" y="180" font-size="10.5" font-weight="800" fill="#2F87BC" font-family="IBM Plex Mono, monospace">ÉLÈVES</text>
+
+          <g font-family="IBM Plex Mono, monospace" font-size="10" class="svg-faint">
+            <text x="118" y="134" text-anchor="middle">0 s</text>
+            <text x="268" y="134" text-anchor="middle">+30 s</text>
+            <text x="418" y="134" text-anchor="middle">+2 min</text>
+            <text x="568" y="134" text-anchor="middle">+3 min</text>
+            <text x="694" y="134" text-anchor="middle">+5 min</text>
+          </g>
+
+          <circle cx="118" cy="118" r="4" fill="#B08D18"/>
+          <circle cx="268" cy="118" r="4" fill="#2F87BC"/>
+          <circle cx="418" cy="118" r="4" fill="#2F87BC"/>
+          <circle cx="568" cy="118" r="4" fill="#2F87BC"/>
+          <circle cx="694" cy="118" r="4" fill="#B08D18"/>
+
+          <!-- prof lane -->
+          <rect x="60" y="26" width="118" height="44" rx="8" fill="none" stroke="#B08D18" stroke-width="1.4"/>
+          <text x="119" y="44" text-anchor="middle" font-weight="700" fill="#B08D18" font-size="11.5">Crée le défi</text>
+          <text x="119" y="60" text-anchor="middle" class="svg-faint" font-size="10">mode + tables</text>
+          <line x1="118" y1="72" x2="118" y2="110" stroke="#B08D18" stroke-width="1.2"/>
+
+          <rect x="636" y="26" width="118" height="44" rx="8" fill="none" stroke="#B08D18" stroke-width="1.4"/>
+          <text x="695" y="44" text-anchor="middle" font-weight="700" fill="#B08D18" font-size="11.5">Projette, clôt</text>
+          <text x="695" y="60" text-anchor="middle" class="svg-faint" font-size="10">commente les erreurs</text>
+          <line x1="694" y1="72" x2="694" y2="110" stroke="#B08D18" stroke-width="1.2"/>
+
+          <!-- eleve lane -->
+          <line x1="268" y1="126" x2="268" y2="146" stroke="#2F87BC" stroke-width="1.2"/>
+          <rect x="209" y="150" width="118" height="44" rx="8" fill="none" stroke="#2F87BC" stroke-width="1.4"/>
+          <text x="268" y="168" text-anchor="middle" font-weight="700" fill="#2F87BC" font-size="11.5">Saisissent KR7MP</text>
+          <text x="268" y="184" text-anchor="middle" class="svg-faint" font-size="10">« 18 ont rejoint »</text>
+
+          <line x1="418" y1="126" x2="418" y2="146" stroke="#2F87BC" stroke-width="1.2"/>
+          <rect x="359" y="150" width="118" height="44" rx="8" fill="none" stroke="#2F87BC" stroke-width="1.4"/>
+          <text x="418" y="168" text-anchor="middle" font-weight="700" fill="#2F87BC" font-size="11.5">Jouent</text>
+          <text x="418" y="184" text-anchor="middle" class="svg-faint" font-size="10">mêmes 20 questions</text>
+
+          <line x1="568" y1="126" x2="568" y2="146" stroke="#2F87BC" stroke-width="1.2"/>
+          <rect x="509" y="150" width="118" height="44" rx="8" fill="none" stroke="#2F87BC" stroke-width="1.4"/>
+          <text x="568" y="168" text-anchor="middle" font-weight="700" fill="#2F87BC" font-size="11.5">Voient le podium</text>
+          <text x="568" y="184" text-anchor="middle" class="svg-faint" font-size="10">se remplir</text>
+
+          <text x="418" y="216" text-anchor="middle" class="svg-faint" font-size="10.5">Aucun départ synchronisé à coder — le « c'est parti » du prof suffit.</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>Comme tout le monde démarre en même temps, chacun termine à quelques secondes d'écart et voit les autres arriver. L'effet ressenti est celui d'un direct, sans qu'aucun mécanisme temps réel n'ait été construit.</figcaption>
+  </figure>
+
+  <div class="grid3">
+    <div class="card stack g8">
+      <span class="tag tag--solo">Seul</span>
+      <h4>Toujours disponible</h4>
+      <p style="font-size:14.5px; color:var(--soft)">Un élève à la maison, un dimanche soir, n'a besoin de personne. Il joue, ses points comptent, il monte au classement de la semaine.</p>
+    </div>
+    <div class="card stack g8">
+      <span class="tag tag--amis">Entre copains</span>
+      <h4>Sans passer par l'école</h4>
+      <p style="font-size:14.5px; color:var(--soft)">Un élève lance un défi et donne le code à trois copains. 5 défis ouverts maximum, 24 h de validité, et jamais au-dessus de son propre niveau débloqué.</p>
+    </div>
+    <div class="card stack g8">
+      <span class="tag tag--classe">Défi de classe</span>
+      <h4>Dix minutes de cours</h4>
+      <p style="font-size:14.5px; color:var(--soft)">Le prof cible les tables qui coincent, projette le classement, commente les erreurs les plus fréquentes. Un rituel de début d'heure.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:28px"><b>Aucun texte libre nulle part.</b> Pas de nom de défi, pas de message, pas de pseudo — un défi est identifié par son code, point. Dès qu'on laisse des collégiens écrire du texte que d'autres verront, il faut de la modération, et personne au collège n'aura le temps de la faire. Les avatars sont une liste fermée d'emojis pour la même raison.</p>
+</section>
+
+<!-- ================= 5. ÉQUITÉ ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">05 · Équité</span>
+    <h2>Pourquoi 20 bonnes réponses<br>ne valent pas toujours pareil</h2>
+    <p class="lede">Dans un défi, tout le monde a les mêmes questions : rien à corriger. Dans les classements permanents, en revanche, chacun choisit ses tables — et là, un correctif est indispensable.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <p style="font-size:15px; color:var(--soft); margin-bottom:20px">Deux élèves, 20 bonnes réponses chacun :</p>
+    <div class="bars">
+      <div>
+        <div class="bar__head"><span>Tables de 2 et 5 <span style="color:var(--faint)">— doubler, compter de 5 en 5</span></span><b>82 pts</b></div>
+        <div class="bar__track"><div class="bar__fill" style="width:41%; background:linear-gradient(90deg,#4DA8DA,#2F87BC)"></div></div>
+      </div>
+      <div>
+        <div class="bar__head"><span>Tables de 7 et 9 <span style="color:var(--faint)">— aucun motif à exploiter</span></span><b>201 pts</b></div>
+        <div class="bar__track"><div class="bar__fill" style="width:100%; background:linear-gradient(90deg,#C9A227,#9E7C12)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card stack g8">
+      <h4>La pondération</h4>
+      <p style="font-size:14.5px; color:var(--soft)">Chaque table vaut un nombre de points fonction de sa difficulté réelle. Celles qui reposent sur une règle (×1, ×10) ou une astuce (×2, ×5, ×9, ×20) valent peu. La table de 17 vaut le plus : nombre premier, aucun raccourci. Corrige le choix de la facilité.</p>
+    </div>
+    <div class="card stack g8">
+      <h4>Les paliers</h4>
+      <p style="font-size:14.5px; color:var(--soft)">On ne compare pas une 6ᵉ travaillant jusqu'à 10 avec un 3ᵉ travaillant jusqu'à 20. Trois classements séparés — Découverte, Confirmé, Expert — déduits automatiquement de la plus haute table jouée. Corrige l'écart entre niveaux.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:24px">Et le déblocage passe par le jeu : franchir la table 10 dans <b>Montée des tables</b> ouvre la 11 à l'entraînement. Un élève de 6ᵉ ne tombe jamais sur 17 × 18 par accident, et le mode Montée trouve enfin sa raison d'être.</p>
+</section>
+
+<!-- ================= 6. QUI PEUT QUOI ================= -->
+<section>
+  <div class="sec-head">
+    <span class="eyebrow">06 · Droits</span>
+    <h2>Qui peut quoi</h2>
+    <p class="lede">Ces règles sont appliquées par la base de données elle-même, pas par l'interface. Même en bidouillant, un élève ne peut pas les contourner.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Action</th><th>Élève</th><th>Prof</th><th>Admin</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Voir ses propres résultats</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Voir les résultats d'un camarade</td><td class="no">— sauf classements (prénom + initiale)</td><td class="yes">✓ ses classes</td><td class="yes">✓</td></tr>
+        <tr><td>Créer un défi</td><td class="yes">✓ 5 max, 24 h</td><td class="yes">✓ 7 jours</td><td class="yes">✓</td></tr>
+        <tr><td>Rejouer un défi déjà joué</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+        <tr><td>Modifier un score enregistré</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+        <tr><td>Changer son avatar</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Changer sa classe ou son niveau</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Jouer au-dessus de son plafond de tables</td><td class="no">— refusé par le serveur</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Voir la maîtrise agrégée d'une classe</td><td class="no">—</td><td class="yes">✓ ses classes</td><td class="yes">✓</td></tr>
+        <tr><td>Importer des élèves, exporter les données</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note" style="margin-top:26px">Sur la triche : dans un jeu qui tourne dans un navigateur, un élève dégourdi finira par voir les réponses. On limite les dégâts — une seule participation, score plafonné par le nombre de questions, écriture impossible après coup — et surtout, <b>ces défis ne comptent dans aucune évaluation</b>. C'est ce dernier point qui dégonfle le problème.</p>
+</section>
+
+</div>

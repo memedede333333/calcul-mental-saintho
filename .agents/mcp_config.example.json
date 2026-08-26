@@ -1,0 +1,29 @@
+{
+  "_commentaire": [
+    "Config MCP pour Antigravity — Calcul Mental Saintho.",
+    "Copier ce fichier en .agents/mcp_config.json puis remplacer :",
+    "  <REF_PROJET_DEV> = Reference ID du projet Supabase de DEV",
+    "                     (Dashboard > Project Settings > General)",
+    "  <TOKEN>          = Personal Access Token Supabase",
+    "                     (avatar en haut a droite > Access Tokens)",
+    "",
+    "mcp_config.json ne doit JAMAIS etre commite : il est dans .gitignore.",
+    "--project-ref limite l'agent a CE projet, pas a tout le compte.",
+    "--read-only  : a activer des que la base contient autre chose que des",
+    "               donnees de demonstration.",
+    "NE JAMAIS pointer vers le projet de PRODUCTION."
+  ],
+  "mcpServers": {
+    "supabase-dev": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=<REF_PROJET_DEV>"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "<TOKEN>"
+      }
+    }
+  }
+}

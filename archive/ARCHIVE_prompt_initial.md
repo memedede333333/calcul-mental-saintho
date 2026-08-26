@@ -1,3 +1,12 @@
+> ⚠️ **DOCUMENT ARCHIVÉ — NE PAS SUIVRE**
+>
+> Ce document décrit l'architecture Google Apps Script + Google Sheets,
+> **abandonnée le 26 août 2026**. Il est conservé pour mémoire uniquement.
+>
+> Le document de référence est `ANTIGRAVITY_BRIEF.md` à la racine du dépôt.
+
+---
+
 # PROMPT ANTIGRAVITY — CALCUL MENTAL SAINTHO
 
 ## 🎯 Mission

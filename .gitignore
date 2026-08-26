@@ -7,3 +7,6 @@ dist-ssr/
 .env.*
 !.env.example
 .vercel
+
+# Jeton d acces MCP — ne jamais commiter
+.agents/mcp_config.json
