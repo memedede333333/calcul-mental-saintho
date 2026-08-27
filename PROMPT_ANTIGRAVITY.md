@@ -66,6 +66,24 @@ React/Vite existant est abouti et **doit être conservé**.
 
 **Arrête-toi là et fais-moi un point.** N'enchaîne pas sur les écrans.
 
+## À chaque étape franchie, tu tiens le journal
+
+Ajoute une entrée en haut de `JOURNAL.md` — le modèle est en tête du fichier :
+
+- **Fait** — ce qui fonctionne maintenant et ne fonctionnait pas avant
+- **Décidé** — les choix de conception, en marquant clairement lesquels sont
+  ✅ validés par moi et lesquels sont ⏳ proposés en attente
+- **Constaté** — ce qui a surpris, cassé, ou ne s'est pas passé comme prévu.
+  C'est la rubrique la plus utile : un bug contourné sans trace revient
+  toujours.
+- **Ensuite** — la prochaine étape
+
+Puis mets à jour le tableau d'état de `ETAT.md` (§2), et son registre des
+décisions (§3) si un choix a été tranché.
+
+Une entrée par **étape**, pas par fichier modifié. C'est ce qui permet de
+changer de chat sans rien reperdre.
+
 Ensuite on suivra l'ordre de construction proposé à la fin de `ECRANS.md`.
 
 ## Les règles qui ne se négocient pas

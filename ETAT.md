@@ -222,6 +222,7 @@ existantes**, jamais de couleurs en dur.
 | `ANTIGRAVITY_BRIEF.md` | Le cadrage complet : architecture, règles, lots de travail |
 | `ECRANS.md` | Les 19 écrans, un par un : appels, contenus, états |
 | `SUPABASE_PAS_A_PAS.md` | Mise en route Supabase, MCP, modèle d'e-mail OTP |
+| `JOURNAL.md` | L'historique : ce qui a été fait, décidé, constaté, étape par étape |
 | `PROMPT_ANTIGRAVITY.md` | Le message de démarrage à coller dans un chat neuf |
 | `docs/ecrans-et-defis.html` | Les maquettes visuelles élève et professeur |
 | `archive/` | ⚠️ Ancienne architecture Apps Script — **périmé, ne pas suivre** |
@@ -275,6 +276,15 @@ Colle ceci :
 
 > Lis `ETAT.md` à la racine du dépôt, puis `ANTIGRAVITY_BRIEF.md` et `ECRANS.md`. Ignore le dossier `archive/`, il contient une architecture abandonnée. Dis-moi ensuite où en est le projet selon toi et ce que tu proposes comme prochaine étape.
 
-Et **tiens ce document à jour** : à chaque étape franchie, mets à jour le
-tableau du §2 ; à chaque décision de conception prise, ajoute-la au §3 avec sa
-raison. C'est ce qui permet de changer de chat sans tout reperdre.
+### La discipline à tenir
+
+À **chaque étape franchie**, deux gestes :
+
+1. **Ajouter une entrée dans `JOURNAL.md`** — fait / décidé / constaté /
+   ensuite. Le modèle est en tête du fichier. En marquant clairement ce qui est
+   validé, et par qui.
+2. **Mettre à jour ce document** — le tableau du §2 toujours, le registre des
+   décisions du §3 si un choix de conception a été pris.
+
+Le journal raconte, `ETAT.md` fait foi. C'est ce qui permet de changer de chat,
+d'outil ou de personne sans rien reperdre.

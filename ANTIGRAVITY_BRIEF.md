@@ -102,7 +102,12 @@ au début** — puis n'y reviens plus :
 5. **Ne pas ajouter de dépendance** sans raison explicite. Le projet doit rester
    déployable par `git push` par un enseignant, pas par un ingénieur.
 
-6. **Interdits absolus :** aucun `localStorage` pour des données de jeu (le
+6. **Tiens `JOURNAL.md` à jour.** Une entrée par étape franchie : fait,
+   décidé (validé ou en attente), constaté, ensuite. Puis répercute dans
+   `ETAT.md`. Ce n'est pas de la paperasse : c'est ce qui permet de reprendre
+   le projet dans six mois, ou depuis un autre outil.
+
+7. **Interdits absolus :** aucun `localStorage` pour des données de jeu (le
    serveur fait foi) ; aucune donnée en dur qui simule un vrai contenu — c'est
    précisément le défaut qui rendait l'ancienne version trompeuse.
 
