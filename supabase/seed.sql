@@ -23,14 +23,20 @@ insert into public.eleves (email, nom, prenom, classe, avatar_emoji, tables_auto
 -- Quelques sessions réparties sur trois semaines, avec des niveaux
 -- volontairement différents d'un élève à l'autre : sinon tous les
 -- classements sont ex æquo et on ne voit rien.
+-- Les colonnes `points` et `palier` sont calculees ici comme le ferait
+-- `enregistrer_session()`. Sans elles, tous les classements bases sur la
+-- progression afficheraient zero et les donnees de demo ne serviraient a rien.
 insert into public.sessions_jeu
-  (eleve_id, mode, tables, nb_questions, score, duree_s, serie_max, sans_faute_max, plus_haute_table, cree_le)
-select e.id, m.mode, '{2,3,4,5,6,7,8,9,10}'::smallint[],
+  (eleve_id, mode, tables, nb_questions, score, duree_s, serie_max, sans_faute_max,
+   plus_haute_table, points, palier, cree_le)
+select e.id, m.mode, m.tabs,
        m.nb, greatest(1, (m.score * f.coef)::int),
        round(m.duree / f.coef, 1),
        (m.serie * f.coef)::int, (m.serie * f.coef)::int,
        case when m.table_max is null then null
             else greatest(2, (m.table_max * f.coef)::int)::smallint end,
+       round(greatest(1, (m.score * f.coef)::int) * public.poids_moyen(m.tabs) * 10)::int,
+       public.palier_tables(m.tabs),
        now() - (m.jours || ' days')::interval
   from public.eleves e
   join (values
@@ -43,12 +49,13 @@ select e.id, m.mode, '{2,3,4,5,6,7,8,9,10}'::smallint[],
       ('hugo.lambert@demo.saintho.fr',   0.60)
   ) as f(email, coef) on f.email = e.email
   cross join (values
-      ('countdown', 40, 32, 120.0, 12, 10,  1),
-      ('sprint',    20, 18,  74.5,  9, null, 3),
-      ('flawless',  25, 25,  88.0, 25, null, 6),
-      ('climb',     45, 41, 210.0, 14, 9,   12),
-      ('countdown', 38, 29, 120.0,  8, 10,  20)
-  ) as m(mode, nb, score, duree, serie, table_max, jours);
+      -- mode, nb, score, duree, serie, table_max, jours, tables jouees
+      ('countdown', 40, 32, 120.0, 12, 10,   1, '{2,3,4,5,6,7,8,9,10}'::smallint[]),
+      ('sprint',    20, 18,  74.5,  9, null, 3, '{6,7,8,9}'::smallint[]),
+      ('flawless',  25, 25,  88.0, 25, null, 6, '{2,3,4,5}'::smallint[]),
+      ('climb',     45, 41, 210.0, 14, 9,   12, '{2,3,4,5,6,7,8,9,10}'::smallint[]),
+      ('countdown', 38, 29, 120.0,  8, 10,  20, '{7,8,9,10}'::smallint[])
+  ) as m(mode, nb, score, duree, serie, table_max, jours, tabs);
 
 -- Maîtrise partielle pour voir la grille se colorer
 insert into public.maitrise (eleve_id, fait, niveau, nb_vues, nb_reussites, derniere_vue)

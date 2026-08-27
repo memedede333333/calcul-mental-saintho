@@ -152,3 +152,18 @@ select count(*) as eleves_visibles_par_prof from eleves;
 select count(*) as sessions_visibles_par_prof from sessions_jeu;
 
 reset role;
+
+\echo '=== 29. Portee NIVEAU : tous les 6e du college ==='
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select niveau_scolaire('6A') as n1, niveau_scolaire('5A') as n2, niveau_scolaire('3B') as n3;
+select rang, nom_affiche, classe from classement_progression('semaine','niveau','decouverte',10);
+
+\echo '=== 30. Classement des classes (moyenne par eleve) ==='
+select rang, classe, eleves_actifs, eleves_total, points_moyens, est_ma_classe
+  from classement_classes('semaine');
+
+\echo '=== 31. Classement des classes, 6e uniquement ==='
+select rang, classe, points_moyens from classement_classes('semaine','6');
+
+reset role;
