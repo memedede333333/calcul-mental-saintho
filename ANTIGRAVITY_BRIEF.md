@@ -115,6 +115,9 @@ supabase/migrations/20260826090000_schema.sql   Tables, contraintes, index
 supabase/migrations/20260826090100_rls.sql      Sécurité au niveau ligne
 supabase/migrations/20260826090200_api.sql      Fonctions RPC + classements
 supabase/migrations/20260826090300_difficulte.sql  Tables 1-20, paliers, pondération
+supabase/migrations/20260826090400_portee_niveau.sql  Classement par niveau + par classe
+supabase/migrations/20260826090500_palier_tous.sql    Tableau d'honneur du collège
+supabase/migrations/20260827080000_administration.sql Gestion des élèves + journal
 supabase/seed.sql                               Élèves fictifs (DEV uniquement)
 supabase/tests/run.sh                           Vérification de bout en bout
 .agents/mcp_config.json                         Connexion MCP Supabase
@@ -458,10 +461,73 @@ règle facilement après observation en classe.
 meilleure série · meilleur score chrono · meilleur temps au sprint · plus haute
 table atteinte.
 
-Les deux acceptent un filtre de période (semaine / mois / année scolaire /
-depuis toujours) et de portée (collège / ma classe). **Mettre « ma classe » par
-défaut** : la comparaison de proximité motive, l'exposition à l'échelle du
-collège écrase.
+Les deux acceptent trois filtres combinables :
+
+- **Période** — semaine · mois · année scolaire · depuis toujours
+- **Portée** — `classe` · `niveau` (tous les 6ᵉ) · `college`
+- **Palier** — `decouverte` · `confirme` · `expert` · `tous`
+
+**Mettre « ma classe » par défaut** : la comparaison de proximité motive,
+l'exposition à l'échelle du collège écrase.
+
+Le palier `tous` désactive le filtre de difficulté : c'est un **tableau
+d'honneur** (« les records du collège »), à présenter comme une vitrine, jamais
+comme le classement par défaut — sinon on retombe sur l'effet qu'on cherche à
+éviter, les mêmes toujours en tête.
+
+Il existe aussi `classement_classes()` : un classement d'équipes, 6ᵉA contre
+6ᵉB, en moyenne par élève pour ne pas avantager les classes nombreuses. À cet
+âge l'émulation collective fonctionne souvent mieux que l'exposition
+individuelle.
+
+---
+
+## 11bis. Gestion des élèves — déjà écrite côté serveur
+
+Toute la vie courante du fichier d'élèves existe en base (migration 7). **Il
+reste à construire les écrans**, pas la logique. N'écris pas ta propre version.
+
+| Fonction SQL | À quoi ça sert | Qui y a droit |
+|---|---|---|
+| `importer_eleves(jsonb)` | Import de rentrée | admin |
+| `ajouter_eleve(...)` | Arrivée en cours d'année | admin ou prof de la classe |
+| `modifier_eleve(...)` | Corriger nom, classe, e-mail | admin ou prof de la classe |
+| `desactiver_eleve(id, motif)` | Départ | admin ou prof de la classe |
+| `reactiver_eleve(id)` | Retour, ou erreur | admin ou prof de la classe |
+| `definir_plafond_classe(classe, n)` | Ouvrir les tables 11-12 à une classe | admin ou prof de la classe |
+| `eleves_sans_connexion(classe?)` | Suivi de rentrée | admin ou prof de la classe |
+
+### Les règles à respecter dans l'interface
+
+**On ne supprime jamais un élève en cours d'année.** On le désactive. Supprimer
+effacerait ses sessions en cascade : les classements de sa classe changeraient
+rétroactivement et les défis auxquels il a participé deviendraient incohérents.
+Aucun bouton « Supprimer » dans l'admin — seulement « Désactiver », avec un
+champ motif.
+
+**L'import ne désactive personne.** Un élève absent du fichier est seulement
+signalé dans le rapport de retour (`actifs_absents_du_fichier`). Affiche cette
+liste et laisse l'administrateur décider au cas par cas. Ne propose jamais de
+désactivation en masse en un clic.
+
+**Les lignes invalides d'un import remontent** dans `lignes_ignorees`, avec la
+raison. Montre-les — un import qui avale silencieusement six lignes est pire
+qu'un import qui échoue.
+
+**L'e-mail n'est modifiable que si l'élève ne s'est jamais connecté.** Après, le
+compte est rattaché : changer l'adresse le laisserait connecté sous une
+identité qui n'existe plus. Le serveur refuse et explique quoi faire — relaie
+le message tel quel.
+
+**Un élève ajouté peut se connecter immédiatement.** Aucun délai, aucune
+validation. Dis-le dans l'interface, sinon on croira qu'il faut attendre.
+
+### Le journal
+
+Chaque action d'administration est enregistrée dans `journal_admin` : qui, quoi,
+quand, sur qui. Plusieurs enseignants auront les droits — il faut pouvoir
+répondre à « qui a désactivé cet élève ? ». Prévois un écran de consultation,
+même minimal.
 
 ---
 
