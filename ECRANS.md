@@ -94,6 +94,61 @@ boucle** — l'élève retaperait son adresse indéfiniment.
 rechargement. Sur iPad, Safari décharge les onglets en arrière-plan. En classe,
 ça veut dire des reconnexions toutes les dix minutes.
 
+### ⚠️ `quiSuisJe()` ne renvoie pas la même forme selon le type
+
+C'est la source d'erreur la plus probable de tout le Lot 0.
+
+```js
+// élève
+{ type: 'eleve',
+  profil: { id, prenom, nom, classe, avatar_emoji,
+            plafond_tables, tables_autorisees } }
+
+// prof
+{ type: 'prof', admin: true|false,
+  profil: { id, nom, email, role, classes } }
+//                  ↑ pas de prenom, pas de classe, pas d'avatar
+
+// inconnu
+{ type: 'inconnu', message: "..." }
+//                  ↑ pas de profil du tout
+```
+
+**N'aplatis pas ces trois formes en un seul objet `user`.** Un écran qui lit
+`user.prenom` planterait pour un professeur, et `user.profil.quoi-que-ce-soit`
+planterait pour un compte inconnu.
+
+Garde la réponse telle quelle et dérive depuis elle :
+
+```js
+const [identite, setIdentite] = useState(null);
+const estProf  = identite?.type === 'prof';
+const estAdmin = identite?.admin === true;
+```
+
+Chaque écran reçoit `identite` et choisit ses champs selon le type.
+
+*(Au passage : le champ s'écrit `prenom`, sans accent. L'ancien code utilisait
+`prénom` — c'est un vrai bug, pas une coquette.)*
+
+### Un placeholder honnête n'est pas une donnée en dur
+
+Un écran « Accueil enseignant — en construction » est parfaitement acceptable :
+il ne simule rien, il annonce ce qu'il est. La règle « aucune donnée en dur »
+vise les **fausses données qui se font passer pour vraies** — de faux
+classements, des records inventés — pas les écrans assumés comme inachevés.
+
+### Ce qu'il faut vérifier avant de dire que c'est fini
+
+- Démarrage **sans session** → écran de connexion
+- Connexion **élève** (`alice.dupont@demo.saintho.fr` du seed) → accueil élève
+- Connexion **professeur** (`prof.demo@demo.saintho.fr`) → l'accueil **ne
+  plante pas**, et le bouton Administration apparaît (ce compte est `admin`)
+- **Adresse non pré-inscrite** → écran « compte non reconnu », et le bouton de
+  déconnexion fonctionne réellement
+- **Rechargement de page** → la session est restaurée, on ne revient pas au
+  login
+
 ## 2. Connexion
 
 **Un bouton principal, un lien de secours.**
