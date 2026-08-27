@@ -43,7 +43,8 @@ echo "▶ Comptes de test (simule une première connexion)"
 psql_run -d "$DB" -q -c "insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111','alice.dupont@demo.saintho.fr'),
   ('22222222-2222-2222-2222-222222222222','bob.martin@demo.saintho.fr'),
-  ('33333333-3333-3333-3333-333333333333','prof.demo@demo.saintho.fr');"
+  ('33333333-3333-3333-3333-333333333333','prof.demo@demo.saintho.fr'),
+  ('44444444-4444-4444-4444-444444444444','maths.demo@demo.saintho.fr');"
 
 echo "▶ Scénario"
 echo

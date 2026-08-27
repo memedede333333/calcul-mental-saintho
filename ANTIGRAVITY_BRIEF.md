@@ -118,6 +118,8 @@ supabase/migrations/20260826090300_difficulte.sql  Tables 1-20, paliers, pondér
 supabase/migrations/20260826090400_portee_niveau.sql  Classement par niveau + par classe
 supabase/migrations/20260826090500_palier_tous.sql    Tableau d'honneur du collège
 supabase/migrations/20260827080000_administration.sql Gestion des élèves + journal
+supabase/migrations/20260827090000_comptes_profs.sql  Comptes enseignants, accès à toutes les classes
+supabase/migrations/20260827100000_profs_joueurs.sql  Les profs jouent + `qui_suis_je()`
 supabase/seed.sql                               Élèves fictifs (DEV uniquement)
 supabase/tests/run.sh                           Vérification de bout en bout
 .agents/mcp_config.json                         Connexion MCP Supabase
@@ -158,6 +160,33 @@ dans `01_scenario.sql`. C'est le seul filet de sécurité du projet.
    à la première connexion. D'où le drapeau de transaction
    `app.rattachement_en_cours`. Si tu ajoutes une écriture système sur `eleves`,
    pense à ce drapeau, sinon elle sera silencieusement annulée.
+
+---
+
+## 5bis. Deux fonctions à connaître avant tout
+
+**`qui_suis_je()`** — à appeler **en premier**, juste après la connexion. Elle
+renvoie `{type: 'eleve' | 'prof' | 'inconnu', ...}` et c'est elle qui décide de
+l'écran d'accueil. `mon_profil()` ne répond que pour les élèves.
+
+Le cas `inconnu` doit être traité proprement : un compte a été créé mais
+l'adresse n'est ni dans `eleves` ni dans `profs`. C'est la barrière d'entrée qui
+fonctionne. Affiche le message renvoyé — « demande à ton professeur » — ne
+plante pas, ne renvoie pas au login en boucle.
+
+**Les enseignants jouent aussi.** Leurs parties vont dans `sessions_profs`, une
+table séparée, via `enregistrer_session_prof()`. Leur classement,
+`classement_profs()`, n'est **lisible que par les enseignants** — aucun élève ne
+peut le voir, ni par requête ni par fonction.
+
+Deux tables distinctes, aucune intersection : un professeur ne peut pas
+apparaître dans un classement d'élèves, même par erreur de filtre. Le même
+écran de jeu sert aux deux — seule la fonction d'enregistrement change, selon
+ce qu'a répondu `qui_suis_je()`. Pas de badges ni de grille de maîtrise pour les
+enseignants : c'est pour l'émulation entre collègues, pas de la remédiation.
+
+Leur classement affiche le **nom complet** — entre adultes qui se connaissent,
+« M. D. » n'aurait pas de sens.
 
 ---
 
@@ -370,8 +399,46 @@ tableau de bord temps réel, et il ne coûte rien à développer.
 - Activer / désactiver un compte, renvoyer un code d'accès
 - Historique des défis
 
-Deux rôles, déjà dans le schéma : `prof` voit ses classes, `admin` voit tout et
-seul lui importe des élèves.
+### Les rôles — décidé le 27 août 2026
+
+**Deux rôles seulement. Ne construis pas de matrice de droits.**
+
+| | `prof` | `admin` |
+|---|---|---|
+| Voir la maîtrise, lancer des défis | toutes les classes | toutes les classes |
+| Ajouter / modifier / désactiver un élève | toutes les classes | toutes les classes |
+| Régler le plafond de tables d'une classe | ✓ | ✓ |
+| Import de rentrée | — | ✓ |
+| Créer et gérer les comptes enseignants | — | ✓ |
+
+**Un enseignant voit et gère TOUTES les classes**, pas seulement les siennes.
+C'est un choix assumé : les affectations changent chaque année, un professeur
+remplace un collègue, échange un service. Un cloisonnement serait périmé en
+permanence et chaque « je ne vois pas ma classe » remonterait à
+l'administrateur. Quatre professeurs qui se croisent tous les jours n'ont pas
+besoin de cloisons — ils ont besoin d'un journal, et il existe.
+
+`profs.classes[]` survit comme **raccourci d'affichage** (« mes classes
+habituelles »), sans aucun effet sur les droits. Vide = on voit la liste
+complète via `liste_classes()`. Chaque enseignant règle les siens avec
+`definir_mes_classes()`.
+
+Un enseignant peut être administrateur : même compte, rôle `admin`, et il
+garde toutes les capacités d'un prof.
+
+### Comptes enseignants
+
+`creer_prof()` · `modifier_prof()` · `desactiver_prof()` · `liste_profs()`
+
+Quatre professeurs : un formulaire de saisie suffit, pas d'import.
+
+⚠️ **Le serveur refuse de retirer le dernier administrateur actif** — rétrogradation
+comme désactivation. Sans ce verrou, une fausse manœuvre enfermerait tout le
+monde dehors et il faudrait passer par la console Supabase. Relaie le message
+d'erreur tel quel : il explique quoi faire.
+
+Prévois **au moins deux administrateurs** dans la vraie base : un seul, c'est un
+point de défaillance unique le jour où il est absent à la rentrée.
 
 ### Ce qu'il ne faut pas construire
 

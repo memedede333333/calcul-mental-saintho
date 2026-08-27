@@ -14,6 +14,7 @@
 \set ALICE '11111111-1111-1111-1111-111111111111'
 \set BOB   '22222222-2222-2222-2222-222222222222'
 \set PROF  '33333333-3333-3333-3333-333333333333'
+\set PROF2 '44444444-4444-4444-4444-444444444444'
 
 \echo '=== 1. Alice consulte son profil ==='
 set role authenticated;
@@ -227,4 +228,80 @@ do $$ begin
   perform importer_eleves('[]'::jsonb);
   raise notice 'ECHEC : un eleve a pu importer !';
 exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+reset role;
+
+\echo '=== 43. PROFS : creation de comptes ==='
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_prof('cyrille@demo.saintho.fr','Cyrille Moreau','admin','{6A,6B}')->>'message' as r1;
+select creer_prof('nouveau.prof@demo.saintho.fr','M. Nouveau','prof')->>'message' as r2;
+
+\echo '=== 44. PROFS : liste ==='
+select nom, role, actif, connecte from liste_profs();
+
+\echo '=== 45. GARDE-FOU : on ne peut pas retirer le dernier admin ==='
+do $$ declare v uuid; begin
+  -- on retrograde d abord Cyrille pour n avoir qu un seul admin
+  select id into v from profs where email='cyrille@demo.saintho.fr';
+  perform modifier_prof(v, p_role=>'prof');
+  select id into v from profs where email='prof.demo@demo.saintho.fr';
+  perform modifier_prof(v, p_role=>'prof');
+  raise notice 'ECHEC : le dernier admin a pu etre retrograde !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 46. Un prof NON admin voit toutes les classes ==='
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+select classe, eleves_actifs, est_favorite from liste_classes();
+
+\echo '=== 47. Un prof NON admin gere les eleves de TOUTE classe ==='
+select ajouter_eleve('test.crossclass@demo.saintho.fr','Test','Cross','5A')->>'ok' as autorise;
+
+\echo '=== 48. Mais il ne peut PAS creer de compte prof ==='
+do $$ begin
+  perform creer_prof('pirate@demo.saintho.fr','P','admin');
+  raise notice 'ECHEC : un prof non admin a cree un compte !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 49. Ses classes favorites ==='
+select definir_mes_classes('{5A}')->>'ok' as ok;
+select classe, est_favorite from liste_classes() where est_favorite;
+reset role;
+
+\echo '=== 50. QUI SUIS-JE : un eleve ==='
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select qui_suis_je()->>'type' as type, qui_suis_je()->'profil'->>'prenom' as prenom;
+
+\echo '=== 51. QUI SUIS-JE : un prof admin ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select qui_suis_je()->>'type' as type, qui_suis_je()->>'admin' as admin, qui_suis_je()->'profil'->>'nom' as nom;
+
+\echo '=== 52. QUI SUIS-JE : compte inconnu ==='
+select set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', false);
+select qui_suis_je()->>'type' as type, qui_suis_je()->>'message' as message;
+
+\echo '=== 53. Les profs jouent ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (enregistrer_session_prof('countdown','{7,8,9}'::smallint[],45,42,120.0,15,15)->>'points')::int as pts_prof1;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+select (enregistrer_session_prof('countdown','{13,17}'::smallint[],30,28,120.0,12,12)->>'points')::int as pts_prof2;
+
+\echo '=== 54. Classement de la salle des profs (nom complet) ==='
+select rang, nom, valeur, parties, est_moi from classement_profs('points');
+
+\echo '=== 55. Un ELEVE ne voit RIEN du classement des profs ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select count(*) as lignes_vues_par_un_eleve from classement_profs('points');
+select count(*) as sessions_profs_lues_par_un_eleve from sessions_profs;
+
+\echo '=== 56. Un ELEVE ne peut pas enregistrer une partie de prof ==='
+do $$ begin
+  perform enregistrer_session_prof('libre','{2}'::smallint[],10,10);
+  raise notice 'ECHEC : un eleve a enregistre une partie de prof !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 57. Les profs n apparaissent PAS dans les classements eleves ==='
+select count(*) as profs_dans_classement_eleves
+  from classement_progression('tout','college','tous',50)
+ where nom_affiche like '%Calcul%' or nom_affiche like '%Demonstration%';
 reset role;

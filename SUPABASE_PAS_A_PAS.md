@@ -106,7 +106,7 @@ le problème est dans la partie 2, pas dans le code.
 
 ### 3.2 — Appliquer le schéma
 
-> Applique les sept migrations de `supabase/migrations/` dans l'ordre, sur la base de dev. Ne modifie aucun fichier : applique-les telles quelles. Ensuite, liste-moi les tables créées et confirme que RLS est activé sur chacune.
+> Applique les neuf migrations de `supabase/migrations/` dans l'ordre, sur la base de dev. Ne modifie aucun fichier : applique-les telles quelles. Ensuite, liste-moi les tables créées et confirme que RLS est activé sur chacune.
 
 *Attendu :* 9 tables (dont `difficulte_operande` et `journal_admin`) — `eleves`, `profs`, `defis`, `defis_participants`,
 `sessions_jeu`, `maitrise`, `badges` — plus `difficulte_operande`. RLS activé
