@@ -146,24 +146,85 @@ select set_config('request.jwt.claim.sub', :'PROF', false);
 select table_n, eleves_verts, eleves_total, taux_maitrise
   from maitrise_classe('6A') limit 6;
 
-\echo '=== 25. Le prof voit bien sa classe ==='
+\echo '=== 25. Portee NIVEAU : tous les 6e du college ==='
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select niveau_scolaire('6A') as n1, niveau_scolaire('5A') as n2, niveau_scolaire('3B') as n3;
+select rang, nom_affiche, classe from classement_progression('semaine','niveau','decouverte',10);
+
+\echo '=== 26. Classement des classes (moyenne par eleve) ==='
+select rang, classe, eleves_actifs, eleves_total, points_moyens, est_ma_classe
+  from classement_classes('semaine');
+
+\echo '=== 27. Classement des classes, 6e uniquement ==='
+select rang, classe, points_moyens from classement_classes('semaine','6');
+
+\echo '=== 28. Le prof voit bien sa classe ==='
 select set_config('request.jwt.claim.sub', :'PROF', false);
 select count(*) as eleves_visibles_par_prof from eleves;
 select count(*) as sessions_visibles_par_prof from sessions_jeu;
 
 reset role;
 
-\echo '=== 29. Portee NIVEAU : tous les 6e du college ==='
+\echo '=== 32. Tableau d honneur : palier tous, college entier ==='
 reset role; set role authenticated;
 select set_config('request.jwt.claim.sub', :'ALICE', false);
-select niveau_scolaire('6A') as n1, niveau_scolaire('5A') as n2, niveau_scolaire('3B') as n3;
-select rang, nom_affiche, classe from classement_progression('semaine','niveau','decouverte',10);
+select rang, nom_affiche, classe, points
+  from classement_progression('tout','college','tous',10);
 
-\echo '=== 30. Classement des classes (moyenne par eleve) ==='
-select rang, classe, eleves_actifs, eleves_total, points_moyens, est_ma_classe
-  from classement_classes('semaine');
+\echo '=== 33. Comparaison : palier decouverte seul vs tous ==='
+select 'decouverte' as portee, count(*) as nb from classement_records('serie','tout','college','decouverte',50)
+union all
+select 'tous',              count(*)     from classement_records('serie','tout','college','tous',50);
+reset role;
 
-\echo '=== 31. Classement des classes, 6e uniquement ==='
-select rang, classe, points_moyens from classement_classes('semaine','6');
+\echo '=== 34. ADMIN : import de rentree ==='
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select jsonb_pretty(importer_eleves('[
+  {"email":"nouveau.eleve@demo.saintho.fr","nom":"Nouveau","prenom":"Eleve","classe":"6A"},
+  {"email":"alice.dupont@demo.saintho.fr","nom":"Dupont","prenom":"Alice","classe":"6A"},
+  {"email":"PAS-UN-EMAIL","nom":"X","prenom":"Y","classe":"6A"}
+]'::jsonb) - 'actifs_absents_du_fichier');
 
+\echo '=== 35. ADMIN : ajout a l unite ==='
+select ajouter_eleve('arrivee.novembre@demo.saintho.fr','Tardif','Marie','6B')->>'message' as resultat;
+
+\echo '=== 36. ADMIN : doublon refuse ==='
+select ajouter_eleve('arrivee.novembre@demo.saintho.fr','Tardif','Marie','6B')->>'raison' as resultat;
+
+\echo '=== 37. ADMIN : plafond de toute une classe ==='
+select definir_plafond_classe('6A', 12::smallint)->>'message' as resultat;
+
+\echo '=== 38. ADMIN : correction d email interdite apres connexion ==='
+do $$ declare v uuid; begin
+  select id into v from eleves where email='alice.dupont@demo.saintho.fr';
+  perform modifier_eleve(v, p_email=>'autre@demo.saintho.fr');
+  raise notice 'ECHEC : email change alors que l eleve s est connecte !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 39. ADMIN : desactivation conserve les resultats ==='
+do $$ declare v uuid; n int; begin
+  select id into v from eleves where email='hugo.lambert@demo.saintho.fr';
+  perform desactiver_eleve(v, 'demenagement');
+  select count(*) into n from sessions_jeu where eleve_id = v;
+  raise notice 'OK : desactive, % sessions conservees', n;
+end $$;
+
+\echo '=== 40. Eleves jamais connectes ==='
+select classe, count(*) as jamais_connectes from eleves_sans_connexion() group by classe order by classe;
+
+\echo '=== 41. Journal : qui a fait quoi ==='
+select acteur_email, action, coalesce(cible,'-') as cible from journal_admin order by id;
+
+\echo '=== 42. Un ELEVE ne peut pas administrer ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$ begin
+  perform ajouter_eleve('pirate@demo.saintho.fr','P','P','6A');
+  raise notice 'ECHEC : un eleve a pu ajouter un compte !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+do $$ begin
+  perform importer_eleves('[]'::jsonb);
+  raise notice 'ECHEC : un eleve a pu importer !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
 reset role;
