@@ -121,6 +121,7 @@ supabase/migrations/20260827080000_administration.sql Gestion des élèves + jou
 supabase/migrations/20260827090000_comptes_profs.sql  Comptes enseignants, accès à toutes les classes
 supabase/migrations/20260827100000_profs_joueurs.sql  Les profs jouent + `qui_suis_je()`
 frontend/src/api.js                             Client Supabase complet — DÉJÀ ÉCRIT
+ECRANS.md                                       Consignes écran par écran
 archive/api_gas_ancien.js                       L'ancien client, pour mémoire
 supabase/seed.sql                               Élèves fictifs (DEV uniquement)
 supabase/tests/run.sh                           Vérification de bout en bout
