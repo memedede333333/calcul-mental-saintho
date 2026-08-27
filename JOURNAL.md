@@ -56,6 +56,81 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-27 (soir) — Bascule vers la connexion Google
+
+**Fait**
+- `connexionGoogle()` ajoutée dans `api.js` (`signInWithOAuth`, fournisseur
+  Google, indice de domaine `hd=saintho.fr`).
+- ⚠️ `detectSessionInUrl` **corrigé de `false` à `true`** — il était réglé pour
+  le seul parcours par code. Laissé à `false`, la connexion Google échouait
+  silencieusement : retour sur le login, en boucle, sans message d'erreur.
+- `ECRANS.md` écran 2 réécrit, `SUPABASE_PAS_A_PAS.md` : nouvelle partie 4
+  (Google Cloud Console + Supabase), le parcours par e-mail devient la partie 5.
+
+**Décidé**
+- **Google Sign-In devient le chemin principal**, le code par e-mail un secours
+  discret. ✅ *validé par Aymeri le 27/08*
+  Motifs : les élèves utilisent déjà ce compte dans Safari pour les Google
+  Forms ; sur un iPad avec session Google ouverte c'est **une tape** au lieu de
+  six chiffres à recopier depuis l'app Mail ; et surtout **le SMTP Workspace
+  cesse d'être un préalable à la rentrée** — c'était le dernier point bloquant.
+  L'objection MDM ne tenait pas : le blocage porte sur `script.google.com`, pas
+  sur `accounts.google.com`, forcément déjà autorisé puisque les élèves ouvrent
+  leur Gmail sur ces iPads.
+- **Le mode démo est retiré**, pas conservé avec un avertissement. Les élèves
+  étant pré-inscrits, « essayer sans compte » n'est plus un cas d'usage ; et une
+  interface qui fonctionne pendant que tous les appels serveur échouent est
+  exactement le défaut qu'on cherche à éliminer. Pour une démonstration : un
+  vrai compte de la base de dev. ✅ *validé par Aymeri le 27/08*
+- **Le secours par e-mail reste masqué** derrière un drapeau tant que le SMTP
+  n'est pas configuré. Un secours qui échoue en silence est pire que pas de
+  secours. ✅ *validé par Aymeri*
+
+**Constaté**
+- L'authentification Google ne change **rien au schéma**. Le rattachement des
+  comptes se fait sur l'adresse e-mail, quel que soit le fournisseur : le
+  trigger retrouve l'élève dans la table et le relie. Aucune migration touchée.
+- La barrière d'entrée fonctionne à l'identique : une adresse absente des tables
+  obtient une session valide et accès à rien — `quiSuisJe()` renvoie `inconnu`.
+- ⚠️ **`react-router-dom` a été installé** sans que la raison soit consignée.
+  Le brief demande de ne pas ajouter de dépendance sans justification. À motiver
+  dans la prochaine entrée, ou à retirer.
+
+**Ensuite** — Configurer l'application OAuth dans Google Cloud Console (mode
+« Interne »), l'activer dans Supabase, puis coder l'écran de connexion.
+
+---
+
+
+## 2026-08-27 — Migrations appliquées, base opérationnelle
+
+**Fait**
+- 9 migrations appliquées sur `calcul-mental-dev` via MCP Supabase, dans l'ordre :
+  schema → RLS → API → difficulté → portée niveau → palier tous →
+  administration → comptes profs → profs joueurs.
+- Seed chargé : 2 profs, 8 élèves, 35 sessions, 144 entrées de maîtrise,
+  20 poids de difficulté.
+- Smoke test réussi : 10 tables RLS activé, paliers et pondérations vérifiés
+  (`poids_facile=0.41`, `poids_dur=1.13`, `poids_expert=1.68`).
+- `frontend/.env.local` créé avec URL et clé anon du projet de dev.
+- Types TypeScript générés (`frontend/src/types/database.ts`), couvrant
+  10 tables et 40+ fonctions RPC.
+- `ETAT.md` mis à jour.
+
+**Constaté**
+- Le script de test `run.sh` est conçu pour un PostgreSQL local avec `psql`
+  (metacommandes `\set`, `\gset`, `\echo`). Il ne peut pas tourner tel quel
+  via le MCP `execute_sql`. Les vérifications critiques (pondération, paliers,
+  compteurs) ont été faites par requête directe. Le test complet de bout en
+  bout nécessitera soit un PG local, soit une adaptation du script.
+
+**Ensuite**
+- Implémenter la restauration de session dans `App.jsx` (appel
+  `quiSuisJe()` au démarrage).
+- Coder les écrans de connexion et d'accueil (Lot 0 de `ECRANS.md`).
+
+---
+
 ## 2026-08-27 — Client API, administration et documentation
 
 **Fait**

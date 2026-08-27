@@ -105,6 +105,9 @@ Ensuite on suivra l'ordre de construction proposé à la fin de `ECRANS.md`.
 - **Aucune ressource chargée depuis un domaine externe.** Les iPads sont filtrés
   par MDM : héberge les polices dans le projet. La seule chose que l'application
   contacte doit être Supabase.
+- **La connexion se fait par Google** (bouton principal), le code par e-mail
+  n'est qu'un secours masqué tant que le SMTP n'est pas configuré. Voir
+  `ECRANS.md` écran 2.
 - **Les élèves ne s'inscrivent pas.** Ils sont pré-inscrits par import. Une
   adresse absente de la table `eleves` n'a accès à rien, même avec un compte
   créé. C'est la barrière d'entrée, ne la contourne pas.

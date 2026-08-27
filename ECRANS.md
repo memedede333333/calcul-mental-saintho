@@ -96,23 +96,58 @@ rechargement. Sur iPad, Safari décharge les onglets en arrière-plan. En classe
 
 ## 2. Connexion
 
-Deux étapes, sur le même écran.
+**Un bouton principal, un lien de secours.**
 
-**Étape 1 — l'adresse.** Un champ e-mail, un bouton « Recevoir mon code ».
-Appelle `demanderCode(email)`.
+### Le bouton — « Se connecter avec Google »
 
-**Étape 2 — le code.** Six cases ou un champ numérique. « Un code à 6 chiffres
-vient d'être envoyé à prenom.nom@saintho.fr. Regarde tes mails. »
-Appelle `verifierCode(email, code)`.
+En grand, au centre. Appelle `connexionGoogle()`.
 
-Prévois « Je n'ai rien reçu » qui renvoie à l'étape 1 — mais **Supabase limite à
-une demande par minute** et par adresse. Le message d'erreur le dit ; affiche-le
-plutôt que de laisser croire à une panne.
+Cette fonction **ne renvoie pas un utilisateur connecté** : elle redirige le
+navigateur vers Google. La session est récupérée au retour, et c'est le
+démarrage de l'application (écran 1) qui constate la connexion. Ne cherche pas
+à enchaîner sur `quiSuisJe()` juste après l'appel : la page aura changé.
 
-Garde le mode démo actuel si tu veux, mais **il ne doit plus jamais ouvrir de
-session locale** en cas d'erreur serveur. C'était le défaut le plus trompeur de
-l'ancienne version : une panne se transformait en connexion réussie avec de
-fausses données.
+Les élèves utilisent déjà ce compte dans Safari pour les Google Forms. Sur un
+iPad où la session Google est ouverte, c'est une tape.
+
+### Le lien de secours — masqué par défaut
+
+Sous le bouton, discret : « Je n'arrive pas à me connecter avec Google ».
+Il ouvre le parcours en deux étapes :
+
+**Étape 1** — un champ e-mail, bouton « Recevoir mon code » → `demanderCode(email)`
+**Étape 2** — « Un code à 6 chiffres a été envoyé à … » → `verifierCode(email, code)`
+
+Sur le champ du code :
+- `inputMode="numeric"`, `maxLength={6}`
+- **`autoComplete="one-time-code"`** — sur iPad, Safari propose alors le code
+  directement au-dessus du clavier. L'élève tape une fois au lieu de six.
+
+Le lien « Je n'ai rien reçu » doit être **désactivé pendant 60 secondes**, avec
+un compte à rebours visible : Supabase refuse une seconde demande avant une
+minute. Un élève qui clique et reçoit une erreur pense que c'est cassé.
+
+⚠️ **Ce secours ne fonctionne que si le SMTP Workspace est configuré**, ce qui
+n'est pas encore le cas. **Garde-le derrière un drapeau désactivable** (une
+constante en haut du fichier suffit) : un secours qui échoue silencieusement est
+pire que pas de secours.
+
+### Après une connexion réussie, quel que soit le chemin
+
+Appelle `quiSuisJe()`. ⚠️ **Traite le cas `inconnu` ici aussi**, pas seulement
+au démarrage : c'est juste après une première connexion réussie qu'il se produit
+le plus souvent — une adresse absente de la table `eleves`. Route vers le même
+écran « compte non reconnu », avec un bouton de déconnexion.
+
+### Supprimé
+
+- Le code PIN à 4 chiffres et le « première connexion 3333 »
+- Le repli en mode démo sur erreur serveur — **c'était le défaut le plus
+  dangereux** : une panne se transformait en connexion réussie avec de fausses
+  données
+- Le mode démo tout court : les élèves étant pré-inscrits, « essayer sans
+  compte » n'est plus un cas d'usage. Pour une démonstration, on utilise un vrai
+  compte de la base de dev.
 
 ## 3. Accueil élève
 

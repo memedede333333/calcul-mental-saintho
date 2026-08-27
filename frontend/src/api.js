@@ -32,9 +32,12 @@ if (!URL || !ANON) {
 
 export const supabase = createClient(URL, ANON, {
     auth: {
-        persistSession: true,      // la session survit au rechargement de page
-        autoRefreshToken: true,    // ...et à une matinée de cours
-        detectSessionInUrl: false, // on n'utilise pas les liens magiques
+        persistSession: true,     // la session survit au rechargement de page
+        autoRefreshToken: true,   // ...et à une matinée de cours
+        // ⚠️ DOIT rester à true : c'est ce qui permet de récupérer la session
+        // au retour de Google. Le mettre à false casse la connexion OAuth
+        // sans message d'erreur — on revient sur le login, en boucle.
+        detectSessionInUrl: true,
     },
 });
 
@@ -86,18 +89,68 @@ function messageLisible(error) {
 }
 
 /* ===================================================================
- * AUTHENTIFICATION — code à 6 chiffres reçu par e-mail
+ * AUTHENTIFICATION
  *
- * Surtout PAS de lien magique : sur iPad, le lien s'ouvre dans le
+ * DEUX CHEMINS, et un seul est mis en avant.
+ *
+ *   1. GOOGLE — le bouton principal. Les élèves ont tous un compte
+ *      Google scolaire, qu'ils utilisent déjà dans Safari pour les
+ *      Google Forms. Sur un iPad où la session Google est ouverte,
+ *      c'est UNE TAPE. Rien à taper, rien à attendre, aucun mail.
+ *
+ *   2. CODE PAR E-MAIL — le secours, en lien discret. Utile à la
+ *      maison sur un ordinateur sans session Google scolaire, ou en
+ *      cas de panne Google.
+ *      ⚠️ Ne fonctionne QUE si le SMTP Workspace est configuré : le
+ *      service intégré de Supabase plafonne à 2 messages/heure et
+ *      n'écrit qu'aux membres du projet. Tant que ce n'est pas fait,
+ *      garde ce lien masqué — un secours qui échoue est pire que pas
+ *      de secours.
+ *
+ * SURTOUT PAS de lien magique par e-mail : sur iPad il s'ouvre dans le
  * navigateur interne de l'app Mail, la session atterrit au mauvais
- * endroit, et l'élève reste déconnecté dans Safari sans comprendre
- * pourquoi. Le code voyage dans la tête de l'élève, aucun navigateur
- * ne peut se tromper.
+ * endroit, et l'élève reste déconnecté dans Safari. La redirection
+ * Google, elle, revient dans le MÊME navigateur — le problème ne se
+ * pose pas.
  *
- * Côté Supabase, cela suppose que le modèle d'e-mail « Magic Link »
- * utilise {{ .Token }} et non {{ .ConfirmationURL }}. Voir
- * SUPABASE_PAS_A_PAS.md, partie 4.
+ * Pour le secours, le modèle d'e-mail Supabase doit utiliser
+ * {{ .Token }} et non {{ .ConfirmationURL }}. Voir
+ * SUPABASE_PAS_A_PAS.md.
+ *
+ * DANS LES DEUX CAS, l'authentification ne donne AUCUN droit : elle
+ * prouve seulement qui est la personne. C'est la présence de son
+ * adresse dans la table `eleves` ou `profs` qui l'autorise. Une
+ * adresse inconnue obtient une session valide et accès à rien —
+ * `quiSuisJe()` renvoie alors le type `inconnu`.
  * ================================================================= */
+
+/**
+ * Connexion par le compte Google de l'établissement.
+ *
+ * `hd: 'saintho.fr'` limite le sélecteur de compte au domaine du
+ * collège : un élève connecté à son Gmail personnel sur l'iPad ne le
+ * verra pas proposé. À combiner avec l'application OAuth déclarée en
+ * mode « Interne » dans Google Cloud Console, qui ferme la porte en
+ * amont.
+ *
+ * Cette fonction NE RETOURNE PAS un utilisateur connecté : elle
+ * redirige le navigateur vers Google. La session est récupérée au
+ * retour, grâce à `detectSessionInUrl`. C'est donc `App.jsx` qui
+ * constate la connexion au montage suivant, pas cet appel.
+ */
+export async function connexionGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin,
+            queryParams: {
+                hd: 'saintho.fr',
+                prompt: 'select_account',
+            },
+        },
+    });
+    return error ? { ok: false, error: messageLisible(error) } : { ok: true };
+}
 
 /**
  * `shouldCreateUser: true` est indispensable : un élève n'existe pas
@@ -583,7 +636,8 @@ export async function journalAdmin(limite = 100) {
 
 export const api = {
     // connexion
-    demanderCode, verifierCode, seDeconnecter, sessionActive, quiSuisJe,
+    connexionGoogle, demanderCode, verifierCode,
+    seDeconnecter, sessionActive, quiSuisJe,
     // élève
     monProfil, mesTablesFaibles, changerAvatar,
     enregistrerSession, enregistrerSessionProf,

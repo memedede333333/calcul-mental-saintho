@@ -29,12 +29,14 @@ d'interface se juge à cette aune.
 | Base de données, sécurité, logique métier | ✅ 9 migrations, 57 cas de test |
 | Client API (`frontend/src/api.js`) | ✅ écrit, 28 appels RPC vérifiés |
 | Connexion MCP Supabase ↔ Antigravity | ✅ opérationnelle (OAuth) |
-| Migrations appliquées sur la base de dev | ⬜ **pas encore** |
-| `@supabase/supabase-js` installé | ⬜ **pas encore** |
-| `frontend/.env.local` | ⬜ **pas encore** |
+| Migrations appliquées sur la base de dev | ✅ 9 migrations + seed, vérifié |
+| `@supabase/supabase-js` installé | ✅ |
+| `frontend/.env.local` | ✅ (projet `lkukdlspcgqtiimvwlsd`) |
+| Types TypeScript (`database.ts`) | ✅ générés, 10 tables + 40 RPC |
 | Écrans React | ⬜ tout reste à faire |
-| Modèle d'e-mail OTP dans Supabase | ⬜ à faire par l'administrateur |
-| SMTP Google Workspace | ⬜ à faire par l'administrateur |
+| Application OAuth Google (mode Interne) | ⬜ à faire par l'administrateur |
+| Google activé dans Supabase + URLs de retour | ⬜ à faire par l'administrateur |
+| Modèle d'e-mail + SMTP (secours, non urgent) | ⬜ plus tard |
 | `*.supabase.co` autorisé dans Jamf | ⬜ à faire par l'administrateur |
 | Nom définitif de l'application | ⬜ en cours de choix |
 
@@ -69,11 +71,34 @@ s'attribuer un badge ou rejouer un défi.
 
 ### Connexion
 
-**Code à 6 chiffres par e-mail, jamais de lien magique.**
-Sur iPad, un lien s'ouvre dans le navigateur interne de l'app Mail : la session
-atterrit au mauvais endroit et l'élève reste déconnecté dans Safari sans
-comprendre. Le code voyage dans sa tête, aucun navigateur ne peut se tromper.
-Bénéfice second : aucun lien à filtrer côté MDM.
+**Google Sign-In est le chemin principal ; le code par e-mail, un secours.**
+*(Décidé le 27/08, en remplacement du tout-e-mail.)*
+Les élèves utilisent déjà leur compte Google scolaire dans Safari pour les
+Google Forms. Sur un iPad avec session Google ouverte, se connecter est **une
+tape**. Surtout, cela retire le SMTP Workspace de la liste des préalables à la
+rentrée — c'était le dernier point bloquant.
+L'objection MDM ne tenait pas : le blocage porte sur `script.google.com`, pas
+sur `accounts.google.com`, forcément autorisé puisque les élèves ouvrent leur
+Gmail sur ces iPads.
+
+**Jamais de lien magique par e-mail.**
+Sur iPad, un lien reçu par mail s'ouvre dans le navigateur interne de l'app Mail :
+la session atterrit au mauvais endroit et l'élève reste déconnecté dans Safari.
+La redirection Google, elle, revient dans le **même** navigateur — le problème
+ne se pose pas. Pour le secours par e-mail, on envoie donc un **code**, jamais
+un lien.
+
+**L'authentification n'autorise pas.**
+Google prouve qui est la personne ; c'est la présence de son adresse dans
+`eleves` ou `profs` qui lui donne accès. Une adresse inconnue obtient une session
+valide et accès à rien. La liste d'élèves reste donc indispensable — et elle
+seule porte la classe, que Google ne connaît pas.
+
+**Le mode démo est retiré.**
+Les élèves étant pré-inscrits, « essayer sans compte » n'est plus un cas
+d'usage. Et une interface qui fonctionne pendant que tous les appels serveur
+échouent est exactement le défaut qu'on élimine. Pour une démonstration : un
+vrai compte de la base de dev.
 
 **Les élèves ne s'inscrivent pas — ils sont pré-inscrits par import.**
 Une adresse absente de la table `eleves` n'a accès à rien, même avec un compte

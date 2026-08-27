@@ -143,25 +143,93 @@ presque terminé : il reste la restauration de session au démarrage.
 
 ---
 
-## Partie 4 — Le piège : code à 6 chiffres, pas lien magique
+## Partie 4 — Connexion Google (le chemin principal)
 
-**À faire à la main dans le tableau de bord. Antigravity ne peut pas.**
+**À faire dans le navigateur, une seule fois. Antigravity ne peut pas.**
 
-Par défaut, Supabase envoie un **lien magique** cliquable. Sur iPad, ce lien
-s'ouvre dans le navigateur interne de l'app Mail : la session atterrit au
-mauvais endroit et l'élève se retrouve déconnecté dans l'application. C'est le
-grand classique du mobile, et ça rendrait la connexion inutilisable en classe.
+Les élèves ont tous un compte Google scolaire qu'ils utilisent déjà dans Safari
+pour les Google Forms. Sur un iPad où la session est ouverte, se connecter
+devient **une tape** — sans mail, sans code, sans attente.
 
-### Corriger le modèle d'e-mail
+### 4.1 — Déclarer l'application dans Google Cloud Console
 
-**Authentication › Email Templates › Magic Link.**
+Sur [console.cloud.google.com](https://console.cloud.google.com), avec ton
+compte administrateur Workspace.
 
-Remplace le contenu par un texte qui utilise `{{ .Token }}` au lieu de
-`{{ .ConfirmationURL }}` :
+**a. Créer ou choisir un projet** — nommé par exemple `calcul-mental-saintho`.
+
+**b. Écran de consentement OAuth**
+*APIs et services › Écran de consentement OAuth*
+
+| Champ | Valeur |
+|---|---|
+| Type d'utilisateur | **Interne** ⚠️ |
+| Nom de l'application | Calcul Mental Saintho |
+| E-mail d'assistance | ton adresse |
+| Domaine autorisé | `saintho.fr` |
+
+⚠️ **« Interne » est le réglage important.** Il limite la connexion aux comptes
+du Workspace `saintho.fr` : un Gmail personnel ne peut même pas aller au bout du
+parcours. C'est la porte fermée en amont.
+
+**c. Créer les identifiants**
+*APIs et services › Identifiants › Créer › ID client OAuth*
+
+- Type : **Application Web**
+- URI de redirection autorisés :
+  `https://lkukdlspcgqtiimvwlsd.supabase.co/auth/v1/callback`
+
+Note l'**ID client** et le **code secret**. Le secret ne se réaffiche pas ;
+si tu le perds, on en régénère un.
+
+### 4.2 — Déclarer Google dans Supabase
+
+*Authentication › Sign In / Providers › Google* → activer, coller l'ID client et
+le code secret, enregistrer.
+
+### 4.3 — Autoriser les adresses de retour
+
+*Authentication › URL Configuration*
+
+| Champ | Valeur |
+|---|---|
+| Site URL | `https://calcul-mental-saintho.vercel.app` |
+| Redirect URLs | ajouter `http://localhost:5173/**` |
+
+⚠️ **Le `localhost` est indispensable pour développer.** Sans lui, la connexion
+échoue en local avec une erreur de redirection — et on cherche longtemps.
+
+### 4.4 — Vérifier
+
+Depuis l'application : bouton « Se connecter avec Google » → le sélecteur de
+compte n'affiche que les adresses `@saintho.fr` → retour dans l'app, connecté.
+
+---
+
+## Partie 5 — Le secours par e-mail (optionnel, plus tard)
+
+Un lien discret « Je n'arrive pas à me connecter avec Google » ouvre l'ancien
+parcours : adresse, puis code à 6 chiffres reçu par mail.
+
+⚠️ **Garde ce lien masqué tant que les deux points ci-dessous ne sont pas
+faits.** Un secours qui échoue silencieusement est pire que pas de secours.
+
+Ce n'est plus un préalable à la rentrée — c'est du confort, pour l'élève à la
+maison sur un ordinateur sans session Google scolaire, ou en cas de panne
+Google.
+
+### 5.1 — Le modèle d'e-mail : code, pas lien
+
+*Authentication › Email Templates › Magic Link*
+
+Par défaut, Supabase envoie un **lien cliquable**. Sur iPad, ce lien s'ouvre
+dans le navigateur interne de l'app Mail : la session atterrit au mauvais
+endroit et l'élève reste déconnecté dans Safari.
+
+Remplace le contenu par un texte qui utilise `{{ .Token }}` :
 
 ```html
 <h2>Ton code de connexion</h2>
-<p>Salut !</p>
 <p>Voici ton code personnel :</p>
 <p style="font-size:36px; font-weight:800; letter-spacing:10px;">{{ .Token }}</p>
 <p>Il est valable une heure. Ne le partage avec personne.</p>
@@ -169,25 +237,22 @@ Remplace le contenu par un texte qui utilise `{{ .Token }}` au lieu de
 
 C'est cette seule variable qui fait basculer du lien vers le code.
 
-### Côté application
+### 5.2 — Le SMTP Workspace
 
-Le front doit appeler `signInWithOtp()` pour l'envoi, puis `verifyOtp()` avec
-le code saisi et le type `email`. À préciser à Antigravity au Lot 0.
+Le service intégré de Supabase plafonne à **2 messages par heure** et n'écrit
+qu'aux membres du projet : aucun élève ne recevrait rien.
+
+- Compte dédié dans ton Workspace, par exemple `calcul-mental@saintho.fr`
+- Validation en deux étapes activée, puis un **mot de passe d'application**
+- Dans Supabase : `smtp.gmail.com`, port `587`, l'adresse et ce mot de passe
+- Remonter la limite d'envoi (30/heure par défaut)
+
+Contrainte connue : les élèves ne reçoivent que du domaine `saintho.fr`.
 
 ### Bon à savoir
 
 - Un code est demandable **une fois toutes les 60 secondes** par élève
 - Il expire au bout d'**une heure**
-- Réglable dans *Authentication › Sign In / Providers › Email › Email OTP expiration*
-
-### Et le SMTP
-
-Tant que tu n'as pas branché le SMTP Google Workspace, **seules les adresses
-des membres du projet Supabase reçoivent les e-mails**, à raison de 2 par
-heure. C'est suffisant pour développer et tester avec ton propre compte.
-
-Avant d'ouvrir aux élèves, il faut impérativement le vrai SMTP — voir
-`DEMARRAGE.md`.
 
 ---
 
@@ -201,5 +266,6 @@ Avant d'ouvrir aux élèves, il faut impérativement le vrai SMTP — voir
 | Installer le MCP dans Antigravity | Toi |
 | Appliquer migrations, seed, tests | Antigravity |
 | Clés du front, réécriture d'`api.js` | Antigravity |
-| Modèle d'e-mail OTP | Toi |
-| SMTP Workspace (avant la rentrée) | Toi |
+| Déclarer l'application Google (mode Interne) | Toi |
+| Activer Google dans Supabase + URLs de retour | Toi |
+| Modèle d'e-mail + SMTP (secours, plus tard) | Toi |
