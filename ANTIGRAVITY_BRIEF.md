@@ -120,6 +120,8 @@ supabase/migrations/20260826090500_palier_tous.sql    Tableau d'honneur du coll�
 supabase/migrations/20260827080000_administration.sql Gestion des élèves + journal
 supabase/migrations/20260827090000_comptes_profs.sql  Comptes enseignants, accès à toutes les classes
 supabase/migrations/20260827100000_profs_joueurs.sql  Les profs jouent + `qui_suis_je()`
+frontend/src/api.js                             Client Supabase complet — DÉJÀ ÉCRIT
+archive/api_gas_ancien.js                       L'ancien client, pour mémoire
 supabase/seed.sql                               Élèves fictifs (DEV uniquement)
 supabase/tests/run.sh                           Vérification de bout en bout
 .agents/mcp_config.json                         Connexion MCP Supabase
@@ -160,6 +162,47 @@ dans `01_scenario.sql`. C'est le seul filet de sécurité du projet.
    à la première connexion. D'où le drapeau de transaction
    `app.rattachement_en_cours`. Si tu ajoutes une écriture système sur `eleves`,
    pense à ce drapeau, sinon elle sera silencieusement annulée.
+
+---
+
+## 5ter. `api.js` est déjà écrit — ne le réécris pas
+
+`frontend/src/api.js` est fourni complet : 38 fonctions, une par action du
+serveur. Les 28 appels RPC ont été vérifiés un par un contre les migrations.
+
+**Avant toute chose :**
+
+```bash
+cd frontend && npm install @supabase/supabase-js
+```
+
+Puis crée `frontend/.env.local` avec `VITE_SUPABASE_URL` et
+`VITE_SUPABASE_ANON_KEY` (récupérables via MCP), et vérifie que ce fichier est
+ignoré par Git.
+
+Ton travail sur ce fichier consiste à **l'utiliser**, pas à le refaire. Si une
+fonction manque, ajoute-la — ne recommence pas le module.
+
+### Trois choses à ne pas casser
+
+**La file d'attente hors-ligne.** `enregistrerSession()` met la partie de côté
+dans `localStorage` quand le réseau est coupé, et `viderFile()` la rejoue au
+retour. Appelle `viderFile()` au démarrage de l'app et abonne-toi à
+`surFileChangee()` pour afficher un discret « résultats en attente d'envoi ».
+
+⚠️ Ce n'est **pas** une entorse à la règle « pas de `localStorage` pour les
+données de jeu ». C'est un tampon d'envoi : rien n'en est jamais lu pour être
+affiché. Le serveur reste seul juge des scores. Ne supprime pas ce mécanisme en
+croyant appliquer la règle.
+
+**Les messages d'erreur du serveur.** Ils sont écrits en français, pour être lus
+par un élève ou un professeur. `api.js` les relaie tels quels. Ne les remplace
+pas par « Une erreur est survenue ».
+
+**Les trois refus distincts de `rejoindreDefi()`** — `inconnu`, `ferme`,
+`deja_joue`. L'interface doit les traiter séparément : un message unique
+laisserait l'élève bloqué sans savoir s'il doit retaper le code ou passer à
+autre chose.
 
 ---
 
