@@ -262,6 +262,97 @@ Il existe et il fonctionne. Trois corrections :
   un tableau vide figerait des valeurs périmées. Utilise une ref sur le
   gestionnaire.
 
+### La saisie — modèle à cases, décidé le 28/08
+
+⚠️ **Ce modèle remplace entièrement la validation automatique précédente.**
+`estReponseExacte()`, le délai d'inactivité et la touche ✓ comme validation
+disparaissent. Ne cherche pas à concilier les deux.
+
+#### Le principe
+
+**Autant de cases que de chiffres dans la réponse.** 7 × 8 → deux cases.
+12 × 9 → trois cases. 3 × 3 → une case. Le nombre vient de **la réponse**,
+pas des tables cochées.
+
+Dès que la dernière case est remplie, le système juge. Pas de validation
+manuelle, pas de délai à régler, aucune ambiguïté sur « est-ce fini ? » —
+c'est ce point qui bloquait tout le reste.
+
+*Oui, cela indique le nombre de chiffres attendu. C'est assumé : avec les
+tables de 1 à 10, trois cases ne peuvent signifier que 100. L'indice est
+négligeable, le gain d'ergonomie ne l'est pas.*
+
+#### Quand c'est faux
+
+Les cases passent en rouge et tremblent ~200 ms, **puis se vident**.
+L'élève réécrit. Il apprend son erreur à l'instant où il la commet — c'est
+tout l'intérêt, les erreurs des collégiens étant des quasi-réussites
+(48 au lieu de 49, 55 au lieu de 56).
+
+`⌫` efface **le dernier chiffre** — il ne sert qu'à rattraper une faute de
+frappe avant que la dernière case ne soit remplie. Le retour à zéro après une
+erreur est automatique.
+
+#### Le chrono par question
+
+| Mode | Chrono question | Rattrapage |
+|---|---|---|
+| Sprint · Chrono · Montée | **3 s** | oui, dans les 3 s |
+| Sans faute | **aucun** | non, par nature |
+| Entraînement libre | **aucun** | oui, sans limite |
+
+⚠️ **Le compte à rebours part à la première touche, jamais à l'affichage.**
+Réfléchir doit rester gratuit : c'est déjà le chrono général qui punit
+l'hésitation. Une fois que l'élève commence à taper, il est engagé.
+
+Le compte à rebours **doit se voir** — une barre fine sous la question qui se
+vide. Sans elle, la question qui saute paraît arbitraire et l'élève croit à un
+bug ; avec elle, c'est une tension de jeu.
+
+En **Sans faute**, pas de chrono par question : ce mode récompense la
+précision, pas la vitesse. La première réponse complète décide, une erreur met
+fin à la partie — il n'y a donc pas de rattrapage possible, par définition.
+
+En **entraînement libre**, pas de chrono non plus, mais affiche le temps
+**après** chaque réponse (« ✓ 2,4 s ») et une moyenne en fin de partie. Jamais
+en compte à rebours pendant que l'élève cherche : ce mode existe pour qu'il n'y
+ait pas de pression.
+
+#### Ce que vaut une réponse — la règle de points
+
+| | Points | Grille |
+|---|---|---|
+| Juste du **premier coup** | **1** | 🟢 vert |
+| **Rattrapé** dans le délai | **½** | 🟡 jaune |
+| Jamais trouvé | 0 | 🔴 rouge |
+
+**⚠️ Le demi-point n'est pas un détail, c'est ce qui empêche le jeu
+d'apprendre à renoncer.** Si un rattrapage ne rapportait rien, chercher
+coûterait des secondes pour zéro point alors qu'abandonner ne coûterait rien :
+sous chrono, la meilleure stratégie deviendrait de laisser filer. Avec le demi-
+point, chercher est toujours payant, et l'automatisme reste mieux payé que le
+tâtonnement.
+
+Le calcul est **en base** (`points_session()`, migration 12). Le front envoie
+deux nombres : `score` (toutes les réussites) et `scorePremierEssai`. Il ne
+calcule aucun point lui-même.
+
+Une série (« sans faute ») se casse sur **tout premier essai raté**, y compris
+s'il est rattrapé ensuite.
+
+#### L'écran de fin doit montrer les deux chiffres
+
+> **18 / 20** du premier coup
+> *2 rattrapées au 2ᵉ essai*
+
+Sans ça l'élève se sent volé. Avec, il comprend immédiatement ce qui sépare le
+vert du jaune dans sa grille — c'est la meilleure explication qu'on puisse lui
+en donner.
+
+*(Reporté à la phase visuelle : un agencement paysage avec la question à
+gauche et le pavé à droite, pour raccourcir le trajet du doigt sur un iPad
+posé à plat.)*
+
 ## 6. Fin de partie
 
 Appelle `enregistrerSession({...})` avec, en plus du score, l'objet `maitrise` :
@@ -354,7 +445,34 @@ d'identifier. Le serveur ne renvoie de toute façon rien d'autre.
 `monProfil()` en un seul appel : profil, records, grille de maîtrise, badges.
 Supprime toutes les données en dur.
 
-La grille 15×15 est la pièce maîtresse. Sous elle, un bouton **« Réviser mes
+### ⚠️ Deux pièges dans la réponse de `monProfil()`
+
+**N'affiche JAMAIS `profil.tables_autorisees`.** C'est une colonne fossile de
+la version Google Sheets : figée à 1..10 pour tout le monde, protégée en
+écriture, jamais mise à jour. Un élève Expert ayant débloqué la table 17 y lit
+encore « 1 à 10 ». Le plafond réel est **`profil.plafond_tables`**, et lui
+seul. La base porte maintenant un commentaire SQL « OBSOLETE » sur cette
+colonne.
+
+**Le palier ne se calcule pas côté front.** `profil.palier` le donne déjà
+(`decouverte` / `confirme` / `expert`), déduit du plafond par la fonction
+`palier_de_plafond()`. Une seule définition, en base — ne la recopie pas.
+
+`records` contient aussi `points_total`, `points_semaine` et `jours_actifs_7j`.
+Et depuis la migration 10, `records.plus_haute_table` désigne une table
+**vraiment atteinte en Montée**, plus une case cochée dans un sélecteur.
+
+### La grille de maîtrise
+
+La grille est la pièce maîtresse. **Dimensionne-la sur `plafond_tables`**, pas
+sur une taille fixe : un élève de Découverte voit 10×10, un Expert jusqu'à
+20×20. Montrer 400 cases grises à un 6ᵉ, c'est lui montrer tout ce qu'il ne
+sait pas.
+
+⚠️ *À trancher* : `ALL_TABLES` s'arrête à 15 dans `logic/questions.js`, alors
+que le plafond monte à 20 et qu'il existe un badge `climb_20`. Il faut aligner
+— probablement étendre `ALL_TABLES` à 20. Signale-le si tu vois une raison de
+faire autrement. Sous elle, un bouton **« Réviser mes
 cases rouges »** qui lance une partie sur `mesTablesFaibles()`. C'est le fil
 rouge du projet : la grille n'est pas un tableau décoratif, elle pilote
 l'entraînement.

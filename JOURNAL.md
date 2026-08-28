@@ -56,6 +56,341 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-28 (2) — La saisie passe à un modèle à cases
+
+**Décidé — le modèle à cases remplace toute la validation automatique.**
+Autant de cases que de chiffres dans la réponse ; dès que la dernière est
+remplie, le système juge. C'est Aymeri qui a proposé cette solution, et elle
+dénoue le problème par le bon bout : depuis le début, tout achoppait sur
+« comment savoir que la saisie est finie ? ». Les cases y répondent, donc
+`estReponseExacte()`, le délai d'inactivité et la validation par ✓ disparaissent
+— on retire du code au lieu d'en ajouter. ✅ *validé par Aymeri le 28/08*
+
+Le nombre de cases révèle le nombre de chiffres attendu : assumé. Avec les
+tables de 1 à 10, trois cases ne peuvent signifier que 100. L'indice est
+négligeable, le gain d'ergonomie ne l'est pas.
+
+**Décidé — chrono par question de 3 s, déclenché à la première touche.**
+Jamais à l'affichage : réfléchir doit rester gratuit, l'hésitation est déjà
+punie par le chrono général. Aucun chrono par question en Sans faute (mode de
+précision, pas de vitesse) ni en entraînement libre.
+✅ *validé par Aymeri le 28/08*
+
+**Constaté — ma première règle de points créait une incitation perverse.**
+J'avais proposé que seul le premier essai rapporte. Aymeri a vu la conséquence
+que je n'avais pas vue : chercher aurait coûté des secondes pour zéro point,
+alors qu'abandonner ne coûtait rien. Sous chrono, la meilleure stratégie serait
+devenue de laisser filer — un jeu qui apprend à renoncer.
+
+**Décidé — premier coup 1 point, rattrapage ½ point, jamais trouvé 0.**
+Chercher rapporte donc toujours plus qu'abandonner, et l'automatisme reste
+mieux payé que le tâtonnement. C'est la pondération par table appliquée un cran
+plus fin. ✅ *validé par Aymeri le 28/08*
+
+**Fait — migration 12 `20260828080000_premier_essai.sql`**, écrite et testée
+sur PostgreSQL 16 : colonne `score_premier_essai` sur `sessions_jeu` et
+`sessions_profs`, fonction partagée `points_session()`, et le paramètre
+`p_score_premier_essai` qui vaut `null` par défaut — les parties mises en
+attente hors ligne par l'ancien client remontent donc sans pénalité.
+
+Suite portée à **63 cas, tous verts**. Le cas 61 vérifie explicitement
+l'ordre des points : 226 (tout du premier coup) > 180 (avec rattrapages) > 135
+(a abandonné). C'est l'incitation elle-même qui est sous test, pas seulement le
+calcul.
+
+**Corrigé — j'avais proposé 5 s en Sans faute, à tort.** Dans ce mode la
+première erreur arrête la série : il n'y a pas de rattrapage possible, donc la
+fenêtre ne servait à rien. Pas de chrono par question dans ce mode.
+
+**Ensuite** — Antigravity applique la migration et refait la saisie. Puis les
+défis.
+
+
+## 2026-08-28 — Ergonomie de la saisie sur iPad (Claude + Aymeri)
+
+**Constaté** — `shouldAutoValidate()` validait dès que la saisie comptait
+autant de chiffres que la bonne réponse. Elle attendait donc un troisième
+chiffre exactement quand le résultat dépassait 99 : un élève en déduit que
+« ça n'est pas parti » veut dire « c'est plus grand que 99 ». Indice offert,
+et distribué inégalement selon que l'élève l'a remarqué ou non.
+
+Deuxième point : `maxPossible = 225` (15 × 15) est périmé depuis le passage
+d'`ALL_TABLES` à 20 — le maximum est 400.
+
+Troisième point : en chrono, une mauvaise réponse affiche la correction
+pendant 500 ms. C'est le moment le plus utile de la partie, et il est
+illisible.
+
+**Décidé** — Validation automatique en deux temps : correspondance exacte →
+immédiat ; sinon 1 200 ms d'inactivité → la saisie part telle quelle. Ferme à
+la fois la fuite d'information et la saisie en force brute.
+✅ *validé par Aymeri le 28/08*
+
+**Décidé** — Le chronomètre ne se met **jamais** en pause pendant une
+correction : le classement chrono suppose des durées strictement égales. La
+correction passe dans une bande persistante sous la question, lisible pendant
+la question suivante. ✅ *validé par Aymeri le 28/08*
+
+**Reporté** — Agencement paysage (question à gauche, pavé à droite) : à traiter
+avec la passe visuelle, pas maintenant. ✅ *arbitré par Aymeri le 28/08*
+
+**Fait**
+- `shouldAutoValidate()` supprimée → `estReponseExacte()` (correspondance exacte,
+  aucune fuite du nombre de chiffres) + `setTimeout(submit, 1200)` dans chaque
+  composant (Practice Quiz, SprintPlay, FlawlessPlay, CountdownPlay, ClimbPlay).
+- CountdownPlay : délai erreur 250 → 800 ms ; bande persistante `lastError`
+  sous la question (« ⚠️ 7 × 8 = 56 »), lisible pendant la question suivante.
+- Practice Quiz : même bande persistante en mode chrono, délai erreur 500 → 800 ms.
+- Régression `maxPossible = 225` : le paramètre n'existe plus.
+- Build Vite 0 erreur (469 kB).
+
+**Ensuite** — Les défis.
+
+
+## 2026-08-27 — Étape 3 : Profil et Classements
+
+**Migration** `20260827120000_profil_complet.sql` — à appliquer sur Supabase (MCP non autorisé).
+- `palier_de_plafond(smallint)` : Découverte ≤ 10, Confirmé ≤ 12, Expert au-delà.
+- `mon_profil()` renvoie `{ profil, records, maitrise, badges }` en un seul appel.
+- `tables_autorisees` marquée OBSOLETE en commentaire SQL.
+
+**Fait**
+- `ALL_TABLES` → `[1..20]` dans `logic/questions.js` (aligne sur plafond max + climb_20).
+- `Profile.jsx` réécrit : `monProfil()`, grille de maîtrise dynamique (`plafond × plafond`),
+  clé normalisée via `cleFait(a, b)` (pas `${a}_${b}`), changement d'avatar via API,
+  palier en palette établissement (🌱 sky / ⭐ navy / 🏆 gold),
+  « Réviser mes cases rouges » → `mesTablesFaibles()` → Practice avec tables pré-sélectionnées,
+  cas vide géré (« Aucune case rouge — bravo ! 🎉 »).
+- `Leaderboards.jsx` réécrit : `classementProgression()`, `classementRecords()`,
+  `classementClasses()`, `classementProfs()` (si prof), 3 filtres combinables,
+  défauts : ma classe / semaine / mon palier, `est_moi` pour surlignage doré,
+  tri SQL (pas de re-tri client), noms anonymisés du serveur.
+- `App.jsx` : `tablesADemarrer` state pour naviguer vers Practice avec des tables
+  pré-sélectionnées, `goPlayWithTables()` passé à Profile, `estProf` passé à Leaderboards.
+- `Practice.jsx` : accepte `tablesInitiales` — si fourni, démarre directement le quiz.
+- Badge `climb_20` ajouté aux définitions.
+
+**Constaté**
+- Build Vite 0 erreur (468 kB).
+- MCP Supabase non autorisé — migration à appliquer manuellement.
+
+---
+
+## 2026-08-27 — Avant l'étape 3 : profil complet (Claude)
+
+**Fait** — Les trois corrections de l'étape 2 sont relues et correctes.
+`handlePlafondChange()` reconstruit bien l'objet (`setIdentite(prev => ...)`),
+pas de mutation malgré le mot employé dans le compte rendu ; `Practice.jsx`
+verrouille les tables au-delà du plafond et « Tout choisir » n'en prend que
+les débloquées.
+
+**Constaté — une colonne fossile allait fausser l'écran Profil**
+
+`mon_profil()` renvoyait `tables_autorisees`, un vestige de la version Google
+Sheets : figée à 1..10 pour tout le monde, protégée en écriture par un trigger,
+jamais mise à jour. Un élève Expert ayant débloqué la table 17 y lisait encore
+« 1 à 10 ». Un écran Profil construit dessus aurait été faux sans que personne
+ne comprenne pourquoi. Vérifié sur la base de test : Alice a `plafond_tables`
+= 12 et `tables_autorisees` = 1..10.
+
+Et il manquait à `mon_profil()` tout ce dont l'écran a besoin : plafond,
+palier, total de points.
+
+→ **Migration `20260827120000_profil_complet.sql`** : `mon_profil()` renvoie
+`plafond_tables`, `palier`, `points_total`, `points_semaine`,
+`jours_actifs_7j`. La colonne fossile est conservée (la retirer casserait les
+types générés) mais porte désormais un commentaire SQL « OBSOLETE ».
+
+Nouvelle fonction `palier_de_plafond()` : une seule définition du palier,
+partagée par le profil et les classements, au lieu d'un `case` recopié.
+
+**Décidé** — Le palier ne se saisit jamais, il se déduit du plafond débloqué :
+Découverte ≤ 10, Confirmé ≤ 12, Expert au-delà. ✅ *déjà validé*
+
+**Ensuite** — Étape 3 : `Profile.jsx` et `Leaderboards.jsx`.
+
+
+## 2026-08-27 — Corrections post-revue étape 2
+
+**Migration** `20260827110000_montee_reelle.sql` appliquée sur Supabase.
+- `enregistrer_session()` ne retient `plus_haute_table` que si `p_mode = 'climb'`.
+- Les badges `climb_*` ne sont délivrés que sur une vraie Montée.
+- La RPC renvoie `plafond_tables` dans sa réponse.
+
+**Fait**
+- `Practice.jsx` : `plusHauteTable: null` (Practice n'est jamais climb).
+- `Challenges.jsx` : `plusHauteTable` envoyé uniquement pour le mode climb, `null` pour sprint/flawless/countdown.
+- `Practice.jsx` : sélecteur de tables respecte le plafond de l'élève (`identite.profil.plafond_tables`). Tables au-dessus du plafond affichées avec 🔒 et non cliquables. Message « Débloque les tables suivantes avec la Montée des tables 🧗 ». « Tout choisir » ne sélectionne que les tables débloquées.
+- `App.jsx` : `handlePlafondChange(nouveau)` met à jour `identite.profil.plafond_tables` dans le state.
+- `Practice.jsx` et `Challenges.jsx` : après `enregistrerSession`, si la réponse contient un `plafond_tables` différent, appel de `onPlafondChange`.
+- `Challenges.jsx` (`ChallengeResults`) : après une Montée réussie, affichage « 🔓 Table X débloquée ! » avec message franc et anim-pop.
+
+**Constaté**
+- Build Vite 0 erreur (463 kB).
+- `psql` absent de la machine — les tests SQL locaux nécessitent PostgreSQL 14+. La migration a été validée par l'utilisateur sur PostgreSQL 16 (60 cas, tous verts).
+
+---
+
+## 2026-08-27 (soir) — Revue de l'étape 2 (Claude)
+
+**Fait** — Relecture de `mastery.js`, `Practice.jsx`, `Challenges.jsx` et des
+migrations concernées. Suite de tests portée à **60 cas**, tous verts sur
+PostgreSQL 16.
+
+**Constaté — trois défauts**
+
+1. **Les badges de Montée s'obtenaient sans monter.** `enregistrer_session()`
+   accordait `climb_10/12/15/20` dès que `p_plus_haute_table` atteignait le
+   seuil, quel que soit le mode. Or le front envoie la plus grande table
+   *cochée dans le sélecteur*. Un élève qui coche la table 10 en entraînement
+   libre décrochait `climb_10` sans avoir jamais joué la Montée. Même problème
+   pour la colonne `sessions_jeu.plus_haute_table`, qui alimente le classement
+   « montée » : elle enregistrait un choix de sélecteur, pas une performance.
+   → **Corrigé en base** (`20260827110000_montee_reelle.sql`) : la valeur n'est
+   retenue que si `p_mode = 'climb'`. Corrigé côté serveur et pas seulement
+   côté front — un client peut mentir, la base non. Cas de test 58 et 59.
+
+2. **`Practice.jsx` ignore le plafond de l'élève.** Le sélecteur propose les
+   15 tables ; la base refuse toute partie au-dessus du plafond. Un élève de
+   Découverte qui coche la table 12 joue vingt questions, puis voit sa partie
+   rejetée. → **À corriger côté React.** Le message d'erreur a été rendu
+   explicite au passage : « Tu n'as pas encore débloqué la table 12. Passe par
+   la Montée des tables. » Cas de test 60.
+
+3. **Le plafond débloqué ne se rafraîchit pas à l'écran.**
+   `enregistrer_session()` renvoie `plafond_tables` à jour, mais `identite`
+   n'est pas mis à jour : la table gagnée reste verrouillée jusqu'au
+   rechargement de la page. → **À corriger côté React.**
+
+**Décidé** — La Montée des tables est le seul mode qui débloque et qui décerne
+les badges de montée. Les autres modes ne « prouvent » rien sur la table jouée.
+⏳ *à valider par Aymeri*
+
+**Ensuite** — Les trois corrections ci-dessus, puis l'étape 3 (Profil et
+Classements). La vérification en navigateur reste bloquée tant que Google OAuth
+n'est pas ouvert.
+
+
+## 2026-08-27 — Étape 2 : Enregistrement des parties solo
+
+**Fait**
+- `logic/mastery.js` : ajout des fonctions de conversion pour `enregistrerSession()` :
+  `cleFait(a, b)`, `construireErreurs(wrong)`, `construireMaitrise(wrong, right)` (1 rouge, 2 jaune, 3 vert).
+- `Practice.jsx` : appel de `enregistrerSession` (ou `enregistrerSessionProf` si prof) à la fin d'une partie (modes `libre` et `countdown`).
+- `Challenges.jsx` : câblage complet de l'enregistrement pour les 4 modes de défi solo :
+  `sprint`, `flawless`, `countdown`, `climb`.
+- `Challenges.jsx` : transmission réelle des tables choisies aux sous-modes (au lieu de `[2..10]` en dur).
+- `Challenges.jsx` : pondération du tirage de questions par la maîtrise (`buildWeights`).
+- `Challenges.jsx` : correction des écouteurs clavier (utilisation d'une ref stable `onKeyRef` avec `useEffect([], ...)`) évitant fuite d'écouteurs et états périmés.
+- `Challenges.jsx` : correction de l'ordre des hooks dans `ChallengeResults` (la garde prématurée `if (!result) return null;` est placée après les hooks).
+- `Practice.jsx` & `Challenges.jsx` : célébration des nouveaux badges (`nouveaux_badges`) renvoyés par la RPC et indicateur en cas de sauvegarde dans la file d'attente hors-ligne (`enAttente: true`).
+- `Practice.jsx` & `Challenges.jsx` : confettis limités aux vraies réussites (score ≥ 70%, sprint ≤ 2 erreurs, sans faute ≥ 10, etc.), plus de déclenchement sur un échec.
+
+**Décidé**
+- Le déblocage des tables en Montée des tables (`climb`) est actif en base : franchir la table N en Montée débloque la table N+1 en entraînement.
+- Les professeurs enregistrent leurs parties dans `sessions_profs` via `enregistrerSessionProf`, étanches aux classements élèves.
+
+**Constaté**
+- Vite build passe sans aucune erreur TypeScript ou React (461 kB).
+
+**Ensuite**
+- Étape 3 : écrans Profil et Classements (`Profile.jsx`, `Leaderboards.jsx`).
+
+---
+
+## 2026-08-27 — Corrections post-revue Lot 0
+
+**Fait**
+- `App.jsx` : ajout d'un 5e état `erreur` — si la session existe mais
+  `quiSuisJe()` échoue (réseau, Supabase en panne), on affiche « Le serveur ne
+  répond pas » avec un bouton Réessayer et un bouton Se déconnecter. Avant, on
+  renvoyait au login, ce qui créait une boucle de redirection Google.
+- `App.jsx` : `viderFile()` déplacé à l'intérieur de `traiterIdentite()`, appelé
+  uniquement après que `quiSuisJe()` a répondu `eleve` ou `prof`. Avant, il
+  était dans la branche catch où il n'y avait pas de session valide.
+
+**Décidé**
+- Les 5 cas de vérification de `ECRANS.md` §1 ne sont pas testables pour
+  l'instant (OAuth Google pas configuré, comptes seed en @demo.saintho.fr).
+  Aymeri s'en occupe. On ne bloque pas dessus. ⏳
+
+**Ensuite**
+- Étape 2 : brancher `enregistrerSession()` sur les modes solo existants.
+
+---
+
+## 2026-08-27 — Revue du Lot 0 (Claude)
+
+**Fait** — Relecture de `App.jsx`, `Login.jsx`, `Home.jsx`. Conforme aux
+consignes d'`ECRANS.md` §1 et §2 : `identite` jamais aplati, cas `inconnu`
+traité sans boucle, `autoComplete="one-time-code"`, compte à rebours 60 s,
+secours OTP derrière un drapeau, `react-router-dom` retiré, aucun mode démo.
+
+**Constaté — deux défauts corrigés ou à corriger**
+
+1. `viderFile()` jetait la file quand aucune session n'était active. La boucle
+   ne distingue que « panne réseau » (on garde) de « refus » (on jette) ; or un
+   refus de permission n'est pas un refus définitif. Un iPad hors ligne dont la
+   session expire perdait ses parties en attente, en silence.
+   → **Corrigé dans `api.js`** : sortie anticipée si `getSession()` est vide.
+
+2. `App.jsx` route vers l'écran de connexion quand `quiSuisJe()` échoue. Une
+   coupure réseau en classe déconnecte donc un élève parfaitement authentifié ;
+   il clique sur Google, revient, même échec — boucle. C'est le défaut qu'on
+   s'était interdit : l'application affirme quelque chose de faux.
+   → **À corriger côté React** : cinquième état `erreur`, avec « Réessayer ».
+
+**Décidé** — Un placeholder « en construction » reste acceptable ; la règle
+« aucune donnée en dur » ne vise que les fausses données présentées comme
+vraies. ✅ *validé par Aymeri le 27/08*
+
+**Ensuite** — Les cinq cas de vérification d'`ECRANS.md` §1 ne sont pas
+testables tant que Google OAuth n'est pas configuré ET que des adresses réelles
+`@saintho.fr` ne sont pas inscrites dans `eleves` et `profs` : les comptes du
+seed (`@demo.saintho.fr`) n'existent pas chez Google, et le secours e-mail est
+désactivé. Aucun chemin de connexion ne fonctionne avant ça.
+
+
+## 2026-08-27 — Lot 0 : démarrage, connexion, accueils
+
+**Fait**
+- `App.jsx` réécrit : restauration de session au montage (`sessionActive()` →
+  `quiSuisJe()`), quatre états (`loading` / `login` / `inconnu` / `ready`),
+  `viderFile()` appelé au démarrage sans bloquer.
+- `Login.jsx` réécrit : bouton « Se connecter avec Google » en principal
+  (`connexionGoogle()`), secours OTP par e-mail en lien discret, masqué derrière
+  `SECOURS_EMAIL_ACTIF = false`. Compte à rebours 60 s sur « Redemander un code ».
+  `autoComplete="one-time-code"` sur le champ code.
+- `Home.jsx` réécrit : lit `identite.profil.prenom` (sans accent), accueil prof
+  avec placeholder « en construction », bouton Admin visible seulement si admin.
+- Spinner CSS ajouté (`.spinner` avec `@keyframes spin`), inclus dans
+  `prefers-reduced-motion`.
+- `react-router-dom` retiré de `package.json` : pas importé, pas utile avec
+  l'aiguillage par état.
+
+**Décidé**
+- `identite` stocké tel que renvoyé par `quiSuisJe()`, jamais aplati.
+  `estProf` et `estAdmin` dérivés dans `App.jsx`. Chaque écran reçoit
+  `identite` et choisit ses champs selon le type.
+- Mode démo supprimé intégralement : ni bouton, ni fallback en cas d'erreur.
+- `react-router-dom` non utilisé. L'aiguillage par état + écran courant suffit ;
+  le bouton retour de Safari créerait des états intermédiaires non gérés.
+- Cas `inconnu` traité à deux endroits : au démarrage (App.jsx) et après
+  connexion OTP (Login.jsx appelle `quiSuisJe()` puis remonte à App.jsx).
+
+**Constaté**
+- Le build produit un avertissement bénin : `Admin.jsx` importe `api.js`
+  dynamiquement alors que d'autres fichiers l'importent statiquement. Pas
+  d'impact fonctionnel.
+- Le navigateur intégré d'Antigravity n'a pas pu ouvrir l'URL locale (erreur
+  CDP). La vérification visuelle devra se faire directement dans Safari.
+
+**Ensuite**
+- Tester visuellement les 5 cas de vérification de `ECRANS.md` §1 dans Safari.
+- Étape 2 : brancher l'enregistrement des parties sur les 4 modes solo existants.
+
+---
+
 ## 2026-08-27 (soir) — Bascule vers la connexion Google
 
 **Fait**

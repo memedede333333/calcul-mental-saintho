@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ALL_TABLES, PRAISE, newQuestion, makeHint, shouldAutoValidate } from '../logic/questions';
-import { updateMastery, buildWeights } from '../logic/mastery';
+import { ALL_TABLES, PRAISE, newQuestion, makeHint, estReponseExacte } from '../logic/questions';
+import { updateMastery, buildWeights, construireErreurs, construireMaitrise } from '../logic/mastery';
+import { enregistrerSession, enregistrerSessionProf } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
 import MasteryGrid from '../components/MasteryGrid';
@@ -16,12 +17,13 @@ import MasteryGrid from '../components/MasteryGrid';
 
 const DEFAULT_TABLES = [2, 3, 4, 5];
 
-export default function Practice({ onBack }) {
-    const [phase, setPhase] = useState('setup');
-    const [picked, setPicked] = useState(DEFAULT_TABLES);
+export default function Practice({ onBack, identite, estProf, onPlafondChange, tablesInitiales }) {
+    const [phase, setPhase] = useState(tablesInitiales?.length ? 'quiz' : 'setup');
+    const [picked, setPicked] = useState(tablesInitiales?.length ? tablesInitiales : DEFAULT_TABLES);
     const [length, setLength] = useState(10);
     const [timer, setTimer] = useState(0);
     const [result, setResult] = useState(null);
+    const [serverResult, setServerResult] = useState(null);
     const [showGrid, setShowGrid] = useState(false);
     const [mastery, setMastery] = useState({});
     const [autoValidate, setAutoValidate] = useState(true);
@@ -29,8 +31,45 @@ export default function Practice({ onBack }) {
     const handleDone = useCallback((r) => {
         setMastery(prev => updateMastery(prev, r.wrong, r.right));
         setResult(r);
+        setServerResult(null);
         setPhase('results');
-    }, []);
+
+        // --- Enregistrement serveur ---
+        const mode = r.timerMode ? 'countdown' : 'libre';
+        const erreurs = construireErreurs(r.wrong);
+        const maitrise = construireMaitrise(r.wrong, r.right);
+
+        // Practice n'est jamais en mode climb — plusHauteTable = null.
+        // Envoyer Math.max(...picked) distribuerait les badges climb_*
+        // à quiconque coche la table 10 en entraînement libre.
+
+        const session = {
+            mode,
+            tables: picked,
+            nbQuestions: r.answered,
+            score: r.score,
+            erreurs,
+            dureeS: r.seconds,
+            serieMax: r.maxStreak,
+            sansFauteMax: r.maxStreak,
+            plusHauteTable: null,
+            maitrise,
+        };
+
+        const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
+        enregistrer(session).then(res => {
+            if (res.ok) {
+                setServerResult(res.data);
+                // Remonter le plafond mis à jour si la RPC l'a changé
+                const np = res.data?.plafond_tables;
+                if (np && np !== (identite?.profil?.plafond_tables || 10)) {
+                    onPlafondChange?.(np);
+                }
+            } else {
+                setServerResult({ erreur: res.error, enAttente: res.enAttente });
+            }
+        }).catch(() => {});
+    }, [picked, estProf, identite, onPlafondChange]);
 
     const start = (tables, len) => {
         setPicked(tables);
@@ -50,6 +89,7 @@ export default function Practice({ onBack }) {
                     autoValidate={autoValidate} setAutoValidate={setAutoValidate}
                     onStart={() => setPhase('quiz')}
                     onShowGrid={() => setShowGrid(true)}
+                    plafond={identite?.profil?.plafond_tables || 10}
                 />
             </>
         );
@@ -72,7 +112,8 @@ export default function Practice({ onBack }) {
     return (
         <Results
             result={result}
-            onReplay={() => setPhase('quiz')}
+            serverResult={serverResult}
+            onReplay={() => { setServerResult(null); setPhase('quiz'); }}
             onReviewErrors={(tables) => start(tables, 10)}
             onHome={onBack}
             onSetup={() => setPhase('setup')}
@@ -82,10 +123,15 @@ export default function Practice({ onBack }) {
 
 /* ===================== SETUP ===================== */
 
-function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, autoValidate, setAutoValidate, onStart, onShowGrid }) {
-    const toggle = (t) => setPicked(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
-    const all = picked.length === ALL_TABLES.length;
+function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, autoValidate, setAutoValidate, onStart, onShowGrid, plafond }) {
+    const unlocked = ALL_TABLES.filter(t => t <= plafond);
+    const toggle = (t) => {
+        if (t > plafond) return;
+        setPicked(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+    };
+    const allUnlocked = unlocked.every(t => picked.includes(t));
     const timerOn = timer > 0;
+    const hasLocked = ALL_TABLES.some(t => t > plafond);
 
     return (
         <div className="screen-enter">
@@ -95,23 +141,39 @@ function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, 
             <div className="card">
                 <h2 className="font-display" style={{ fontSize: 24, fontWeight: 800 }}>Choisis tes tables</h2>
                 <div className="chips" style={{ margin: '14px 0' }}>
-                    {ALL_TABLES.map(t => (
-                        <button
-                            key={t}
-                            className={`chip${picked.includes(t) ? ' chip--coral' : ''}`}
-                            onClick={() => toggle(t)}
-                        >
-                            {t}
-                        </button>
-                    ))}
+                    {ALL_TABLES.map(t => {
+                        const locked = t > plafond;
+                        return (
+                            <button
+                                key={t}
+                                className={`chip${picked.includes(t) ? ' chip--coral' : ''}`}
+                                style={{
+                                    opacity: locked ? 0.4 : 1,
+                                    cursor: locked ? 'not-allowed' : 'pointer',
+                                }}
+                                onClick={() => toggle(t)}
+                                title={locked ? 'Débloque en Montée des tables' : ''}
+                            >
+                                {locked ? `🔒 ${t}` : t}
+                            </button>
+                        );
+                    })}
                 </div>
                 <button
                     className="btn btn--ghost"
                     style={{ fontSize: 15, padding: '10px 16px' }}
-                    onClick={() => setPicked(all ? [] : [...ALL_TABLES])}
+                    onClick={() => setPicked(allUnlocked ? [] : [...unlocked])}
                 >
-                    {all ? 'Tout décocher' : 'Tout choisir'}
+                    {allUnlocked ? 'Tout décocher' : 'Tout choisir'}
                 </button>
+                {hasLocked && (
+                    <p style={{
+                        textAlign: 'center', fontSize: 13, color: 'var(--text-soft)',
+                        fontWeight: 600, marginTop: 8,
+                    }}>
+                        Débloque les tables suivantes avec la Montée des tables 🧗
+                    </p>
+                )}
             </div>
 
             {/* Nombre de questions */}
@@ -209,6 +271,7 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
     const [word, setWord] = useState('');
     const [remaining, setRemaining] = useState(timer);
     const [showHint, setShowHint] = useState(false);
+    const [lastError, setLastError] = useState(''); // Correction persistante (chrono)
     const lockRef = useRef(false);
     const wrongRef = useRef([]);
     const rightRef = useRef([]);
@@ -280,8 +343,16 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
             setSessionWeights(w => ({ ...w, [key]: Math.min((w[key] || 1) + 3, 8) }));
         }
 
-        // Transitions : 700ms normal, 250ms chrono/défi
-        const delay = hasTimer ? (ok ? 250 : 500) : (ok ? 700 : 1500);
+        // Transitions : 700ms normal, 250ms bon / 800ms erreur en chrono
+        const delay = hasTimer ? (ok ? 250 : 800) : (ok ? 700 : 1500);
+
+        // En chrono, la correction persiste sous la question suivante
+        if (hasTimer && !ok) {
+            setLastError(`⚠️ ${q.a} × ${q.b} = ${q.answer}`);
+        } else if (hasTimer && ok) {
+            // Bonne réponse : on ne touche pas à lastError,
+            // il reste affiché jusqu'à la prochaine erreur
+        }
         setTimeout(() => {
             if (timedOut.current) return;
             lockRef.current = false;
@@ -299,12 +370,12 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
         }, delay);
     }, [input, q, answered, endless, length, score, maxStreak, streak, tables, sessionWeights, onDone, hasTimer]);
 
-    // Auto-validation intelligente
+    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
     useEffect(() => {
         if (!autoValidate || fb !== 'idle' || lockRef.current || !input) return;
-        if (shouldAutoValidate(input, q.answer)) {
-            submit();
-        }
+        if (estReponseExacte(input, q.answer)) { submit(); return; }
+        const id = setTimeout(submit, 1200);
+        return () => clearTimeout(id);
     }, [input, autoValidate, q.answer, fb, submit]);
 
     const press = (d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
@@ -398,6 +469,16 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
                 )}
             </div>
 
+            {/* Correction persistante en chrono — l'élève la lit à son rythme */}
+            {hasTimer && lastError && (
+                <div style={{
+                    textAlign: 'center', fontSize: 14, fontWeight: 700,
+                    color: 'var(--coral-dk)', padding: '6px 0', marginBottom: 4,
+                }}>
+                    {lastError}
+                </div>
+            )}
+
             {/* Pavé numérique */}
             <Keypad
                 onPress={press}
@@ -429,7 +510,7 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
 
 /* ===================== RESULTS ===================== */
 
-function Results({ result, onReplay, onReviewErrors, onHome, onSetup }) {
+function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSetup }) {
     if (!result) return null;
     const { score, answered, maxStreak, wrong, seconds, timerMode } = result;
     const pct = answered ? Math.round((score / answered) * 100) : 0;
@@ -440,15 +521,19 @@ function Results({ result, onReplay, onReviewErrors, onHome, onSetup }) {
                 : 'On retente ? Tu vas y arriver !';
     const wrongTables = [...new Set(wrong.map(w => w.a))].sort((a, b) => a - b);
 
-    // Confetti sur 3 étoiles
+    // Badges renvoyés par le serveur
+    const badges = serverResult?.nouveaux_badges || [];
+    const enAttente = serverResult?.enAttente;
+
+    // Confettis uniquement si réussite (≥ 70%)
     useEffect(() => {
-        if (stars >= 3) {
+        if (pct >= 70) {
             import('canvas-confetti').then(mod => {
                 const fire = mod.default;
                 fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#C9A227', '#4DA8DA', '#00C9A7', '#FF5A5F'] });
             }).catch(() => { });
         }
-    }, [stars]);
+    }, [pct]);
 
     return (
         <div className="screen-enter">
@@ -505,6 +590,35 @@ function Results({ result, onReplay, onReviewErrors, onHome, onSetup }) {
                             </div>
                         ))}
                     </div>
+                )}
+                {/* Badges débloqués */}
+                {badges.length > 0 && (
+                    <div style={{
+                        textAlign: 'center', background: 'linear-gradient(135deg, #FFF8E1, #FFF0C0)',
+                        borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16,
+                        border: '2px solid var(--gold)',
+                    }}>
+                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--gold)' }}>
+                            🏅 Nouveau{badges.length > 1 ? 'x' : ''} badge{badges.length > 1 ? 's' : ''} !
+                        </p>
+                        {badges.map((b, i) => (
+                            <div key={i} className="anim-pop" style={{
+                                fontSize: 18, fontWeight: 700, marginBottom: 4,
+                            }}>
+                                {b.emoji || '🏅'} {b.nom || b}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Partie sauvegardée hors-ligne */}
+                {enAttente && (
+                    <p style={{
+                        fontSize: 13, color: 'var(--text-soft)', fontWeight: 600,
+                        textAlign: 'center', marginBottom: 14,
+                    }}>
+                        📡 Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
+                    </p>
                 )}
 
                 {/* Boutons d'action */}

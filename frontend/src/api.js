@@ -355,6 +355,13 @@ export async function viderFile() {
     let f = lireFile();
     if (!f.length) return { ok: true, envoyees: 0 };
 
+    // ⚠️ GARDE-FOU : sans session, chaque RPC est refusée pour cause de
+    // permission — et un refus de permission n'est PAS une panne réseau.
+    // La boucle ci-dessous jetterait alors les parties une par une, en
+    // silence. On sort avant : la file attend la prochaine connexion.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess?.session) return { ok: true, envoyees: 0, restantes: f.length };
+
     let envoyees = 0;
     while (f.length) {
         const { error } = await supabase.rpc(f[0].fonction, f[0].params);

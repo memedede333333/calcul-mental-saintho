@@ -1,88 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import branding from '../branding';
+import { connexionGoogle, demanderCode, verifierCode, quiSuisJe } from '../api';
+
+/**
+ * Passer à true quand le SMTP Workspace sera configuré.
+ * Tant que false, le lien de secours par e-mail n'apparaît pas.
+ */
+const SECOURS_EMAIL_ACTIF = false;
 
 /**
  * Login — Écran de connexion
- * Flux :
- * 1. Première connexion : email + 3333 → reçoit un nouveau code par mail
- * 2. Connexions suivantes : email + code personnel
- * 3. Oublié ? → renvoi par mail
- * 4. Mode démo sans compte
+ *
+ * Trois états :
+ *   'principal'  →  bouton Google + lien de secours (si SMTP configuré)
+ *   'email'      →  secours OTP : saisie de l'adresse e-mail
+ *   'code'       →  secours OTP : saisie du code à 6 chiffres
+ *
+ * Après connexion réussie (Google ou OTP), on appelle quiSuisJe()
+ * et on remonte le résultat à App.jsx via onIdentite(data).
+ * Le cas 'inconnu' est traité par App.jsx, pas ici.
  */
-export default function Login({ onLogin }) {
+export default function Login({ onIdentite }) {
+    const [etape, setEtape] = useState('principal');
     const [email, setEmail] = useState('');
-    const [pin, setPin] = useState('');
+    const [code, setCode] = useState('');
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const [logoError, setLogoError] = useState(false);
-    const [showForgot, setShowForgot] = useState(false);
-    const [forgotEmail, setForgotEmail] = useState('');
-    const [forgotLoading, setForgotLoading] = useState(false);
-    const [forgotMsg, setForgotMsg] = useState('');
 
-    // ---- Connexion ----
-    const handleLogin = async (e) => {
+    // Compte à rebours pour "Redemander un code"
+    const [cooldown, setCooldown] = useState(0);
+    const cooldownRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (cooldownRef.current) clearInterval(cooldownRef.current);
+        };
+    }, []);
+
+    function demarrerCooldown() {
+        setCooldown(60);
+        if (cooldownRef.current) clearInterval(cooldownRef.current);
+        cooldownRef.current = setInterval(() => {
+            setCooldown(prev => {
+                if (prev <= 1) {
+                    clearInterval(cooldownRef.current);
+                    cooldownRef.current = null;
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }
+
+    // ---- Connexion Google ----
+    const handleGoogle = async () => {
+        setError('');
+        setLoading(true);
+        const res = await connexionGoogle();
+        // Si erreur (rare : navigateur bloque le popup, etc.)
+        if (!res.ok) {
+            setError(res.error);
+            setLoading(false);
+        }
+        // Si ok : la page redirige, on ne revient pas ici
+    };
+
+    // ---- Secours OTP : demander un code ----
+    const handleDemanderCode = async (e) => {
         e.preventDefault();
-        if (!email.trim() || !pin.trim()) {
-            setError('Entre ton email et ton code.');
+        const emailTrimme = email.trim();
+        if (!emailTrimme) {
+            setError('Entre ton adresse e-mail scolaire.');
             return;
         }
         setLoading(true);
         setError('');
-        setSuccess('');
 
-        try {
-            const { api, setSessionToken } = await import('../api.js');
-            const result = await api.loginPin(email.trim(), pin.trim());
-            if (result.ok) {
-                setSessionToken(result.data.sessionToken);
-
-                // Première connexion ? Afficher le message avant de continuer
-                if (result.data.firstLogin) {
-                    setSuccess(result.data.message);
-                    setLoading(false);
-                    // Connexion auto après 3 secondes
-                    setTimeout(() => onLogin(result.data.profil), 3000);
-                    return;
-                }
-
-                onLogin(result.data.profil);
-            } else {
-                setError(result.error || 'Code incorrect.');
-            }
-        } catch {
-            // Mode démo — connexion locale directe (serveur non dispo)
-            onLogin({
-                id: 'demo',
-                email: email.trim(),
-                nom: email.split('@')[0].split('.').pop() || 'Demo',
-                prénom: email.split('@')[0].split('.')[0] || 'Élève',
-                classe: '6A',
-                avatar_emoji: '🎯',
-                tables_autorisees: '1-15',
-            });
-        }
+        const res = await demanderCode(emailTrimme);
         setLoading(false);
+
+        if (res.ok) {
+            setEtape('code');
+            setCode('');
+            demarrerCooldown();
+        } else {
+            setError(res.error);
+        }
     };
 
-    // ---- Mot de passe oublié ----
-    const handleForgot = async () => {
-        if (!forgotEmail.trim()) {
-            setForgotMsg('Entre ton email scolaire.');
+    // ---- Secours OTP : vérifier le code ----
+    const handleVerifierCode = async (e) => {
+        e.preventDefault();
+        const codeTrimme = code.trim();
+        if (codeTrimme.length < 6) {
+            setError('Le code contient 6 chiffres.');
             return;
         }
-        setForgotLoading(true);
-        setForgotMsg('');
-        try {
-            const { api } = await import('../api.js');
-            const result = await api.forgotPin(forgotEmail.trim());
-            setForgotMsg(result.data?.message || 'Un nouveau code a été envoyé si l\'adresse existe.');
-        } catch {
-            setForgotMsg('Vérifie ta connexion internet.');
+        setLoading(true);
+        setError('');
+
+        const res = await verifierCode(email.trim(), codeTrimme);
+        if (!res.ok) {
+            setError(res.error);
+            setLoading(false);
+            return;
         }
-        setForgotLoading(false);
+
+        // Connexion réussie → quiSuisJe
+        const qui = await quiSuisJe();
+        setLoading(false);
+
+        if (!qui.ok) {
+            setError(qui.error || 'Impossible de charger ton profil.');
+            return;
+        }
+
+        // Remonter à App.jsx — y compris le cas 'inconnu'
+        onIdentite(qui.data);
     };
+
+    // ---- Redemander un code ----
+    const handleRedemander = async () => {
+        if (cooldown > 0) return;
+        setLoading(true);
+        setError('');
+        const res = await demanderCode(email.trim());
+        setLoading(false);
+        if (res.ok) {
+            demarrerCooldown();
+        } else {
+            setError(res.error);
+        }
+    };
+
+    // ====================== RENDU ======================
 
     return (
         <div className="screen-enter" style={{ paddingTop: 32 }}>
@@ -92,190 +144,293 @@ export default function Login({ onLogin }) {
                     <img
                         src={branding.logoPath}
                         alt={branding.appName}
-                        style={{ width: 80, height: 80, borderRadius: 16, objectFit: 'contain', marginBottom: 12 }}
+                        style={{
+                            width: 80, height: 80, borderRadius: 16,
+                            objectFit: 'contain', marginBottom: 12,
+                        }}
                         onError={() => setLogoError(true)}
                     />
                 ) : (
                     <div style={{
-                        width: 80, height: 80, borderRadius: 16, margin: '0 auto 12px',
+                        width: 80, height: 80, borderRadius: 16,
+                        margin: '0 auto 12px',
                         background: 'linear-gradient(135deg, var(--navy), var(--navy-mid))',
-                        color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, letterSpacing: 2
+                        color: 'var(--gold)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontFamily: 'var(--font-display)', fontWeight: 800,
+                        fontSize: 24, letterSpacing: 2,
                     }}>
                         {branding.monogram}
                     </div>
                 )}
                 <h1 className="font-display" style={{
                     fontSize: 'clamp(24px, 7vw, 34px)', fontWeight: 800,
-                    color: 'var(--navy)', letterSpacing: -0.5, lineHeight: 1.1
+                    color: 'var(--navy)', letterSpacing: -0.5, lineHeight: 1.1,
                 }}>
                     {branding.appName}
                 </h1>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14, marginTop: 4 }}>
+                <p style={{
+                    color: 'var(--text-soft)', fontWeight: 700,
+                    fontSize: 14, marginTop: 4,
+                }}>
                     {branding.baseline}
                 </p>
             </div>
 
-            {/* Card de login */}
+            {/* Card de connexion */}
             <div className="card">
-                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, marginBottom: 16, textAlign: 'center' }}>
-                    Connexion
-                </h2>
 
-                <form onSubmit={handleLogin}>
-                    <div style={{ marginBottom: 14 }}>
-                        <label style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                            📧 Email école
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="prenom.nom@saintho.fr"
-                            autoComplete="email"
+                {/* ========== ÉTAT PRINCIPAL ========== */}
+                {etape === 'principal' && (
+                    <>
+                        <h2 className="font-display" style={{
+                            fontSize: 22, fontWeight: 800,
+                            marginBottom: 20, textAlign: 'center',
+                        }}>
+                            Connexion
+                        </h2>
+
+                        {/* Message d'erreur */}
+                        {error && <ErreurMsg>{error}</ErreurMsg>}
+
+                        {/* Bouton Google — le chemin principal */}
+                        <button
+                            className="btn btn--navy"
+                            disabled={loading}
+                            onClick={handleGoogle}
                             style={{
-                                width: '100%', padding: '14px 16px', borderRadius: 14,
-                                border: '2px solid var(--border)', fontSize: 16,
-                                fontFamily: 'var(--font-body)', outline: 'none',
-                                transition: 'border-color 0.2s',
+                                width: '100%', fontSize: 18, padding: 16,
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', gap: 10,
                             }}
-                            onFocus={e => e.target.style.borderColor = 'var(--sky)'}
-                            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                        />
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                            🔑 Code personnel
-                        </label>
-                        <input
-                            type="password"
-                            inputMode="numeric"
-                            maxLength={4}
-                            value={pin}
-                            onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            placeholder="• • • •"
-                            style={{
-                                width: '100%', padding: '14px 16px', borderRadius: 14,
-                                border: '2px solid var(--border)', fontSize: 24,
-                                fontFamily: 'var(--font-display)', textAlign: 'center',
-                                letterSpacing: 12, outline: 'none',
-                                transition: 'border-color 0.2s',
-                            }}
-                            onFocus={e => e.target.style.borderColor = 'var(--gold)'}
-                            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                        />
-                    </div>
+                        >
+                            {loading ? (
+                                '⏳ Redirection…'
+                            ) : (
+                                <>
+                                    <GoogleIcon />
+                                    Se connecter avec Google
+                                </>
+                            )}
+                        </button>
 
-                    {/* Info première connexion */}
-                    <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, textAlign: 'center', marginBottom: 14 }}>
-                        Première connexion ? Utilise le code <b style={{ color: 'var(--navy)' }}>3333</b>
-                    </p>
-
-                    {/* Messages */}
-                    {error && (
                         <p style={{
-                            color: 'var(--coral)', fontWeight: 700, fontSize: 14,
-                            textAlign: 'center', marginBottom: 14,
-                            background: '#FFF0F0', borderRadius: 12, padding: '10px 14px'
+                            fontSize: 12, color: 'var(--text-soft)',
+                            fontWeight: 600, textAlign: 'center', marginTop: 12,
                         }}>
-                            {error}
+                            Utilise ton compte <b style={{ color: 'var(--navy)' }}>@saintho.fr</b>
                         </p>
-                    )}
 
-                    {success && (
-                        <div style={{
-                            fontWeight: 700, fontSize: 14,
-                            textAlign: 'center', marginBottom: 14,
-                            background: '#E8FFF0', borderRadius: 12, padding: '14px',
-                            color: 'var(--mint-dk)', border: '1px solid var(--mint)',
-                        }}>
-                            <span style={{ fontSize: 28, display: 'block', marginBottom: 6 }}>📧✅</span>
-                            {success}
-                        </div>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="btn btn--navy"
-                        disabled={loading}
-                        style={{ width: '100%', fontSize: 20, padding: 16 }}
-                    >
-                        {loading ? '⏳ Connexion...' : 'Se connecter'}
-                    </button>
-                </form>
-
-                {/* Mot de passe oublié */}
-                <div style={{ textAlign: 'center', marginTop: 14 }}>
-                    <button
-                        style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'var(--sky-dk)', fontWeight: 700, fontSize: 14,
-                            textDecoration: 'underline',
-                        }}
-                        onClick={() => { setShowForgot(!showForgot); setForgotMsg(''); }}
-                    >
-                        J'ai oublié mon code
-                    </button>
-                </div>
-
-                {showForgot && (
-                    <div style={{
-                        marginTop: 14, background: 'var(--surface-alt)', borderRadius: 16, padding: 16,
-                    }}>
-                        <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                            Entre ton email scolaire. Un nouveau code te sera envoyé par mail.
-                        </p>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <input
-                                type="email"
-                                value={forgotEmail}
-                                onChange={e => setForgotEmail(e.target.value)}
-                                placeholder="prenom.nom@saintho.fr"
-                                style={{
-                                    flex: 1, padding: '10px 14px', borderRadius: 12,
-                                    border: '2px solid var(--border)', fontSize: 14,
-                                    fontFamily: 'var(--font-body)', outline: 'none',
-                                }}
-                            />
-                            <button
-                                className="btn btn--sky"
-                                disabled={forgotLoading}
-                                style={{ fontSize: 13, padding: '10px 16px', whiteSpace: 'nowrap' }}
-                                onClick={handleForgot}
-                            >
-                                {forgotLoading ? '⏳' : '📧 Envoyer'}
-                            </button>
-                        </div>
-                        {forgotMsg && (
-                            <p style={{
-                                fontSize: 13, fontWeight: 700, textAlign: 'center', marginTop: 10,
-                                color: 'var(--mint-dk)',
-                            }}>
-                                {forgotMsg}
-                            </p>
+                        {/* Lien de secours — uniquement si SMTP configuré */}
+                        {SECOURS_EMAIL_ACTIF && (
+                            <div style={{ textAlign: 'center', marginTop: 20 }}>
+                                <button
+                                    style={{
+                                        background: 'none', border: 'none',
+                                        cursor: 'pointer', color: 'var(--text-soft)',
+                                        fontWeight: 600, fontSize: 13,
+                                        textDecoration: 'underline',
+                                    }}
+                                    onClick={() => {
+                                        setEtape('email');
+                                        setError('');
+                                    }}
+                                >
+                                    Je n'arrive pas à me connecter avec Google
+                                </button>
+                            </div>
                         )}
-                    </div>
+                    </>
                 )}
 
-                {/* Mode démo */}
-                <div style={{ marginTop: 20, textAlign: 'center' }}>
-                    <button
-                        className="btn btn--ghost"
-                        style={{ fontSize: 14, padding: '10px 20px' }}
-                        onClick={() => onLogin({
-                            id: 'demo',
-                            email: 'demo@saintho.fr',
-                            nom: 'Démo',
-                            prénom: 'Élève',
-                            classe: '6A',
-                            avatar_emoji: '🎯',
-                            tables_autorisees: '1-15',
-                        })}
-                    >
-                        🎮 Mode démo (sans compte)
-                    </button>
-                </div>
+                {/* ========== SECOURS : SAISIE EMAIL ========== */}
+                {etape === 'email' && (
+                    <>
+                        <h2 className="font-display" style={{
+                            fontSize: 20, fontWeight: 800,
+                            marginBottom: 16, textAlign: 'center',
+                        }}>
+                            Connexion par e-mail
+                        </h2>
+
+                        {error && <ErreurMsg>{error}</ErreurMsg>}
+
+                        <form onSubmit={handleDemanderCode}>
+                            <div style={{ marginBottom: 14 }}>
+                                <label style={{
+                                    fontWeight: 700, fontSize: 14,
+                                    color: 'var(--text-soft)',
+                                    display: 'block', marginBottom: 6,
+                                }}>
+                                    📧 Adresse e-mail scolaire
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    placeholder="prenom.nom@saintho.fr"
+                                    autoComplete="email"
+                                    autoFocus
+                                    style={champStyle}
+                                    onFocus={e => e.target.style.borderColor = 'var(--sky)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn--navy"
+                                disabled={loading}
+                                style={{ width: '100%', fontSize: 17, padding: 14 }}
+                            >
+                                {loading ? '⏳ Envoi…' : '📧 Recevoir mon code'}
+                            </button>
+                        </form>
+
+                        <div style={{ textAlign: 'center', marginTop: 14 }}>
+                            <button
+                                style={lienStyle}
+                                onClick={() => {
+                                    setEtape('principal');
+                                    setError('');
+                                }}
+                            >
+                                ← Retour à la connexion Google
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* ========== SECOURS : SAISIE CODE 6 CHIFFRES ========== */}
+                {etape === 'code' && (
+                    <>
+                        <h2 className="font-display" style={{
+                            fontSize: 20, fontWeight: 800,
+                            marginBottom: 8, textAlign: 'center',
+                        }}>
+                            Vérifie tes mails
+                        </h2>
+
+                        <p style={{
+                            fontSize: 14, color: 'var(--text-soft)',
+                            fontWeight: 600, textAlign: 'center',
+                            marginBottom: 16, lineHeight: 1.4,
+                        }}>
+                            Un code à 6 chiffres a été envoyé à{' '}
+                            <b style={{ color: 'var(--navy)' }}>{email.trim()}</b>
+                        </p>
+
+                        {error && <ErreurMsg>{error}</ErreurMsg>}
+
+                        <form onSubmit={handleVerifierCode}>
+                            <div style={{ marginBottom: 14 }}>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    autoComplete="one-time-code"
+                                    value={code}
+                                    onChange={e => setCode(
+                                        e.target.value.replace(/\D/g, '').slice(0, 6)
+                                    )}
+                                    placeholder="• • • • • •"
+                                    autoFocus
+                                    style={{
+                                        ...champStyle,
+                                        fontSize: 28, textAlign: 'center',
+                                        letterSpacing: 10,
+                                        fontFamily: 'var(--font-display)',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = 'var(--gold)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn--navy"
+                                disabled={loading}
+                                style={{ width: '100%', fontSize: 17, padding: 14 }}
+                            >
+                                {loading ? '⏳ Vérification…' : 'Valider'}
+                            </button>
+                        </form>
+
+                        {/* Redemander un code — avec cooldown */}
+                        <div style={{
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', gap: 8, marginTop: 14,
+                        }}>
+                            <button
+                                style={{
+                                    ...lienStyle,
+                                    opacity: cooldown > 0 ? 0.5 : 1,
+                                    cursor: cooldown > 0 ? 'default' : 'pointer',
+                                }}
+                                disabled={cooldown > 0}
+                                onClick={handleRedemander}
+                            >
+                                {cooldown > 0
+                                    ? `Redemander un code (${cooldown}s)`
+                                    : 'Je n\'ai rien reçu — redemander'}
+                            </button>
+
+                            <button
+                                style={lienStyle}
+                                onClick={() => {
+                                    setEtape('email');
+                                    setCode('');
+                                    setError('');
+                                }}
+                            >
+                                Changer d'adresse
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
 }
+
+// ====================== Composants utilitaires ======================
+
+function ErreurMsg({ children }) {
+    return (
+        <p style={{
+            color: 'var(--coral)', fontWeight: 700, fontSize: 14,
+            textAlign: 'center', marginBottom: 14,
+            background: 'var(--coral-bg, #FFF0F0)', borderRadius: 12,
+            padding: '10px 14px',
+        }}>
+            {children}
+        </p>
+    );
+}
+
+/** Icône Google simplifiée en SVG inline — aucune dépendance externe */
+function GoogleIcon() {
+    return (
+        <svg width="20" height="20" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+    );
+}
+
+// ====================== Styles partagés ======================
+
+const champStyle = {
+    width: '100%', padding: '14px 16px', borderRadius: 14,
+    border: '2px solid var(--border)', fontSize: 16,
+    fontFamily: 'var(--font-body)', outline: 'none',
+    transition: 'border-color 0.2s',
+};
+
+const lienStyle = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: 'var(--text-soft)', fontWeight: 600, fontSize: 13,
+    textDecoration: 'underline',
+};

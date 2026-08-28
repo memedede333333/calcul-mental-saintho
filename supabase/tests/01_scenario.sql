@@ -304,4 +304,71 @@ exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
 select count(*) as profs_dans_classement_eleves
   from classement_progression('tout','college','tous',50)
  where nom_affiche like '%Calcul%' or nom_affiche like '%Demonstration%';
+
+-- =====================================================================
+-- 58-60. La Montee des tables ne se gagne qu'en Montee
+-- Regression : les badges climb_* etaient accordes des que la plus
+-- grande table COCHEE atteignait le seuil, quel que soit le mode.
+-- =====================================================================
+-- Remise a zero des badges de montee : impossible pour un eleve
+-- (aucun droit de suppression sur `badges`), on passe par le proprietaire.
+reset role;
+delete from badges where badge_id like 'climb_%'
+  and eleve_id = (select id from eleves where email = 'alice.dupont@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-1111-1111-111111111111', false);
+
+\echo '=== 58. Entrainement libre en cochant la table 10 : AUCUN badge de montee ==='
+select enregistrer_session('libre','{9,10}'::smallint[],10,10,
+       '[]'::jsonb,30,10,10,10::smallint,'{}'::jsonb,null) -> 'nouveaux_badges' as doit_etre_vide;
+select case when count(*) = 0 then 'OK : aucun badge de montee'
+            else 'ECHEC : badge de montee accorde en mode libre' end as verdict
+  from badges where eleve_id = eleve_courant() and badge_id like 'climb_%';
+select case when plus_haute_table is null then 'OK : colonne non renseignee hors Montee'
+            else 'ECHEC : la table cochee a ete enregistree comme atteinte' end as verdict
+  from sessions_jeu where eleve_id = eleve_courant() order by cree_le desc limit 1;
+
+\echo '=== 59. Vraie Montee jusqu a la table 10 : le badge est accorde ==='
+select enregistrer_session('climb','{2,3,4,5,6,7,8,9,10}'::smallint[],30,30,
+       '[]'::jsonb,90,30,30,10::smallint,'{}'::jsonb,null) -> 'nouveaux_badges' as doit_contenir_climb_10;
+select case when count(*) = 1 then 'OK : badge climb_10 accorde'
+            else 'ECHEC : badge de montee manquant' end as verdict
+  from badges where eleve_id = eleve_courant() and badge_id = 'climb_10';
+
+\echo '=== 60. Tables au-dessus du plafond : refus avec un message lisible ==='
+do $$ begin
+  perform enregistrer_session('libre','{14}'::smallint[],5,5);
+  raise notice 'ECHEC : partie acceptee sur une table verrouillee';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+-- =====================================================================
+-- 61-63. Premier coup / rattrapage : chercher doit toujours payer
+-- Regression a empecher : si un rattrapage ne vaut rien, abandonner
+-- devient la meilleure strategie sous chrono.
+-- =====================================================================
+\echo '=== 61. 20/20 du premier coup > 20/20 avec 8 rattrapages > 12/20 sans rattrapage ==='
+with a as (select (enregistrer_session('libre','{7,8}'::smallint[],20,20,
+                    '[]'::jsonb,60,20,20,null,'{}'::jsonb,null,20)->>'points')::int as p),
+     b as (select (enregistrer_session('libre','{7,8}'::smallint[],20,20,
+                    '[]'::jsonb,60,20,20,null,'{}'::jsonb,null,12)->>'points')::int as p),
+     c as (select (enregistrer_session('libre','{7,8}'::smallint[],20,12,
+                    '[]'::jsonb,60,12,12,null,'{}'::jsonb,null,12)->>'points')::int as p)
+select a.p as tout_premier_coup, b.p as avec_rattrapages, c.p as a_abandonne,
+       case when a.p > b.p and b.p > c.p
+            then 'OK : chercher paye plus qu abandonner'
+            else 'ECHEC : mauvaise incitation' end as verdict
+  from a, b, c;
+
+\echo '=== 62. Ancien client hors ligne : parametre absent, aucune penalite ==='
+select case when (enregistrer_session('libre','{7,8}'::smallint[],10,10)->>'premier_essai')::int = 10
+            then 'OK : traite comme premier coup'
+            else 'ECHEC : ancienne partie penalisee' end as verdict;
+
+\echo '=== 63. Un premier essai superieur au score est refuse ==='
+do $$ begin
+  perform enregistrer_session('libre','{7,8}'::smallint[],10,5,
+          '[]'::jsonb,10,0,0,null,'{}'::jsonb,null,9);
+  raise notice 'ECHEC : premier_essai > score accepte';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
 reset role;

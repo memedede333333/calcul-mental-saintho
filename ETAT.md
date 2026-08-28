@@ -26,14 +26,17 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ 9 migrations, 57 cas de test |
+| Base de données, sécurité, logique métier | ✅ 11 migrations, 60 cas de test |
 | Client API (`frontend/src/api.js`) | ✅ écrit, 28 appels RPC vérifiés |
 | Connexion MCP Supabase ↔ Antigravity | ✅ opérationnelle (OAuth) |
-| Migrations appliquées sur la base de dev | ✅ 9 migrations + seed, vérifié |
+| Migrations appliquées sur la base de dev | ✅ 11 migrations + seed, vérifié |
 | `@supabase/supabase-js` installé | ✅ |
 | `frontend/.env.local` | ✅ (projet `lkukdlspcgqtiimvwlsd`) |
 | Types TypeScript (`database.ts`) | ✅ générés, 10 tables + 40 RPC |
-| Écrans React | ⬜ tout reste à faire |
+| Écrans React — Lot 0 (démarrage, connexion, accueils) | ✅ App.jsx, Login.jsx, Home.jsx |
+| Écrans React — Étape 2 (enregistrement des parties solo) | ✅ Practice.jsx, Challenges.jsx (libre, sprint, sans faute, chrono, montée) |
+| Écrans React — Étape 3 (profil, classements) | ✅ Profile.jsx, Leaderboards.jsx |
+| Écrans React — Étapes 4-7 (défis de classe, prof, admin) | ⬜ à faire |
 | Application OAuth Google (mode Interne) | ⬜ à faire par l'administrateur |
 | Google activé dans Supabase + URLs de retour | ⬜ à faire par l'administrateur |
 | Modèle d'e-mail + SMTP (secours, non urgent) | ⬜ plus tard |

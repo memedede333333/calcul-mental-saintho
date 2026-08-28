@@ -5,7 +5,7 @@
  */
 
 // Tables disponibles
-export const ALL_TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+export const ALL_TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 
 // Mots d'encouragement
 export const PRAISE = [
@@ -93,30 +93,13 @@ export function newQuestion(tables, prev, weights, maxMultiplier = 10) {
 }
 
 /**
- * Vérifie si la réponse saisie peut être auto-validée
- * (validation automatique intelligente)
- * 
- * Valide automatiquement quand :
- * 1. Le nombre de chiffres saisis = nombre de chiffres de la bonne réponse
- * 2. OU quand aucune réponse plausible plus longue n'existe
+ * Correspondance exacte — validation immédiate.
+ * C'est ce qui rend le jeu rapide : bonne réponse = zéro tap de plus.
+ *
+ * Ne révèle PAS le nombre de chiffres de la réponse (contrairement à
+ * l'ancienne shouldAutoValidate qui le divulguait via input.length).
+ * Le délai de 1200 ms d'inactivité est géré côté composant.
  */
-export function shouldAutoValidate(input, correctAnswer, maxPossible = 225) {
-    if (!input || input.length === 0) return false;
-    const ansStr = String(correctAnswer);
-    const inputNum = parseInt(input, 10);
-
-    // Si le nombre de chiffres saisis correspond à celui de la bonne réponse
-    if (input.length >= ansStr.length) return true;
-
-    // Si l'input actuel, même prolongé avec des chiffres, ne peut pas être un résultat valide
-    // (ex: si l'input est "3" et la réponse est 12, on attend un 2e chiffre)
-    // Mais si l'input est "7" et la réponse maximale possible est 225 (15×15),
-    // il pourrait devenir 70, 71, etc. — donc on attend.
-    const minPossibleWithMore = parseInt(input + '0', 10);
-    const maxPossibleWithMore = parseInt(input + '9'.repeat(3 - input.length), 10);
-
-    // Si même en ajoutant des chiffres, on dépasse le max possible
-    if (minPossibleWithMore > maxPossible) return true;
-
-    return false;
+export function estReponseExacte(input, correctAnswer) {
+    return input !== '' && parseInt(input, 10) === correctAnswer;
 }

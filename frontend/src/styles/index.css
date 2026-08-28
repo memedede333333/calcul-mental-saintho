@@ -628,6 +628,20 @@ input, textarea, select, button { touch-action: manipulation; }
   padding: 16px;
 }
 
+/* ── Spinner (loading screen) ─────────────────────────────────────────── */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Screen transitions ───────────────────────────────────────────────── */
 .screen-enter { animation: screen-fade 0.25s ease; }
 
@@ -669,7 +683,7 @@ input, textarea, select, button { touch-action: manipulation; }
 
 /* ── Reduced motion ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .anim-pop, .anim-shake, .screen-enter,
+  .anim-pop, .anim-shake, .screen-enter, .spinner,
   .mode-card, .btn, .key, .streak-badge--milestone {
     animation: none !important;
     transition: none !important;

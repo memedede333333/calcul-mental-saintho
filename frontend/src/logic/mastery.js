@@ -51,3 +51,53 @@ export function buildWeights(tables, mastery, maxMultiplier = 10) {
     }
     return w;
 }
+
+/* ===================================================================
+ * Fonctions de conversion pour enregistrerSession()
+ *
+ * Le serveur attend :
+ *   - erreurs : ["7_8", "6_9"] — clés normalisées (petit_grand)
+ *   - maitrise : {"7_8": 1, "6_9": 3} — 1 rouge, 2 jaune, 3 vert
+ *
+ * Les composants de quiz produisent :
+ *   - wrong : [{ a, b, answer, given }]
+ *   - right : [{ a, b }]
+ * ================================================================= */
+
+/** Clé normalisée : le plus petit d'abord. */
+export function cleFait(a, b) {
+    return `${Math.min(a, b)}_${Math.max(a, b)}`;
+}
+
+/**
+ * Construit la liste plate d'erreurs pour le serveur.
+ * Dédupliquée : une table ratée deux fois n'apparaît qu'une fois.
+ */
+export function construireErreurs(wrong) {
+    return [...new Set(wrong.map(w => cleFait(w.a, w.b)))];
+}
+
+/**
+ * Construit la map de maîtrise pour le serveur.
+ *
+ * Règle : chaque fait vu dans la partie reçoit un niveau :
+ *   - 3 (vert)   : toujours réussi
+ *   - 2 (jaune)  : réussi au moins une fois, raté au moins une fois
+ *   - 1 (rouge)  : toujours raté
+ */
+export function construireMaitrise(wrong, right) {
+    const bons = new Set();
+    const mauvais = new Set();
+
+    for (const r of right) bons.add(cleFait(r.a, r.b));
+    for (const w of wrong) mauvais.add(cleFait(w.a, w.b));
+
+    const m = {};
+    for (const k of bons) {
+        m[k] = mauvais.has(k) ? 2 : 3;   // vu en bon ET en mauvais → jaune
+    }
+    for (const k of mauvais) {
+        if (!bons.has(k)) m[k] = 1;       // jamais réussi → rouge
+    }
+    return m;
+}

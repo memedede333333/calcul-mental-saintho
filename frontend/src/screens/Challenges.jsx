@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { newQuestion, PRAISE, makeHint, ALL_TABLES } from '../logic/questions';
-import { buildWeights } from '../logic/mastery';
+import { newQuestion, PRAISE, makeHint, ALL_TABLES, estReponseExacte } from '../logic/questions';
+import { buildWeights, construireErreurs, construireMaitrise } from '../logic/mastery';
+import { enregistrerSession, enregistrerSessionProf } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
 
 /**
- * Challenges — Mode Défis (Phase 5)
+ * Challenges — Mode Défis
  * 5 types : Sprint, Sans faute, Contre-la-montre, Montée, Classe
- * Écran de sélection → configuration → jeu → résultats/podium
+ * Écran de sélection → configuration → jeu → résultats
  */
 
 const CHALLENGE_TYPES = [
@@ -28,21 +29,73 @@ const CHALLENGE_TYPES = [
     },
     {
         id: 'climb', emoji: '🧗', name: 'Montée des tables',
-        desc: 'Palier par palier, de la table 2 à 15',
+        desc: 'Palier par palier, de la table 2 à 20',
         color: '--purple',
     },
     {
         id: 'class', emoji: '👥', name: 'Défi de classe',
-        desc: 'Même questions — classement en direct',
+        desc: 'Mêmes questions — classement en direct',
         color: '--navy',
     },
 ];
 
-export default function Challenges({ onBack, user }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange }) {
     const [phase, setPhase] = useState('select'); // select | config | play | results
     const [challengeType, setChallengeType] = useState(null);
     const [joinCode, setJoinCode] = useState('');
+    const [selectedTables, setSelectedTables] = useState([2, 3, 4, 5, 6, 7, 8, 9, 10]);
     const [result, setResult] = useState(null);
+    const [serverResult, setServerResult] = useState(null);
+
+    const plafond = identite?.profil?.plafond_tables || 10;
+
+    const handleDone = useCallback((r) => {
+        setResult(r);
+        setServerResult(null);
+        setPhase('results');
+
+        // Préparation de la session pour enregistrerSession
+        const mode = challengeType?.id || 'sprint';
+        const erreurs = construireErreurs(r.wrong || []);
+        const maitrise = construireMaitrise(r.wrong || [], r.right || []);
+
+        let tables = selectedTables;
+        if (mode === 'climb') {
+            const maxT = Math.max(2, r.highestTable || 2);
+            tables = [];
+            for (let i = 2; i <= maxT; i++) tables.push(i);
+        }
+
+        const nbQuestions = r.answered || (r.score + (r.errors || 0)) || 0;
+        const score = Math.min(nbQuestions, Math.max(0, r.score ?? 0));
+
+        const session = {
+            mode,
+            tables,
+            nbQuestions,
+            score,
+            erreurs,
+            dureeS: Math.round(r.time || 0),
+            serieMax: r.maxStreak || r.streak || 0,
+            sansFauteMax: mode === 'flawless' ? (r.streak || 0) : (r.maxStreak || 0),
+            plusHauteTable: mode === 'climb' ? (r.highestTable || null) : null,
+            maitrise,
+        };
+
+        const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
+        enregistrer(session).then(res => {
+            if (res.ok) {
+                setServerResult(res.data);
+                // Remonter le plafond mis à jour si la Montée l'a changé
+                const np = res.data?.plafond_tables;
+                if (np && np !== plafond) {
+                    onPlafondChange?.(np);
+                }
+            } else {
+                setServerResult({ erreur: res.error, enAttente: res.enAttente });
+            }
+        }).catch(() => {});
+    }, [challengeType, selectedTables, estProf, plafond, onPlafondChange]);
 
     if (phase === 'select') {
         return (
@@ -59,9 +112,14 @@ export default function Challenges({ onBack, user }) {
         return (
             <ChallengeConfig
                 type={challengeType}
+                tables={selectedTables}
+                setTables={setSelectedTables}
+                plafond={plafond}
                 onBack={() => setPhase('select')}
-                onStart={() => setPhase('play')}
-                user={user}
+                onStart={(tables) => {
+                    if (tables) setSelectedTables(tables);
+                    setPhase('play');
+                }}
             />
         );
     }
@@ -70,8 +128,9 @@ export default function Challenges({ onBack, user }) {
         return (
             <ChallengePlay
                 type={challengeType}
+                tables={selectedTables}
                 onQuit={() => setPhase('select')}
-                onDone={(r) => { setResult(r); setPhase('results'); }}
+                onDone={handleDone}
             />
         );
     }
@@ -80,8 +139,9 @@ export default function Challenges({ onBack, user }) {
         <ChallengeResults
             type={challengeType}
             result={result}
-            user={user}
-            onReplay={() => setPhase('play')}
+            serverResult={serverResult}
+            ancienPlafond={plafond}
+            onReplay={() => { setServerResult(null); setPhase('play'); }}
             onHome={() => setPhase('select')}
             onBack={onBack}
         />
@@ -156,12 +216,16 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
 
 /* ===================== CONFIG ===================== */
 
-function ChallengeConfig({ type, onBack, onStart, user }) {
-    const [tables, setTables] = useState([2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    const toggle = (t) => setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
-
-    // Montée des tables : pas besoin de choisir
+function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) {
     const isClimb = type.id === 'climb';
+
+    // Tables autorisées pour ce compte
+    const availableTables = ALL_TABLES.filter(t => t <= Math.max(10, plafond));
+
+    const toggle = (t) => {
+        if (t > plafond) return;
+        setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+    };
 
     return (
         <div className="screen-enter">
@@ -183,15 +247,23 @@ function ChallengeConfig({ type, onBack, onStart, user }) {
                         Tables du défi
                     </h3>
                     <div className="chips">
-                        {ALL_TABLES.slice(0, 10).map(t => (
-                            <button
-                                key={t}
-                                className={`chip${tables.includes(t) ? ' chip--gold' : ''}`}
-                                onClick={() => toggle(t)}
-                            >
-                                {t}
-                            </button>
-                        ))}
+                        {availableTables.map(t => {
+                            const locked = t > plafond;
+                            return (
+                                <button
+                                    key={t}
+                                    className={`chip${tables.includes(t) ? ' chip--gold' : ''}`}
+                                    style={{
+                                        opacity: locked ? 0.4 : 1,
+                                        cursor: locked ? 'not-allowed' : 'pointer'
+                                    }}
+                                    onClick={() => toggle(t)}
+                                    title={locked ? 'Débloque en Montée des tables' : ''}
+                                >
+                                    {locked ? `🔒 ${t}` : t}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -203,7 +275,7 @@ function ChallengeConfig({ type, onBack, onStart, user }) {
                 </h3>
                 {type.id === 'sprint' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-                        <li>20 questions identiques pour tous</li>
+                        <li>20 questions chrono</li>
                         <li>Classement par temps total</li>
                         <li>+3 secondes de pénalité par erreur</li>
                     </ul>
@@ -226,13 +298,13 @@ function ChallengeConfig({ type, onBack, onStart, user }) {
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
                         <li>Commence à la table 2</li>
                         <li>5 questions par palier, ≥4 justes pour passer</li>
-                        <li>Monte le plus haut possible !</li>
+                        <li>Débloque les tables supérieures pour l'entraînement !</li>
                     </ul>
                 )}
                 {type.id === 'class' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
                         <li>Créé par l'enseignant</li>
-                        <li>Même questions pour toute la classe</li>
+                        <li>Mêmes questions pour toute la classe</li>
                         <li>Classement en direct</li>
                     </ul>
                 )}
@@ -242,7 +314,7 @@ function ChallengeConfig({ type, onBack, onStart, user }) {
                 className="btn btn--gold"
                 style={{ width: '100%', fontSize: 22, padding: 16 }}
                 disabled={!isClimb && tables.length === 0}
-                onClick={onStart}
+                onClick={() => onStart(tables)}
             >
                 Lancer le défi ! ⚔️
             </button>
@@ -252,20 +324,21 @@ function ChallengeConfig({ type, onBack, onStart, user }) {
 
 /* ===================== PLAY ===================== */
 
-function ChallengePlay({ type, onQuit, onDone }) {
-    // Selon le type, adapter la logique
-    if (type.id === 'sprint') return <SprintPlay onQuit={onQuit} onDone={onDone} />;
-    if (type.id === 'flawless') return <FlawlessPlay onQuit={onQuit} onDone={onDone} />;
-    if (type.id === 'countdown') return <CountdownPlay onQuit={onQuit} onDone={onDone} />;
+function ChallengePlay({ type, tables, onQuit, onDone }) {
+    const activeTables = tables && tables.length > 0 ? tables : [2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    if (type.id === 'sprint') return <SprintPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'flawless') return <FlawlessPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'countdown') return <CountdownPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
     if (type.id === 'climb') return <ClimbPlay onQuit={onQuit} onDone={onDone} />;
-    return <SprintPlay onQuit={onQuit} onDone={onDone} />; // fallback
+    return <SprintPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
 }
 
 /* --- Sprint : 20 questions, classement par temps --- */
-function SprintPlay({ onQuit, onDone }) {
-    const tables = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+function SprintPlay({ tables, onQuit, onDone }) {
     const total = 20;
-    const [q, setQ] = useState(() => newQuestion(tables, null, null));
+    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
+    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
     const [input, setInput] = useState('');
     const [answered, setAnswered] = useState(0);
     const [errors, setErrors] = useState(0);
@@ -273,6 +346,8 @@ function SprintPlay({ onQuit, onDone }) {
     const [word, setWord] = useState('');
     const lockRef = useRef(false);
     const startRef = useRef(Date.now());
+    const wrongRef = useRef([]);
+    const rightRef = useRef([]);
 
     const submit = useCallback(() => {
         if (lockRef.current || !input) return;
@@ -284,10 +359,12 @@ function SprintPlay({ onQuit, onDone }) {
         if (ok) {
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+            rightRef.current.push({ a: q.a, b: q.b });
         } else {
             setErrors(e => e + 1);
             setFb('wrong');
             setWord(`${q.a} × ${q.b} = ${q.answer}`);
+            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
         }
 
         setTimeout(() => {
@@ -295,25 +372,45 @@ function SprintPlay({ onQuit, onDone }) {
             setFb('idle'); setWord(''); setInput('');
             if (next >= total) {
                 const elapsed = (Date.now() - startRef.current) / 1000;
-                onDone({ answered: total, errors: errors + (ok ? 0 : 1), time: elapsed, score: total - (errors + (ok ? 0 : 1)) });
+                const errCount = errors + (ok ? 0 : 1);
+                onDone({
+                    answered: total,
+                    errors: errCount,
+                    time: elapsed,
+                    score: total - errCount,
+                    wrong: wrongRef.current,
+                    right: rightRef.current,
+                    maxStreak: total - errCount,
+                });
             } else {
-                setQ(prev => newQuestion(tables, prev, null));
+                setQ(prev => newQuestion(tables, prev, weights));
             }
         }, ok ? 250 : 500);
-    }, [input, q, answered, errors, onDone]);
+    }, [input, q, answered, errors, tables, weights, onDone]);
 
-    const press = d => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
-    const del = () => { if (!lockRef.current) setInput(v => v.slice(0, -1)); };
+    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current || !input) return;
+        if (estReponseExacte(input, q.answer)) { submit(); return; }
+        const id = setTimeout(submit, 1200);
+        return () => clearTimeout(id);
+    }, [input, q.answer, fb, submit]);
+
+    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
+    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
+
+    const onKeyRef = useRef();
+    onKeyRef.current = (e) => {
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') del();
+        else if (e.key === 'Enter') submit();
+    };
 
     useEffect(() => {
-        const onKey = e => {
-            if (e.key >= '0' && e.key <= '9') press(e.key);
-            else if (e.key === 'Backspace') del();
-            else if (e.key === 'Enter') submit();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
+        const handler = (e) => onKeyRef.current?.(e);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
 
     return (
         <div className="screen-enter game-zone">
@@ -341,15 +438,17 @@ function SprintPlay({ onQuit, onDone }) {
 }
 
 /* --- Sans faute : la première erreur arrête --- */
-function FlawlessPlay({ onQuit, onDone }) {
-    const tables = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const [q, setQ] = useState(() => newQuestion(tables, null, null));
+function FlawlessPlay({ tables, onQuit, onDone }) {
+    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
+    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
     const [input, setInput] = useState('');
     const [streak, setStreak] = useState(0);
     const [fb, setFb] = useState('idle');
     const [word, setWord] = useState('');
     const lockRef = useRef(false);
     const startRef = useRef(Date.now());
+    const wrongRef = useRef([]);
+    const rightRef = useRef([]);
 
     const submit = useCallback(() => {
         if (lockRef.current || !input) return;
@@ -360,33 +459,55 @@ function FlawlessPlay({ onQuit, onDone }) {
             setStreak(s => s + 1);
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+            rightRef.current.push({ a: q.a, b: q.b });
             setTimeout(() => {
                 lockRef.current = false;
                 setFb('idle'); setWord(''); setInput('');
-                setQ(prev => newQuestion(tables, prev, null));
+                setQ(prev => newQuestion(tables, prev, weights));
             }, 250);
         } else {
             setFb('wrong');
             setWord(`${q.a} × ${q.b} = ${q.answer}`);
+            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
             setTimeout(() => {
                 const elapsed = (Date.now() - startRef.current) / 1000;
-                onDone({ streak, time: elapsed, lastQuestion: `${q.a}×${q.b}` });
+                onDone({
+                    streak,
+                    score: streak,
+                    answered: streak + 1,
+                    time: elapsed,
+                    lastQuestion: `${q.a}×${q.b}`,
+                    wrong: wrongRef.current,
+                    right: rightRef.current,
+                    maxStreak: streak,
+                });
             }, 1200);
         }
-    }, [input, q, streak, onDone]);
+    }, [input, q, streak, tables, weights, onDone]);
 
-    const press = d => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
-    const del = () => { if (!lockRef.current) setInput(v => v.slice(0, -1)); };
+    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current || !input) return;
+        if (estReponseExacte(input, q.answer)) { submit(); return; }
+        const id = setTimeout(submit, 1200);
+        return () => clearTimeout(id);
+    }, [input, q.answer, fb, submit]);
+
+    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
+    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
+
+    const onKeyRef = useRef();
+    onKeyRef.current = (e) => {
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') del();
+        else if (e.key === 'Enter') submit();
+    };
 
     useEffect(() => {
-        const onKey = e => {
-            if (e.key >= '0' && e.key <= '9') press(e.key);
-            else if (e.key === 'Backspace') del();
-            else if (e.key === 'Enter') submit();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
+        const handler = (e) => onKeyRef.current?.(e);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
 
     return (
         <div className="screen-enter game-zone">
@@ -415,21 +536,28 @@ function FlawlessPlay({ onQuit, onDone }) {
 }
 
 /* --- Contre-la-montre : 2 min, max de bonnes réponses --- */
-function CountdownPlay({ onQuit, onDone }) {
-    const tables = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+function CountdownPlay({ tables, onQuit, onDone }) {
     const duration = 120;
-    const [q, setQ] = useState(() => newQuestion(tables, null, null));
+    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
+    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
     const [input, setInput] = useState('');
     const [score, setScore] = useState(0);
+    const [lastError, setLastError] = useState(''); // Correction persistante
+    const [streak, setStreak] = useState(0);
+    const [maxStreak, setMaxStreak] = useState(0);
     const [remaining, setRemaining] = useState(duration);
     const [fb, setFb] = useState('idle');
     const [word, setWord] = useState('');
     const lockRef = useRef(false);
     const scoreRef = useRef(0);
     const answeredRef = useRef(0);
+    const maxStreakRef = useRef(0);
     const timedOut = useRef(false);
+    const wrongRef = useRef([]);
+    const rightRef = useRef([]);
 
     useEffect(() => { scoreRef.current = score; }, [score]);
+    useEffect(() => { maxStreakRef.current = maxStreak; }, [maxStreak]);
 
     useEffect(() => {
         const id = setInterval(() => {
@@ -439,7 +567,14 @@ function CountdownPlay({ onQuit, onDone }) {
                     if (!timedOut.current) {
                         timedOut.current = true;
                         setTimeout(() => {
-                            onDone({ score: scoreRef.current, answered: answeredRef.current, time: duration });
+                            onDone({
+                                score: scoreRef.current,
+                                answered: answeredRef.current,
+                                time: duration,
+                                maxStreak: maxStreakRef.current,
+                                wrong: wrongRef.current,
+                                right: rightRef.current,
+                            });
                         }, 0);
                     }
                     return 0;
@@ -458,34 +593,54 @@ function CountdownPlay({ onQuit, onDone }) {
 
         if (ok) {
             setScore(s => s + 1);
+            setStreak(s => {
+                const next = s + 1;
+                setMaxStreak(m => Math.max(m, next));
+                return next;
+            });
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+            rightRef.current.push({ a: q.a, b: q.b });
         } else {
             setScore(s => Math.max(0, s - 1));
+            setStreak(0);
             setFb('wrong');
             setWord(`${q.a} × ${q.b} = ${q.answer}`);
+            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
+            setLastError(`⚠️ ${q.a} × ${q.b} = ${q.answer}`);
         }
 
         setTimeout(() => {
             if (timedOut.current) return;
             lockRef.current = false;
             setFb('idle'); setWord(''); setInput('');
-            setQ(prev => newQuestion(tables, prev, null));
-        }, 250);
-    }, [input, q, onDone]);
+            setQ(prev => newQuestion(tables, prev, weights));
+        }, ok ? 250 : 800);
+    }, [input, q, tables, weights]);
 
-    const press = d => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
-    const del = () => { if (!lockRef.current) setInput(v => v.slice(0, -1)); };
+    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current || !input || timedOut.current) return;
+        if (estReponseExacte(input, q.answer)) { submit(); return; }
+        const id = setTimeout(submit, 1200);
+        return () => clearTimeout(id);
+    }, [input, q.answer, fb, submit]);
+
+    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
+    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
+
+    const onKeyRef = useRef();
+    onKeyRef.current = (e) => {
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') del();
+        else if (e.key === 'Enter') submit();
+    };
 
     useEffect(() => {
-        const onKey = e => {
-            if (e.key >= '0' && e.key <= '9') press(e.key);
-            else if (e.key === 'Backspace') del();
-            else if (e.key === 'Enter') submit();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
+        const handler = (e) => onKeyRef.current?.(e);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
 
     const timerWarn = remaining <= 10;
 
@@ -511,6 +666,15 @@ function CountdownPlay({ onQuit, onDone }) {
                     {word}
                 </div>
             </div>
+            {/* Correction persistante — l'élève la lit à son rythme */}
+            {lastError && (
+                <div style={{
+                    textAlign: 'center', fontSize: 14, fontWeight: 700,
+                    color: 'var(--coral-dk)', padding: '6px 0', marginBottom: 4,
+                }}>
+                    {lastError}
+                </div>
+            )}
             <Keypad onPress={press} onDelete={del} onSubmit={submit} />
         </div>
     );
@@ -521,6 +685,10 @@ function ClimbPlay({ onQuit, onDone }) {
     const [currentTable, setCurrentTable] = useState(2);
     const [questionsInLevel, setQuestionsInLevel] = useState(0);
     const [correctInLevel, setCorrectInLevel] = useState(0);
+    const [totalQuestions, setTotalQuestions] = useState(0);
+    const [totalCorrect, setTotalCorrect] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [maxStreak, setMaxStreak] = useState(0);
     const [q, setQ] = useState(() => newQuestion([2], null, null));
     const [input, setInput] = useState('');
     const [fb, setFb] = useState('idle');
@@ -528,6 +696,8 @@ function ClimbPlay({ onQuit, onDone }) {
     const [levelMsg, setLevelMsg] = useState('');
     const lockRef = useRef(false);
     const startRef = useRef(Date.now());
+    const wrongRef = useRef([]);
+    const rightRef = useRef([]);
 
     const submit = useCallback(() => {
         if (lockRef.current || !input) return;
@@ -535,16 +705,28 @@ function ClimbPlay({ onQuit, onDone }) {
         const ok = parseInt(input, 10) === q.answer;
         const nextQ = questionsInLevel + 1;
         const nextCorrect = correctInLevel + (ok ? 1 : 0);
+        const nextTotalQ = totalQuestions + 1;
+        const nextTotalCorrect = totalCorrect + (ok ? 1 : 0);
 
         setQuestionsInLevel(nextQ);
         setCorrectInLevel(nextCorrect);
+        setTotalQuestions(nextTotalQ);
+        setTotalCorrect(nextTotalCorrect);
 
         if (ok) {
+            setStreak(s => {
+                const next = s + 1;
+                setMaxStreak(m => Math.max(m, next));
+                return next;
+            });
             setFb('correct');
             setWord('✓');
+            rightRef.current.push({ a: q.a, b: q.b });
         } else {
+            setStreak(0);
             setFb('wrong');
             setWord(`${q.a} × ${q.b} = ${q.answer}`);
+            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
         }
 
         setTimeout(() => {
@@ -552,13 +734,22 @@ function ClimbPlay({ onQuit, onDone }) {
             setFb('idle'); setWord(''); setInput('');
 
             if (nextQ >= 5) {
-                // Fin du palier
+                // Fin du palier (5 questions)
                 if (nextCorrect >= 4) {
-                    // Réussi → palier suivant
+                    // Réussi (≥ 4 bonnes réponses) → palier suivant
                     const nextTable = currentTable + 1;
-                    if (nextTable > 15) {
+                    if (nextTable > 20) {
                         // Victoire totale !
-                        onDone({ highestTable: 15, time: (Date.now() - startRef.current) / 1000, perfect: true });
+                        onDone({
+                            highestTable: 20,
+                            score: nextTotalCorrect,
+                            answered: nextTotalQ,
+                            maxStreak,
+                            time: (Date.now() - startRef.current) / 1000,
+                            perfect: true,
+                            wrong: wrongRef.current,
+                            right: rightRef.current,
+                        });
                     } else {
                         setCurrentTable(nextTable);
                         setQuestionsInLevel(0);
@@ -568,27 +759,47 @@ function ClimbPlay({ onQuit, onDone }) {
                         setQ(newQuestion([nextTable], null, null));
                     }
                 } else {
-                    // Raté → fin
-                    onDone({ highestTable: currentTable - 1, time: (Date.now() - startRef.current) / 1000, perfect: false });
+                    // Raté → fin du parcours
+                    onDone({
+                        highestTable: currentTable - 1,
+                        score: nextTotalCorrect,
+                        answered: nextTotalQ,
+                        maxStreak,
+                        time: (Date.now() - startRef.current) / 1000,
+                        perfect: false,
+                        wrong: wrongRef.current,
+                        right: rightRef.current,
+                    });
                 }
             } else {
                 setQ(prev => newQuestion([currentTable], prev, null));
             }
         }, ok ? 250 : 600);
-    }, [input, q, questionsInLevel, correctInLevel, currentTable, onDone]);
+    }, [input, q, questionsInLevel, correctInLevel, totalQuestions, totalCorrect, currentTable, maxStreak, onDone]);
 
-    const press = d => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
-    const del = () => { if (!lockRef.current) setInput(v => v.slice(0, -1)); };
+    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current || !input) return;
+        if (estReponseExacte(input, q.answer)) { submit(); return; }
+        const id = setTimeout(submit, 1200);
+        return () => clearTimeout(id);
+    }, [input, q.answer, fb, submit]);
+
+    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
+    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
+
+    const onKeyRef = useRef();
+    onKeyRef.current = (e) => {
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') del();
+        else if (e.key === 'Enter') submit();
+    };
 
     useEffect(() => {
-        const onKey = e => {
-            if (e.key >= '0' && e.key <= '9') press(e.key);
-            else if (e.key === 'Backspace') del();
-            else if (e.key === 'Enter') submit();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
+        const handler = (e) => onKeyRef.current?.(e);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
 
     return (
         <div className="screen-enter game-zone">
@@ -635,24 +846,51 @@ function ClimbPlay({ onQuit, onDone }) {
 
 /* ===================== RESULTS ===================== */
 
-function ChallengeResults({ type, result, user, onReplay, onHome, onBack }) {
-    if (!result) return null;
+function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay, onHome, onBack }) {
+    const badges = serverResult?.nouveaux_badges || [];
+    const enAttente = serverResult?.enAttente;
+    const nouveauPlafond = serverResult?.plafond_tables || null;
 
-    // Confetti sur victoire
+    // Déterminer si le résultat est une vraie réussite méritant confettis
+    const isSuccess = useMemo(() => {
+        if (!result) return false;
+        if (type.id === 'sprint') {
+            const errs = result.errors || 0;
+            return errs <= 2;
+        }
+        if (type.id === 'flawless') {
+            return (result.streak || 0) >= 10;
+        }
+        if (type.id === 'countdown') {
+            return (result.score || 0) >= 15;
+        }
+        if (type.id === 'climb') {
+            return (result.highestTable || 0) >= 10 || result.perfect;
+        }
+        return false;
+    }, [type.id, result]);
+
+    // Confetti uniquement sur vraie réussite
     useEffect(() => {
-        import('canvas-confetti').then(mod => {
-            mod.default({
-                particleCount: 100, spread: 70, origin: { y: 0.6 },
-                colors: ['#C9A227', '#4DA8DA', '#00C9A7', '#FF5A5F']
-            });
-        }).catch(() => { });
-    }, []);
+        if (isSuccess) {
+            import('canvas-confetti').then(mod => {
+                mod.default({
+                    particleCount: 100, spread: 70, origin: { y: 0.6 },
+                    colors: ['#C9A227', '#4DA8DA', '#00C9A7', '#FF5A5F']
+                });
+            }).catch(() => { });
+        }
+    }, [isSuccess]);
+
+    if (!result) return null;
 
     return (
         <div className="screen-enter">
             <div className="card" style={{ textAlign: 'center' }}>
                 {/* Podium emoji */}
-                <div style={{ fontSize: 64, marginBottom: 8 }}>🏆</div>
+                <div style={{ fontSize: 64, marginBottom: 8 }}>
+                    {isSuccess ? '🏆' : '💪'}
+                </div>
 
                 <h2 className="font-display" style={{ fontSize: 26, fontWeight: 800 }}>
                     {type.id === 'sprint' && `Sprint terminé !`}
@@ -729,6 +967,52 @@ function ChallengeResults({ type, result, user, onReplay, onHome, onBack }) {
                         </>
                     )}
                 </div>
+
+                {/* Badges débloqués */}
+                {badges.length > 0 && (
+                    <div style={{
+                        textAlign: 'center', background: 'linear-gradient(135deg, #FFF8E1, #FFF0C0)',
+                        borderRadius: 'var(--radius-md)', padding: 16, marginTop: 16, marginBottom: 16,
+                        border: '2px solid var(--gold)',
+                    }}>
+                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--gold)' }}>
+                            🏅 Nouveau{badges.length > 1 ? 'x' : ''} badge{badges.length > 1 ? 's' : ''} !
+                        </p>
+                        {badges.map((b, i) => (
+                            <div key={i} className="anim-pop" style={{
+                                fontSize: 18, fontWeight: 700, marginBottom: 4,
+                            }}>
+                                {b.emoji || '🏅'} {b.nom || b}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Table débloquée par la Montée */}
+                {type.id === 'climb' && nouveauPlafond && ancienPlafond && nouveauPlafond > ancienPlafond && (
+                    <div className="anim-pop" style={{
+                        textAlign: 'center', background: 'linear-gradient(135deg, #E8F5E9, #C8E6C9)',
+                        borderRadius: 'var(--radius-md)', padding: 16, marginTop: 16, marginBottom: 16,
+                        border: '2px solid var(--mint)',
+                    }}>
+                        <p className="font-display" style={{ fontWeight: 800, fontSize: 20, color: 'var(--mint-dk)' }}>
+                            🔓 Table {nouveauPlafond} débloquée !
+                        </p>
+                        <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
+                            Tu peux maintenant t'entraîner sur la table {nouveauPlafond} en mode libre.
+                        </p>
+                    </div>
+                )}
+
+                {/* Partie sauvegardée hors-ligne */}
+                {enAttente && (
+                    <p style={{
+                        fontSize: 13, color: 'var(--text-soft)', fontWeight: 600,
+                        textAlign: 'center', marginTop: 14, marginBottom: 14,
+                    }}>
+                        📡 Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
+                    </p>
+                )}
 
                 <button className="btn btn--gold" style={{ width: '100%', marginTop: 16, marginBottom: 10 }} onClick={onReplay}>
                     Relancer ⚔️
