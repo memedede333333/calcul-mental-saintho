@@ -249,7 +249,8 @@ existantes**, jamais de couleurs en dur.
 |---|---|
 | `ANTIGRAVITY_BRIEF.md` | Le cadrage complet : architecture, règles, lots de travail |
 | `ECRANS.md` | Les 19 écrans, un par un : appels, contenus, états |
-| `SUPABASE_PAS_A_PAS.md` | Mise en route Supabase, MCP, modèle d'e-mail OTP |
+| `SUPABASE_PAS_A_PAS.md` | Mise en route Supabase, MCP, Google OAuth, comptes |
+| `NOM_ET_MARQUE.md` | Check-list de bascule du nom — les 14 endroits à changer, dont 6 hors du code |
 | `JOURNAL.md` | L'historique : ce qui a été fait, décidé, constaté, étape par étape |
 | `PROMPT_ANTIGRAVITY.md` | Le message de démarrage à coller dans un chat neuf |
 | `docs/ecrans-et-defis.html` | Les maquettes visuelles élève et professeur |

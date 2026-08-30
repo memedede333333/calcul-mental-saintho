@@ -686,6 +686,7 @@ export type Database = {
           p_erreurs?: number
           p_maitrise?: Json
           p_score: number
+          p_score_premier_essai?: number
           p_temps_s: number
         }
         Returns: Json

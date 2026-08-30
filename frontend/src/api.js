@@ -424,7 +424,7 @@ export async function rejoindreDefi(code) {
     return rpc('rejoindre_defi', { p_code: code.trim().toUpperCase() });
 }
 
-export async function terminerDefi({ defiId, score, tempsS, erreurs = 0, detail = {}, maitrise = {} }) {
+export async function terminerDefi({ defiId, score, tempsS, erreurs = 0, detail = {}, maitrise = {}, scorePremierEssai = null }) {
     return rpc('terminer_defi', {
         p_defi_id: defiId,
         p_score: score,
@@ -432,6 +432,7 @@ export async function terminerDefi({ defiId, score, tempsS, erreurs = 0, detail 
         p_erreurs: erreurs,
         p_detail: detail,
         p_maitrise: maitrise,
+        p_score_premier_essai: scorePremierEssai,
     });
 }
 

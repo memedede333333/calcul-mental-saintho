@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { newQuestion, PRAISE, makeHint, ALL_TABLES } from '../logic/questions';
 import { buildWeights, construireErreurs, construireMaitrise, cleFait } from '../logic/mastery';
-import { enregistrerSession, enregistrerSessionProf } from '../api';
+import {
+    enregistrerSession, enregistrerSessionProf,
+    creerDefi, rejoindreDefi, terminerDefi,
+    classementDefi, avancementDefi, suivreDefi,
+    listeClasses,
+} from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
 
@@ -21,7 +26,7 @@ const CHALLENGE_TYPES = [
     {
         id: 'sprint', emoji: '⚡', name: 'Sprint',
         desc: '20 questions — le plus rapide gagne !',
-        color: '--coral', questions: 20,
+        color: '--coral', questions: 20, shareable: true,
     },
     {
         id: 'flawless', emoji: '🎯', name: 'Sans faute',
@@ -31,17 +36,12 @@ const CHALLENGE_TYPES = [
     {
         id: 'countdown', emoji: '⏱', name: 'Contre-la-montre',
         desc: '2 minutes — max de bonnes réponses',
-        color: '--sky', timer: 120,
+        color: '--sky', timer: 120, shareable: true,
     },
     {
         id: 'climb', emoji: '🧗', name: 'Montée des tables',
         desc: 'Palier par palier, de la table 2 à 20',
         color: '--purple',
-    },
-    {
-        id: 'class', emoji: '👥', name: 'Défi de classe',
-        desc: 'Mêmes questions — classement en direct',
-        color: '--navy',
     },
 ];
 
@@ -52,9 +52,12 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     const [selectedTables, setSelectedTables] = useState([2, 3, 4, 5, 6, 7, 8, 9, 10]);
     const [result, setResult] = useState(null);
     const [serverResult, setServerResult] = useState(null);
+    // Défi partagé : info renvoyée par rejoindreDefi() ou creerDefi()
+    const [defiInfo, setDefiInfo] = useState(null);
 
-    const plafond = identite?.profil?.plafond_tables || 10;
+    const plafond = identite?.profil?.plafond_tables || (estProf ? 20 : 10);
 
+    // --- Fin de partie SOLO ---
     const handleDone = useCallback((r) => {
         setResult(r);
         setServerResult(null);
@@ -97,6 +100,49 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         }).catch(() => {});
     }, [challengeType, selectedTables, estProf, plafond, onPlafondChange]);
 
+    // --- Fin de partie DÉFI : terminerDefi() seul (pas enregistrerSession) ---
+    const handleDoneDefi = useCallback((r) => {
+        setResult(r);
+        setPhase('defi-results');
+
+        const maitrise = construireMaitrise(r.resultats || []);
+
+        terminerDefi({
+            defiId: defiInfo.defi_id,
+            score: r.score || 0,
+            tempsS: Math.round(r.time || 0),
+            erreurs: (r.answered || 0) - (r.score || 0),
+            maitrise,
+            scorePremierEssai: r.scorePremierEssai ?? null,
+        }).catch(() => {});
+    }, [defiInfo]);
+
+    // --- Rejoindre un défi ---
+    const handleJoin = useCallback(async (code) => {
+        const res = await rejoindreDefi(code);
+        if (!res.ok) return res; // { ok: false, raison, message }
+        // Succès : on a les questions figées
+        const d = res.data;
+        const type = CHALLENGE_TYPES.find(t => t.id === d.type) || CHALLENGE_TYPES[0];
+        setDefiInfo(d);
+        setChallengeType(type);
+        setSelectedTables(d.tables || [2,3,4,5]);
+        setPhase('defi-play');
+        return res;
+    }, []);
+
+    // --- Créer un défi ---
+    const handleCreateDefi = useCallback(async (type, tables, classe) => {
+        const res = await creerDefi({ type: type.id, tables, classe });
+        if (!res.ok) return res;
+        setDefiInfo({ defi_id: res.data.defi_id, code: res.data.code, type: type.id, tables });
+        setChallengeType(type);
+        setPhase('defi-code');
+        return res;
+    }, []);
+
+    // --- PHASES ---
+
     if (phase === 'select') {
         return (
             <ChallengeSelect
@@ -104,6 +150,8 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 onSelect={(type) => { setChallengeType(type); setPhase('config'); }}
                 joinCode={joinCode}
                 setJoinCode={setJoinCode}
+                onJoin={handleJoin}
+                estProf={estProf}
             />
         );
     }
@@ -115,11 +163,13 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 tables={selectedTables}
                 setTables={setSelectedTables}
                 plafond={plafond}
+                estProf={estProf}
                 onBack={() => setPhase('select')}
                 onStart={(tables) => {
                     if (tables) setSelectedTables(tables);
                     setPhase('play');
                 }}
+                onCreateDefi={handleCreateDefi}
             />
         );
     }
@@ -136,6 +186,45 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         );
     }
 
+    if (phase === 'defi-play') {
+        return (
+            <ChallengePlay
+                type={challengeType}
+                tables={selectedTables}
+                maitrise={null}
+                defiQuestions={defiInfo?.questions}
+                defiDureeS={defiInfo?.duree_s}
+                onQuit={() => setPhase('select')}
+                onDone={handleDoneDefi}
+            />
+        );
+    }
+
+    if (phase === 'defi-code') {
+        return (
+            <DefiCodeScreen
+                defiInfo={defiInfo}
+                estProf={estProf}
+                onStart={() => setPhase('defi-leaderboard')}
+                onBack={() => setPhase('select')}
+            />
+        );
+    }
+
+    if (phase === 'defi-results' || phase === 'defi-leaderboard') {
+        return (
+            <DefiLeaderboard
+                defiId={defiInfo?.defi_id}
+                result={result}
+                type={challengeType}
+                estProf={estProf}
+                onHome={() => { setDefiInfo(null); setPhase('select'); }}
+                onBack={onBack}
+            />
+        );
+    }
+
+    // phase === 'results' (solo)
     return (
         <ChallengeResults
             type={challengeType}
@@ -151,7 +240,34 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
 /* ===================== SELECT ===================== */
 
-function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
+function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, estProf }) {
+    const [joinError, setJoinError] = useState(null);
+    const [joinLoading, setJoinLoading] = useState(false);
+    const [joinDefiId, setJoinDefiId] = useState(null); // for deja_joue → show leaderboard
+
+    const handleJoin = async () => {
+        if (joinCode.length < 5) return;
+        setJoinError(null);
+        setJoinLoading(true);
+        try {
+            const res = await onJoin(joinCode);
+            if (!res.ok) {
+                const raison = res.data?.raison || res.raison || 'inconnu';
+                if (raison === 'deja_joue') {
+                    setJoinDefiId(res.data?.defi_id || null);
+                    setJoinError('Tu as déjà participé à ce défi.');
+                } else if (raison === 'ferme') {
+                    setJoinError('Ce défi est terminé.');
+                } else {
+                    setJoinError("Ce code n'existe pas. Vérifie les lettres.");
+                }
+            }
+        } catch {
+            setJoinError('Erreur réseau.');
+        }
+        setJoinLoading(false);
+    };
+
     return (
         <div className="screen-enter">
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
@@ -172,7 +288,8 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
                         type="text"
                         maxLength={5}
                         value={joinCode}
-                        onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5))}
+                        autoCapitalize="characters"
+                        onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-HJ-KM-NP-Z2-9]/g, '').slice(0, 5))}
                         placeholder="CODE à 5 lettres"
                         style={{
                             flex: 1, padding: '12px 16px', borderRadius: 14,
@@ -182,15 +299,35 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
                         }}
                         onFocus={e => e.target.style.borderColor = 'var(--gold)'}
                         onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                        onKeyDown={e => { if (e.key === 'Enter') handleJoin(); }}
                     />
                     <button
                         className="btn btn--gold"
-                        disabled={joinCode.length < 5}
+                        disabled={joinCode.length < 5 || joinLoading}
                         style={{ padding: '12px 20px', fontSize: 16, whiteSpace: 'nowrap' }}
+                        onClick={handleJoin}
                     >
-                        Rejoindre
+                        {joinLoading ? '⏳' : 'Rejoindre'}
                     </button>
                 </div>
+                {joinError && (
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', marginTop: 8, textAlign: 'center' }}>
+                        {joinError}
+                        {joinDefiId && (
+                            <button
+                                className="btn btn--ghost"
+                                style={{ fontSize: 12, marginLeft: 8, padding: '4px 10px' }}
+                                onClick={() => {
+                                    // Navigate to defi leaderboard
+                                    // We reuse onJoin's side effects but for deja_joue we need to go to leaderboard directly
+                                    // This is handled by the parent via phase
+                                }}
+                            >
+                                Voir le classement
+                            </button>
+                        )}
+                    </p>
+                )}
             </div>
 
             {CHALLENGE_TYPES.map(type => (
@@ -205,7 +342,17 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
                 >
                     <span className="mode-card__emoji">{type.emoji}</span>
                     <span>
-                        <div className="mode-card__title" style={{ fontSize: 20 }}>{type.name}</div>
+                        <div className="mode-card__title" style={{ fontSize: 20 }}>
+                            {type.name}
+                            {type.shareable && (
+                                <span style={{
+                                    fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.3)',
+                                    borderRadius: 8, padding: '2px 8px', marginLeft: 8, verticalAlign: 'middle',
+                                }}>
+                                    👥 En défi
+                                </span>
+                            )}
+                        </div>
                         <div className="mode-card__desc">{type.desc}</div>
                     </span>
                 </button>
@@ -216,13 +363,41 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
 
 /* ===================== CONFIG ===================== */
 
-function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) {
+function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi }) {
     const isClimb = type.id === 'climb';
+    const isShareable = type.shareable === true;
     const availableTables = ALL_TABLES.filter(t => t <= Math.max(10, plafond));
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState(null);
+    const [classes, setClasses] = useState([]);
+    const [selectedClasse, setSelectedClasse] = useState(null);
+
+    // Load classes for prof defi creation
+    useEffect(() => {
+        if (estProf && isShareable) {
+            listeClasses().then(res => {
+                if (res.ok && res.data) {
+                    setClasses(res.data);
+                    if (res.data.length > 0) setSelectedClasse(res.data[0].classe);
+                }
+            });
+        }
+    }, [estProf, isShareable]);
 
     const toggle = (t) => {
         if (t > plafond) return;
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+    };
+
+    const handleCreate = async () => {
+        if (tables.length === 0) return;
+        setCreating(true);
+        setCreateError(null);
+        const res = await onCreateDefi(type, tables, estProf ? selectedClasse : null);
+        if (!res.ok) {
+            setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
+            setCreating(false);
+        }
     };
 
     return (
@@ -274,7 +449,7 @@ function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) 
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
                         <li>20 questions, 3s par question</li>
                         <li>1er essai = 1 pt, rattrapé = ½ pt</li>
-                        <li>Classement par score total</li>
+                        <li>⚡ Le plus rapide gagne — chaque erreur ajoute 3 secondes</li>
                     </ul>
                 )}
                 {type.id === 'flawless' && (
@@ -298,14 +473,27 @@ function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) 
                         <li>Débloque les tables supérieures !</li>
                     </ul>
                 )}
-                {type.id === 'class' && (
-                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-                        <li>Créé par l'enseignant</li>
-                        <li>Mêmes questions pour toute la classe</li>
-                        <li>Classement en direct</li>
-                    </ul>
-                )}
             </div>
+
+            {/* Classe selector for prof defi creation */}
+            {estProf && isShareable && classes.length > 0 && (
+                <div className="card" style={{ marginBottom: 14 }}>
+                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
+                        🏫 Classe du défi
+                    </h3>
+                    <div className="chips">
+                        {classes.map(c => (
+                            <button
+                                key={c.classe}
+                                className={`chip${selectedClasse === c.classe ? ' chip--navy' : ''}`}
+                                onClick={() => setSelectedClasse(c.classe)}
+                            >
+                                {c.classe}{c.est_favorite ? ' ⭐' : ''}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <button
                 className="btn btn--gold"
@@ -313,22 +501,40 @@ function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) 
                 disabled={!isClimb && tables.length === 0}
                 onClick={() => onStart(tables)}
             >
-                Lancer le défi ! ⚔️
+                Jouer seul ⚔️
             </button>
+
+            {isShareable && (
+                <>
+                    <button
+                        className="btn btn--navy"
+                        style={{ width: '100%', fontSize: 18, padding: 14, marginTop: 10 }}
+                        disabled={tables.length === 0 || creating}
+                        onClick={handleCreate}
+                    >
+                        {creating ? '⏳ Création…' : '👥 Créer un défi'}
+                    </button>
+                    {createError && (
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', marginTop: 8, textAlign: 'center' }}>
+                            {createError}
+                        </p>
+                    )}
+                </>
+            )}
         </div>
     );
 }
 
 /* ===================== PLAY ===================== */
 
-function ChallengePlay({ type, tables, maitrise, onQuit, onDone }) {
+function ChallengePlay({ type, tables, maitrise, defiQuestions, defiDureeS, onQuit, onDone }) {
     const activeTables = tables && tables.length > 0 ? tables : [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-    if (type.id === 'sprint') return <SprintPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'sprint') return <SprintPlay tables={activeTables} maitrise={maitrise} defiQuestions={defiQuestions} onQuit={onQuit} onDone={onDone} />;
     if (type.id === 'flawless') return <FlawlessPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
-    if (type.id === 'countdown') return <CountdownPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'countdown') return <CountdownPlay tables={activeTables} maitrise={maitrise} defiQuestions={defiQuestions} defiDureeS={defiDureeS} onQuit={onQuit} onDone={onDone} />;
     if (type.id === 'climb') return <ClimbPlay onQuit={onQuit} onDone={onDone} />;
-    return <SprintPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
+    return <SprintPlay tables={activeTables} maitrise={maitrise} defiQuestions={defiQuestions} onQuit={onQuit} onDone={onDone} />;
 }
 
 /* ================================================================
@@ -338,9 +544,18 @@ function ChallengePlay({ type, tables, maitrise, onQuit, onDone }) {
  * a question timer bar, and first-attempt scoring.
  * ================================================================ */
 
-function useQuizEngine({ tables, maitrise, hasQuestionTimer }) {
-    const weights = useMemo(() => buildWeights(tables, maitrise || {}), [tables, maitrise]);
-    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
+function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
+    // En mode défi, les questions sont figées — pas de buildWeights, pas de newQuestion
+    const isDefi = Array.isArray(defiQuestions) && defiQuestions.length > 0;
+    const weights = useMemo(() => isDefi ? null : buildWeights(tables, maitrise || {}), [tables, maitrise, isDefi]);
+    const defiIndex = useRef(0);
+
+    const makeDefiQ = (idx) => {
+        const dq = defiQuestions[idx] || defiQuestions[0];
+        return { a: dq.a, b: dq.b, answer: dq.a * dq.b };
+    };
+
+    const [q, setQ] = useState(() => isDefi ? makeDefiQ(0) : newQuestion(tables, null, weights));
     const [digits, setDigits] = useState(() => Array(String(q.answer).length).fill(''));
     const [fb, setFb] = useState('idle');
     const [word, setWord] = useState('');
@@ -462,6 +677,16 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer }) {
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
+    /** Avance à la question suivante dans la liste figée du défi.
+     *  Renvoie false si la liste est épuisée. */
+    const nextDefiQuestion = useCallback(() => {
+        if (!isDefi) return true;
+        defiIndex.current += 1;
+        if (defiIndex.current >= defiQuestions.length) return false; // exhausted
+        resetQuestion(makeDefiQ(defiIndex.current));
+        return true;
+    }, [isDefi, defiQuestions, resetQuestion]);
+
     return {
         q, digits, setDigits, fb, setFb, word, setWord,
         premierEssai, setPremierEssai,
@@ -471,6 +696,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer }) {
         lockRef, resultatsRef, numDigits, weights,
         resetQuestion, recordResult, press, del,
         qTimerRef,
+        isDefi, nextDefiQuestion,
     };
 }
 
@@ -520,16 +746,16 @@ function renderQuestionTimer(active, expired) {
         </div>
     );
 }
-
 /* --- Sprint : 20 questions, 3s/question --- */
-function SprintPlay({ tables, maitrise, onQuit, onDone }) {
-    const total = 20;
-    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true });
+function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
+    const total = defiQuestions?.length || 20;
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
         score, answered,
         scoreRef, premierRef, answeredRef, maxStreakRef,
-        resetQuestion, recordResult, press, del } = engine;
+        resetQuestion, recordResult, press, del,
+        isDefi, nextDefiQuestion } = engine;
 
     const startRef = useRef(Date.now());
 
@@ -543,10 +769,12 @@ function SprintPlay({ tables, maitrise, onQuit, onDone }) {
                 resultats: resultatsRef.current,
                 time: (Date.now() - startRef.current) / 1000,
             });
+        } else if (isDefi) {
+            nextDefiQuestion();
         } else {
             resetQuestion(newQuestion(tables, q, weights));
         }
-    }, [tables, q, weights, onDone, resetQuestion]);
+    }, [tables, q, weights, onDone, resetQuestion, isDefi, nextDefiQuestion, total]);
 
     // Handle question timer expiry → show answer then advance
     useEffect(() => {
@@ -589,7 +817,7 @@ function SprintPlay({ tables, maitrise, onQuit, onDone }) {
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span className="pill">⚡ Sprint</span>
+                <span className="pill">{isDefi ? '⚔️ Défi' : '⚡ Sprint'}</span>
                 <span className="pill">{answered}/{total}</span>
                 <span className="pill">⭐ {score}</span>
             </div>
