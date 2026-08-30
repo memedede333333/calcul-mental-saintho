@@ -56,6 +56,92 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-28 (4) — Première relecture croisée : Antigravity relit le SQL
+
+**Fait** — Sur demande d'Aymeri, Antigravity a relu la migration 13. Jusque-là
+la relecture n'allait que dans un sens : Claude relit le React, personne ne
+relit le SQL. L'asymétrie est levée.
+
+**Constaté — la trouvaille est réelle, et personne ne l'avait vue.**
+Le score de progression se calcule sur une **fenêtre glissante**. Les cases
+vertes ne comptent que si `derniere_vue` tombe dans la période. C'est le bon
+choix — sinon un élève accumulerait 2 500 points de bonus chaque semaine sans
+rien faire. Mais la conséquence n'avait jamais été formulée : **un élève qui
+avait 1 767 points lundi voit 0 le lundi suivant s'il n'a pas joué.**
+
+Ce n'est pas un défaut de la formule, c'est un défaut d'explication. Un
+classement hebdomadaire remis à zéro est même une bonne chose — il fait
+repartir tout le monde à égalité, et un élève qui commence en novembre peut
+être premier dès sa première semaine. Encore faut-il le dire.
+
+**Décidé** — La remise à zéro ne se corrige pas, elle s'affiche et s'explique :
+
+- le score porte sa période dans son libellé (« cette semaine »), partout
+- une phrase l'assume : « Le classement repart à zéro chaque lundi — tout le
+  monde a sa chance. »
+- le Profil montre à côté ce qui **ne** se remet **jamais** à zéro : les
+  records personnels et la grille de maîtrise
+
+**Corrigé (Antigravity)** — les trois changements d'affichage sont appliqués :
+
+1. Classement : l'unité porte la période (`pts cette semaine`, `pts / élève
+   cette semaine`) au lieu de `pts` seul. La phrase de motivation s'affiche en
+   bas quand la période est « Semaine ».
+2. Profil : l'écran est scindé en « 📈 Cette semaine » (score de progression
+   et ses trois composantes : points de jeu, bonus jours actifs, bonus cases
+   vertes) et « 🏆 Depuis toujours » (records, sessions jouées, points total).
+   La phrase « Tes records personnels — ça ne recule jamais. » explicite la
+   distinction.
+3. Les données de `progression_detail()` sont exploitées dans le Profil —
+   `mon_profil()` les renvoyait depuis la migration 13, elles n'étaient pas
+   encore lues côté React.
+
+**Vérifié — les trois autres points de la revue tiennent.**
+`pts_palier > 0` n'exclut personne en pratique : `points_session()` renvoie au
+minimum 1 dès qu'une réponse est juste, même sur la table la moins pondérée.
+`palier = 'tous'` se comporte comme avant.
+
+Sur le coût, son estimation est fondée et les deux index qu'il suppose existent
+bel et bien — `sessions_eleve_idx (eleve_id, cree_le desc)` et surtout
+`maitrise_revision_idx (eleve_id, niveau, derniere_vue)`, qui couvre les trois
+prédicats de la sous-requête. Le seuil d'alerte qu'il propose (classement
+« collège » au-delà de 500 ms) est le bon signal à surveiller.
+
+**Fait** — Nettoyage des données de démo effectué. Il ne reste que Lou (31) et
+Adeliya (32) dans `eleves`.
+
+
+## 2026-08-30 — Migration 13, classement classes, revue SQL
+
+**Fait — migration 13 (`score_progression`) appliquée.** `progression_detail()`
+factorise la formule en un seul endroit. `classement_progression()` et
+`mon_profil()` ne peuvent plus diverger. Types régénérés.
+
+**Constaté — l'onglet Classes du classement affichait 0 partout.**
+`classement_classes` renvoie `points_moyens` / `est_ma_classe` ; les composants
+partagés `PodiumCard` et `LeaderboardRow` lisaient `points` / `est_moi` — noms
+qui n'existent pas dans ces colonnes. La déduction des niveaux (`niveauxDisponibles`)
+lisait `nom_affiche`, colonne absente aussi.
+
+**Corrigé — normalisation au chargement.** La réponse de `classement_classes` est
+mappée vers la forme attendue (`nom_affiche`, `valeur`, `est_moi`, `avatar`)
+avant injection dans les composants. Ajout de « X / Y élèves ont joué » dans la
+ligne pour distinguer une classe silencieuse d'une classe à zéro.
+
+**Fait — revue de la migration 13.** Quatre points examinés :
+1. `pts_palier > 0` : exclut en théorie un élève à 0 point, impossible en
+   pratique — une seule bonne réponse suffit. Pas de correctif nécessaire.
+2. Sous-requête corrélée `progression_detail()` : ~60 index scans pour une
+   classe de 30, ~700 pour le collège. Acceptable aux volumes actuels.
+3. `palier = 'tous'` : se comporte correctement, toutes sessions passent.
+4. Progression/semaine vs records/cumul : cohérent et intentionnel, les deux
+   blocs sont bien séparés dans le JSON.
+5. Observation : les cases vertes hors fenêtre ne comptent pas — correct, sinon
+   le bonus s'accumulerait à l'infini. Mais le score peut baisser d'une semaine
+   à l'autre si l'élève ne joue pas (la semaine repart de 0).
+
+---
+
 ## 2026-08-28 (3) — ⭐ Première connexion réelle : l'application fonctionne
 
 **Fait — Google OAuth configuré et validé en conditions réelles.** Audience

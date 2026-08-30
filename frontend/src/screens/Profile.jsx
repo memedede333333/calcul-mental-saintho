@@ -43,7 +43,8 @@ export default function Profile({ onBack, identite, onLogout, onReviser }) {
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [avatar, setAvatar] = useState(identite?.profil?.avatar_emoji || '🎯');
     const [showMastery, setShowMastery] = useState(true);
-    const [tablesFaibles, setTablesFaibles] = useState(null); // null = pas encore chargé, [] = aucune
+    const [tablesFaibles, setTablesFaibles] = useState(null);
+    const [progression, setProgression] = useState(null);
 
     // --- Chargement du profil ---
     useEffect(() => {
@@ -63,6 +64,7 @@ export default function Profile({ onBack, identite, onLogout, onReviser }) {
             setRecords(d.records);
             setMaitrise(d.maitrise || {});
             setBadges(d.badges || []);
+            setProgression(d.progression || null);
             setAvatar(d.profil?.avatar_emoji || '🎯');
             setLoading(false);
 
@@ -179,11 +181,79 @@ export default function Profile({ onBack, identite, onLogout, onReviser }) {
                 </p>
             </div>
 
-            {/* Records */}
+            {/* ===== Cette semaine ===== */}
             <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>
-                    📊 Mes records
+                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
+                    📈 Cette semaine
                 </h3>
+                <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
+                    Le classement repart à zéro chaque lundi — tout le monde a sa chance.
+                </p>
+
+                {progression ? (
+                    <>
+                        {/* Score principal */}
+                        <div style={{
+                            textAlign: 'center', marginBottom: 14, padding: '16px 0',
+                            background: 'linear-gradient(135deg, rgba(201,162,39,0.10), rgba(201,162,39,0.03))',
+                            borderRadius: 14,
+                        }}>
+                            <div className="font-display" style={{ fontSize: 36, fontWeight: 800, color: 'var(--gold)' }}>
+                                {progression.total ?? 0}
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)' }}>
+                                Score de progression
+                            </div>
+                        </div>
+
+                        {/* Composantes */}
+                        <div className="stat-grid">
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--navy)' }}>
+                                    {progression.points_jeu ?? 0}
+                                </span>
+                                <span className="stat__label">🎮 Points de jeu</span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
+                                    +{progression.bonus_jours ?? 0}
+                                </span>
+                                <span className="stat__label">📅 {progression.jours_actifs ?? 0} jour{(progression.jours_actifs ?? 0) > 1 ? 's' : ''} actif{(progression.jours_actifs ?? 0) > 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>
+                                    +{progression.bonus_vertes ?? 0}
+                                </span>
+                                <span className="stat__label">🟢 {progression.cases_vertes ?? 0} case{(progression.cases_vertes ?? 0) > 1 ? 's' : ''} verte{(progression.cases_vertes ?? 0) > 1 ? 's' : ''}</span>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="stat-grid">
+                        <div className="stat">
+                            <span className="stat__value" style={{ color: 'var(--mint)' }}>
+                                {records?.points_semaine || 0}
+                            </span>
+                            <span className="stat__label">📈 Points semaine</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat__value" style={{ color: 'var(--sky)' }}>
+                                {records?.jours_actifs_7j || 0}
+                            </span>
+                            <span className="stat__label">📅 Jours actifs (7j)</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ===== Depuis toujours ===== */}
+            <div className="card" style={{ marginBottom: 14 }}>
+                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
+                    🏆 Depuis toujours
+                </h3>
+                <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
+                    Tes records personnels — ça ne recule jamais.
+                </p>
                 <div className="stat-grid">
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--coral)' }}>
@@ -213,19 +283,7 @@ export default function Profile({ onBack, identite, onLogout, onReviser }) {
                         <span className="stat__value" style={{ color: 'var(--gold)' }}>
                             {records?.points_total || 0}
                         </span>
-                        <span className="stat__label">🏆 Points total</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--mint)' }}>
-                            {records?.points_semaine || 0}
-                        </span>
-                        <span className="stat__label">📈 Points semaine</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--sky)' }}>
-                            {records?.jours_actifs_7j || 0}
-                        </span>
-                        <span className="stat__label">📅 Jours actifs (7j)</span>
+                        <span className="stat__label">💰 Points total</span>
                     </div>
                 </div>
             </div>

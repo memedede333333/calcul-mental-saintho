@@ -33,10 +33,10 @@ const RECORD_CATS = [
 ];
 
 const PERIODES = [
-    { id: 'semaine', label: 'Semaine' },
-    { id: 'mois', label: 'Mois' },
-    { id: 'annee', label: 'Année' },
-    { id: 'tout', label: 'Toujours' },
+    { id: 'semaine', label: 'Semaine',  suffixe: 'cette semaine' },
+    { id: 'mois',    label: 'Mois',     suffixe: 'ce mois' },
+    { id: 'annee',   label: 'Année',    suffixe: 'cette année' },
+    { id: 'tout',    label: 'Toujours', suffixe: '' },
 ];
 
 const PORTEES = [
@@ -99,11 +99,27 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                     setErreur(res?.error || 'Impossible de charger le classement.');
                     setData([]);
                 } else {
-                    setData(res.data || []);
+                    let rows = res.data || [];
+                    // classement_classes renvoie des colonnes différentes :
+                    // rang, classe, eleves_actifs, eleves_total, points_moyens, est_ma_classe
+                    // On normalise vers la forme attendue par PodiumCard et LeaderboardRow.
+                    if (onglet === 'classes') {
+                        rows = rows.map(r => ({
+                            rang: r.rang,
+                            nom_affiche: r.classe,
+                            classe: r.classe,
+                            avatar: '🏫',
+                            valeur: r.points_moyens ?? 0,
+                            est_moi: r.est_ma_classe === true,
+                            eleves_actifs: r.eleves_actifs ?? 0,
+                            eleves_total: r.eleves_total ?? 0,
+                        }));
+                    }
+                    setData(rows);
                     // Déduire les niveaux disponibles des classes renvoyées
-                    if (onglet === 'classes' && niveauClasse === null && res.data?.length) {
+                    if (onglet === 'classes' && niveauClasse === null && rows.length) {
                         const niveaux = [...new Set(
-                            res.data.map(r => (r.nom_affiche || '')[0]).filter(Boolean)
+                            rows.map(r => (r.classe || '')[0]).filter(Boolean)
                         )].sort();
                         setNiveauxDisponibles(niveaux);
                     }
@@ -120,10 +136,11 @@ export default function Leaderboards({ onBack, identite, estProf }) {
     const showFilters = !estProf && (onglet === 'progression' || onglet === 'records');
     const currentRecordCat = RECORD_CATS.find(c => c.id === recordCat) || RECORD_CATS[0];
 
-    // Unité d'affichage selon le contexte
+    // Unité d'affichage selon le contexte — le score porte toujours sa période
+    const periodeInfo = PERIODES.find(p => p.id === periode) || PERIODES[0];
     const unit = onglet === 'records' ? currentRecordCat.unit
-               : onglet === 'progression' ? 'pts'
-               : onglet === 'classes' ? 'pts / élève'
+               : onglet === 'progression' ? (periodeInfo.suffixe ? `pts ${periodeInfo.suffixe}` : 'pts')
+               : onglet === 'classes' ? (periodeInfo.suffixe ? `pts / élève ${periodeInfo.suffixe}` : 'pts / élève')
                : 'pts';
 
     return (
@@ -313,6 +330,16 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                             />
                         ))}
                     </div>
+
+                    {/* Phrase de motivation — le classement se réinitialise */}
+                    {(onglet === 'progression' || onglet === 'classes') && periode === 'semaine' && (
+                        <p style={{
+                            textAlign: 'center', fontSize: 12, fontWeight: 600,
+                            color: 'var(--text-soft)', marginTop: 12, fontStyle: 'italic',
+                        }}>
+                            💡 Le classement repart à zéro chaque lundi — tout le monde a sa chance.
+                        </p>
+                    )}
                 </>
                 );
             })()}
@@ -391,6 +418,12 @@ function LeaderboardRow({ entry, index, unit, isLast, onglet }) {
                 {/* Pour les classements d'élèves, on affiche la classe */}
                 {onglet !== 'classes' && classe && (
                     <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>{classe}</p>
+                )}
+                {/* Pour le classement des classes, afficher le nombre d'élèves actifs */}
+                {onglet === 'classes' && entry.eleves_actifs != null && (
+                    <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600 }}>
+                        {entry.eleves_actifs} / {entry.eleves_total} élève{entry.eleves_total > 1 ? 's' : ''} {entry.eleves_actifs > 1 ? 'ont' : 'a'} joué
+                    </p>
                 )}
             </div>
             <span className="font-display" style={{
