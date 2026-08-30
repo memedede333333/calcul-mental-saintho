@@ -56,6 +56,93 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-28 (3) — ⭐ Première connexion réelle : l'application fonctionne
+
+**Fait — Google OAuth configuré et validé en conditions réelles.** Audience
+Interne, client OAuth déclaré, provider activé, comptes inscrits. Aymeri s'est
+connecté avec son compte enseignant, et Lou Audran (31) avec son compte élève.
+
+Ce qui a été vérifié à l'écran, sur de vraies données :
+
+- accueil élève avec le bon prénom et la bonne classe (« Salut Lou ! 31 »)
+- profil : palier Découverte, « Tables débloquées : 1 à 10 », records à zéro,
+  badges grisés, grille 10×10 vide — **tout est honnête, rien n'est simulé**
+- sélecteur de tables : 1 à 10 ouvertes, 11 à 20 avec un cadenas, mention
+  « Débloque les tables suivantes avec la Montée des tables »
+- classements côté enseignant : onglets Classes et Salle des profs uniquement,
+  état vide explicite
+- la grille de maîtrise est dimensionnée sur le plafond, pas sur ALL_TABLES
+
+**Constaté — l'écran Administration n'a jamais été réécrit.**
+`Admin.jsx` fait 493 lignes et contient toujours `DEMO_STUDENTS` : six élèves
+inventés en `@saintho.org`, des classes 6A à 5B qui n'existent pas, le code PIN
+« 3333 » d'un système supprimé, un sélecteur PIN/Google, et des boutons
+« Exporter CSV » et « RAZ année » qui ne sont branchés sur rien.
+
+C'est exactement ce que la règle « aucune donnée en dur » interdisait, et c'est
+affiché à un administrateur réel. Le champ y est même écrit `prénom` avec
+l'accent — le bug qu'on avait identifié dès l'audit initial.
+
+**Constaté — deux variables CSS manquantes rendent deux cartes illisibles.**
+`Challenges.jsx` compose ses dégradés avec `var(--X-dk)`. Or `--coral-dk`,
+`--sky-dk`, `--purple-dk` existent, mais **`--gold-dk` et `--navy-dk` non**. Un
+`linear-gradient` dont une borne est invalide est ignoré en entier : les cartes
+« Sans faute » (gold) et « Défi de classe » (navy) tombent sur le fond clair par
+défaut, avec leur texte blanc dessus. Elles paraissent désactivées alors
+qu'elles ne le sont pas.
+
+**Constaté — les données de démo polluent les classements réels.** Le
+classement des classes affiche 6A, 6B et 5A à côté des vraies classes 31 et 32 :
+ce sont les élèves de `seed.sql`, chargés dans la base de développement.
+
+**Corrigé — Admin.jsx entièrement réécrit sur les vraies fonctions.**
+Supprimé : `DEMO_STUDENTS` (6 élèves inventés), `const CLASSES` en dur,
+onglet PINs (code 3333), onglet Config (sélecteur PIN/Google, boutons
+CSV et RAZ année branchés sur rien), heatmap aléatoire, stats à 73%.
+
+Remplacé par : classes depuis `listeClasses()`, élèves depuis
+`elevesSansConnexion()`, ajout/désactivation/réactivation réels, plafond
+via `definirPlafondClasse()`, onglets Enseignants/Import/Journal réservés
+aux admins (`estAdmin`), import CSV via `importerEleves()` avec affichage
+des lignes ignorées et des absents. Build 468 kB (−1,7 kB : le code démo
+pesait plus que le vrai).
+
+**Corrigé — `--gold-dk` et `--navy-dk` ajoutées dans `index.css`.**
+Les deux cartes « Sans faute » et « Défi de classe » sont à nouveau
+visibles. Vérification : `grep "var(--.*-dk)" Challenges.jsx` → 5 couleurs,
+toutes définies.
+
+**Corrigé — le podium est masqué quand toutes les valeurs sont à 0.**
+Le classement affiche l'état vide honnête (🏜 + message) au lieu de
+trois marches avec des zéros.
+
+**Ensuite** — les défis.
+
+
+## 2026-08-28 (3) — Closure périmée : la 20ᵉ bonne réponse était perdue
+
+**Constaté — dans SprintPlay et ClimbPlay, `onDone()` partait avec le
+score d'avant la dernière réponse.** `recordResult()` incrémentait le
+score via `setScore(s => s + 1)`, puis `setTimeout(advanceQuestion, 400)`
+capturait la closure du rendu précédent. À la 20ᵉ question, `score` dans
+la closure valait encore 19 — un sans-faute affichait 19/20, et le 20/20
+était inatteignable.
+
+CountdownPlay avait déjà des refs (`scoreRef`, `answeredRef`…) mais les
+synchronisait via `useEffect`, ce qui laissait le même décalage d'un rendu
+— compensé à la main dans Practice par `scoreRef.current + 1`. Fragile,
+dupliqué, et un cinquième mode l'aurait réintroduit.
+
+**Corrigé — les refs sont désormais dans `useQuizEngine`, incrémentées
+dans `recordResult()` avant tout `setTimeout`.** L'état React (`setScore`)
+suit pour l'affichage, mais `onDone` ne lit que les refs. La compensation
+manuelle `+ (result !== 'jamais' ? 1 : 0)` a disparu.
+
+Vérification : `grep -c "scoreRef.current" Challenges.jsx Practice.jsx` →
+8 occurrences dans des `onDone`, 0 lecture de `score` nu. Build 0 erreur.
+
+---
+
 ## 2026-08-28 (2) — La saisie passe à un modèle à cases
 
 **Décidé — le modèle à cases remplace toute la validation automatique.**
@@ -102,8 +189,42 @@ calcul.
 première erreur arrête la série : il n'y a pas de rattrapage possible, donc la
 fenêtre ne servait à rien. Pas de chrono par question dans ce mode.
 
-**Ensuite** — Antigravity applique la migration et refait la saisie. Puis les
-défis.
+**Fait — implémentation complète du modèle à cases.**
+
+_Correctifs (points 1-3 d'Aymeri) :_
+
+- Bug critique : `masteryColor(1)` renvoyait de l'or au lieu du corail.
+  L'échelle locale (−2 à 4) coexistait avec l'échelle serveur (1/2/3).
+  Unification sur l'échelle serveur partout : `undefined` = jamais vu,
+  `1` = rouge, `2` = jaune, `3` = vert. `buildWeights()` corrigé aussi
+  (recevait `{}` dans Challenges, pondération inerte).
+- En entraînement libre, l'élève bloqué sur une question n'avait aucune
+  sortie : après 3 tentatives ratées, les cases se remplissent avec la
+  bonne réponse (~1,5 s), puis question suivante. Compté « jamais ».
+- À l'expiration du chrono question, la bonne réponse n'était pas
+  montrée (l'ancien `lastError` disparaissait). Remplacé : les cases
+  s'emplissent en vert doux 800 ms.
+
+_Composants modifiés/créés :_
+
+- `DigitBoxes.jsx` [NEW] — saisie à cases, ne connaît que `numDigits`
+- `Keypad.jsx` — ✓ retiré, 0 élargi sur 2 colonnes
+- `mastery.js` — échelle serveur unifiée, `construireMaitrise()` depuis
+  résultats par question (premier/rattrape/jamais), `buildWeights()`
+  avec `maxMultiplier=20`
+- `questions.js` — `estReponseExacte()` supprimée
+- `api.js` — `p_score_premier_essai` dans les deux fonctions
+- `Practice.jsx` — Quiz entièrement réécrit (cases, 3 tentatives libre,
+  response time, `scorePremierEssai`)
+- `Challenges.jsx` — 4 modes réécrits (cases, chrono 3s, scoring)
+- `App.jsx` — charge `maitrise` via `monProfil()`, la passe en prop
+- `Leaderboards.jsx` — niveaux déduits des classes renvoyées (plus de
+  6ᵉ/5ᵉ/4ᵉ/3ᵉ en dur)
+- Écrans de fin : « 18/20 du premier coup · 2 rattrapées au 2ᵉ essai »
+
+Build Vite 0 erreur (469 kB). Migration 12 appliquée, `points_session(20,12,'{7,8}') → 180` ✅.
+
+**Ensuite** — Les défis.
 
 
 ## 2026-08-28 — Ergonomie de la saisie sur iPad (Claude + Aymeri)

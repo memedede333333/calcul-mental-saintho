@@ -3,9 +3,11 @@ import React from 'react';
 /**
  * Keypad — Pavé numérique custom optimisé iPad
  * Boutons ≥ 64px, pas de clavier natif iOS
- * Props : onPress(digit), onDelete, onSubmit, onHint?, showHint?
+ *
+ * Dernière rangée : ⌫ · 0 (élargi sur 2 colonnes).
+ * Pas de touche ✓ — la saisie à cases juge dès la dernière case remplie.
  */
-export default function Keypad({ onPress, onDelete, onSubmit, onHint, showHint = true, disabled = false }) {
+export default function Keypad({ onPress, onDelete, disabled = false }) {
     return (
         <div className="keypad game-zone">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
@@ -26,18 +28,12 @@ export default function Keypad({ onPress, onDelete, onSubmit, onHint, showHint =
                 ⌫
             </button>
             <button
-                className="key"
+                className="key key--zero"
                 onClick={() => !disabled && onPress('0')}
                 disabled={disabled}
+                style={{ gridColumn: 'span 2' }}
             >
                 0
-            </button>
-            <button
-                className="key key--go"
-                onClick={() => !disabled && onSubmit()}
-                disabled={disabled}
-            >
-                ✓
             </button>
         </div>
     );

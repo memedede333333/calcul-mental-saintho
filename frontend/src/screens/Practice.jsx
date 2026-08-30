@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ALL_TABLES, PRAISE, newQuestion, makeHint, estReponseExacte } from '../logic/questions';
-import { updateMastery, buildWeights, construireErreurs, construireMaitrise } from '../logic/mastery';
+import { ALL_TABLES, PRAISE, newQuestion, makeHint } from '../logic/questions';
+import { updateMastery, buildWeights, construireErreurs, construireMaitrise, cleFait } from '../logic/mastery';
 import { enregistrerSession, enregistrerSessionProf } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -9,15 +9,15 @@ import MasteryGrid from '../components/MasteryGrid';
 /**
  * Practice — Mode S'entraîner complet
  * Phases : setup → quiz → results
- * Conservé et amélioré depuis le prototype :
- * - Tables 1-15, validation auto intelligente
- * - Compteur x/40, série sans faute 🔥, chrono
- * - Persistance maîtrise locale (puis serveur)
+ *
+ * Modèle à cases (28/08) : autant de cases que de chiffres dans la
+ * réponse. Dès que la dernière est remplie, le système juge.
+ * En entraînement libre : pas de chrono par question, 3 tentatives max.
  */
 
 const DEFAULT_TABLES = [2, 3, 4, 5];
 
-export default function Practice({ onBack, identite, estProf, onPlafondChange, tablesInitiales }) {
+export default function Practice({ onBack, identite, estProf, onPlafondChange, tablesInitiales, maitrise: maitriseProp }) {
     const [phase, setPhase] = useState(tablesInitiales?.length ? 'quiz' : 'setup');
     const [picked, setPicked] = useState(tablesInitiales?.length ? tablesInitiales : DEFAULT_TABLES);
     const [length, setLength] = useState(10);
@@ -25,42 +25,41 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
     const [result, setResult] = useState(null);
     const [serverResult, setServerResult] = useState(null);
     const [showGrid, setShowGrid] = useState(false);
-    const [mastery, setMastery] = useState({});
-    const [autoValidate, setAutoValidate] = useState(true);
+    const [mastery, setMastery] = useState(maitriseProp || {});
+
+    // Sync quand la prop maitrise arrive/change
+    useEffect(() => { if (maitriseProp) setMastery(maitriseProp); }, [maitriseProp]);
 
     const handleDone = useCallback((r) => {
-        setMastery(prev => updateMastery(prev, r.wrong, r.right));
+        // r contient : { score, scorePremierEssai, answered, maxStreak, resultats, seconds, timerMode }
+        const maitriseSortie = construireMaitrise(r.resultats);
+        // Merge session mastery into local
+        setMastery(prev => ({ ...prev, ...maitriseSortie }));
         setResult(r);
         setServerResult(null);
         setPhase('results');
 
-        // --- Enregistrement serveur ---
         const mode = r.timerMode ? 'countdown' : 'libre';
-        const erreurs = construireErreurs(r.wrong);
-        const maitrise = construireMaitrise(r.wrong, r.right);
-
-        // Practice n'est jamais en mode climb — plusHauteTable = null.
-        // Envoyer Math.max(...picked) distribuerait les badges climb_*
-        // à quiconque coche la table 10 en entraînement libre.
+        const erreurs = construireErreurs(r.resultats);
 
         const session = {
             mode,
             tables: picked,
             nbQuestions: r.answered,
             score: r.score,
+            scorePremierEssai: r.scorePremierEssai,
             erreurs,
             dureeS: r.seconds,
             serieMax: r.maxStreak,
             sansFauteMax: r.maxStreak,
             plusHauteTable: null,
-            maitrise,
+            maitrise: maitriseSortie,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
         enregistrer(session).then(res => {
             if (res.ok) {
                 setServerResult(res.data);
-                // Remonter le plafond mis à jour si la RPC l'a changé
                 const np = res.data?.plafond_tables;
                 if (np && np !== (identite?.profil?.plafond_tables || 10)) {
                     onPlafondChange?.(np);
@@ -86,7 +85,6 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
                     picked={picked} setPicked={setPicked}
                     length={length} setLength={setLength}
                     timer={timer} setTimer={setTimer}
-                    autoValidate={autoValidate} setAutoValidate={setAutoValidate}
                     onStart={() => setPhase('quiz')}
                     onShowGrid={() => setShowGrid(true)}
                     plafond={identite?.profil?.plafond_tables || 10}
@@ -102,7 +100,6 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
                 length={timer > 0 ? 0 : length}
                 timer={timer}
                 mastery={mastery}
-                autoValidate={autoValidate}
                 onQuit={() => setPhase('setup')}
                 onDone={handleDone}
             />
@@ -123,7 +120,7 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
 
 /* ===================== SETUP ===================== */
 
-function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, autoValidate, setAutoValidate, onStart, onShowGrid, plafond }) {
+function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, onStart, onShowGrid, plafond }) {
     const unlocked = ALL_TABLES.filter(t => t <= plafond);
     const toggle = (t) => {
         if (t > plafond) return;
@@ -219,14 +216,6 @@ function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, 
                 </div>
             </div>
 
-            {/* Options */}
-            <div className="card" style={{ marginTop: 14 }}>
-                <label className="commutative-toggle" onClick={() => setAutoValidate(v => !v)}>
-                    <input type="checkbox" checked={autoValidate} readOnly />
-                    Validation automatique
-                </label>
-            </div>
-
             {/* Boutons Go + Grille */}
             <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
                 <button
@@ -255,40 +244,47 @@ function Setup({ onBack, picked, setPicked, length, setLength, timer, setTimer, 
     );
 }
 
-/* ===================== QUIZ ===================== */
+/* ===================== QUIZ — Modèle à cases ===================== */
 
-function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) {
+function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
     const weights = useMemo(() => buildWeights(tables, mastery), [tables, mastery]);
 
     const [sessionWeights, setSessionWeights] = useState(weights);
     const [q, setQ] = useState(() => newQuestion(tables, null, weights));
-    const [input, setInput] = useState('');
+    const [digits, setDigits] = useState(() => Array(String(q.answer).length).fill(''));
     const [answered, setAnswered] = useState(0);
     const [score, setScore] = useState(0);
+    const [scorePremierEssai, setScorePremierEssai] = useState(0);
     const [streak, setStreak] = useState(0);
     const [maxStreak, setMaxStreak] = useState(0);
     const [fb, setFb] = useState('idle');
     const [word, setWord] = useState('');
     const [remaining, setRemaining] = useState(timer);
     const [showHint, setShowHint] = useState(false);
-    const [lastError, setLastError] = useState(''); // Correction persistante (chrono)
+
+    // Per-question state
+    const [premierEssai, setPremierEssai] = useState(true);
+    const [attempts, setAttempts] = useState(0);
+    const [responseStart, setResponseStart] = useState(null); // temps après 1ère touche
+
     const lockRef = useRef(false);
-    const wrongRef = useRef([]);
-    const rightRef = useRef([]);
+    const resultatsRef = useRef([]); // { a, b, result: 'premier'|'rattrape'|'jamais' }
     const startRef = useRef(Date.now());
+    // Les compteurs vivent dans des refs, pas seulement dans l'état.
+    // Une closure capturée par un setTimeout lit l'état du rendu
+    // précédent : à la dernière question, le score partirait
+    // amputé d'une unité. C'est arrivé, ne le refais pas.
     const scoreRef = useRef(0);
+    const scorePremierRef = useRef(0);
     const answeredRef = useRef(0);
     const maxStreakRef = useRef(0);
+    const streakRef = useRef(0);
     const timedOut = useRef(false);
     const endless = length === 0;
     const hasTimer = timer > 0;
+    const numDigits = String(q.answer).length;
 
-    // Sync refs
-    useEffect(() => { scoreRef.current = score; }, [score]);
-    useEffect(() => { answeredRef.current = answered; }, [answered]);
-    useEffect(() => { maxStreakRef.current = maxStreak; }, [maxStreak]);
-
-    // Timer countdown
+    // Global timer countdown
     useEffect(() => {
         if (!hasTimer) return;
         const id = setInterval(() => {
@@ -299,8 +295,11 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
                         timedOut.current = true;
                         setTimeout(() => {
                             onDone({
-                                score: scoreRef.current, answered: answeredRef.current,
-                                maxStreak: maxStreakRef.current, wrong: wrongRef.current, right: rightRef.current,
+                                score: scoreRef.current,
+                                scorePremierEssai: scorePremierRef.current,
+                                answered: answeredRef.current,
+                                maxStreak: maxStreakRef.current,
+                                resultats: resultatsRef.current,
                                 seconds: timer, timerMode: true
                             });
                         }, 0);
@@ -315,105 +314,175 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
 
     const finish = useCallback(() => {
         onDone({
-            score, answered: endless ? answered : length, maxStreak,
-            wrong: wrongRef.current, right: rightRef.current,
+            score: scoreRef.current, scorePremierEssai: scorePremierRef.current,
+            answered: endless ? answeredRef.current : length,
+            maxStreak: maxStreakRef.current,
+            resultats: resultatsRef.current,
             seconds: Math.round((Date.now() - startRef.current) / 1000), timerMode: hasTimer
         });
-    }, [score, answered, length, maxStreak, endless, hasTimer, onDone]);
+    }, [length, endless, hasTimer, onDone]);
 
-    const submit = useCallback(() => {
-        if (lockRef.current || input === '' || timedOut.current) return;
-        lockRef.current = true;
-        const ok = parseInt(input, 10) === q.answer;
-        const nextAnswered = answered + 1;
-        setAnswered(nextAnswered);
+    // Advance to next question
+    const nextQuestion = useCallback(() => {
+        lockRef.current = false;
+        setFb('idle'); setWord(''); setShowHint(false);
+        setPremierEssai(true); setAttempts(0); setResponseStart(null);
+        const newQ = newQuestion(tables, q, sessionWeights);
+        setQ(newQ);
+        setDigits(Array(String(newQ.answer).length).fill(''));
+    }, [tables, q, sessionWeights]);
 
-        if (ok) {
+    // Record result and move on
+    const recordAndAdvance = useCallback((result) => {
+        // Refs d'abord — toujours à jour pour onDone dans le setTimeout
+        resultatsRef.current.push({ a: q.a, b: q.b, result });
+        answeredRef.current += 1;
+        setAnswered(a => a + 1);
+
+        if (result === 'premier') {
+            scoreRef.current += 1;
+            scorePremierRef.current += 1;
             setScore(s => s + 1);
-            setStreak(s => { const n = s + 1; setMaxStreak(m => Math.max(m, n)); return n; });
-            setFb('correct');
-            setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
-            rightRef.current.push({ a: q.a, b: q.b });
-        } else {
+            setScorePremierEssai(s => s + 1);
+            streakRef.current += 1;
+            if (streakRef.current > maxStreakRef.current) maxStreakRef.current = streakRef.current;
+            setStreak(streakRef.current);
+            setMaxStreak(maxStreakRef.current);
+        } else if (result === 'rattrape') {
+            scoreRef.current += 1;
+            setScore(s => s + 1);
+            streakRef.current = 0;
             setStreak(0);
-            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
-            setFb('wrong');
-            setWord(`${q.a} × ${q.b} = ${q.answer}`);
-            const key = `${Math.min(q.a, q.b)}_${Math.max(q.a, q.b)}`;
-            setSessionWeights(w => ({ ...w, [key]: Math.min((w[key] || 1) + 3, 8) }));
+        } else {
+            streakRef.current = 0;
+            setStreak(0);
         }
 
-        // Transitions : 700ms normal, 250ms bon / 800ms erreur en chrono
-        const delay = hasTimer ? (ok ? 250 : 800) : (ok ? 700 : 1500);
+        // Update session weights
+        const key = cleFait(q.a, q.b);
+        setSessionWeights(w => ({
+            ...w,
+            [key]: Math.min((w[key] || 1) + (result === 'jamais' ? 4 : result === 'rattrape' ? 2 : 0), 8)
+        }));
 
-        // En chrono, la correction persiste sous la question suivante
-        if (hasTimer && !ok) {
-            setLastError(`⚠️ ${q.a} × ${q.b} = ${q.answer}`);
-        } else if (hasTimer && ok) {
-            // Bonne réponse : on ne touche pas à lastError,
-            // il reste affiché jusqu'à la prochaine erreur
-        }
+        const delay = result === 'premier' ? 400 : result === 'rattrape' ? 600 : 800;
+
         setTimeout(() => {
             if (timedOut.current) return;
-            lockRef.current = false;
-            setFb('idle'); setWord(''); setInput(''); setShowHint(false);
-            if (!endless && nextAnswered >= length) {
+            if (!endless && answeredRef.current >= length) {
                 onDone({
-                    score: ok ? score + 1 : score, answered: length,
-                    maxStreak: Math.max(maxStreak, ok ? streak + 1 : 0),
-                    wrong: wrongRef.current, right: rightRef.current,
-                    seconds: Math.round((Date.now() - startRef.current) / 1000)
+                    score: scoreRef.current,
+                    scorePremierEssai: scorePremierRef.current,
+                    answered: length,
+                    maxStreak: maxStreakRef.current,
+                    resultats: resultatsRef.current,
+                    seconds: Math.round((Date.now() - startRef.current) / 1000), timerMode: hasTimer
                 });
             } else {
-                setQ(prev => newQuestion(tables, prev, sessionWeights));
+                nextQuestion();
             }
         }, delay);
-    }, [input, q, answered, endless, length, score, maxStreak, streak, tables, sessionWeights, onDone, hasTimer]);
+    }, [q, endless, length, hasTimer, onDone, nextQuestion]);
 
-    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    // When digit boxes are complete (last digit filled)
+    const handleComplete = useCallback((value) => {
+        if (lockRef.current || timedOut.current) return;
+        const ok = value === q.answer;
+        const att = attempts + 1;
+        setAttempts(att);
+
+        if (ok) {
+            lockRef.current = true;
+            setFb('correct');
+            setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+            // Show response time in libre mode
+            if (!hasTimer && responseStart) {
+                const dt = ((Date.now() - responseStart) / 1000).toFixed(1);
+                setWord(`✓ ${dt} s`);
+            }
+            const result = premierEssai ? 'premier' : 'rattrape';
+            recordAndAdvance(result);
+        } else {
+            // Wrong
+            setPremierEssai(false);
+            setFb('wrong');
+
+            // En entraînement libre : après 3 tentatives, montrer la réponse
+            if (!hasTimer && att >= 3) {
+                lockRef.current = true;
+                setWord(`${q.a} × ${q.b} = ${q.answer}`);
+                // Show answer in the boxes
+                setTimeout(() => {
+                    setFb('reveal');
+                    setDigits(String(q.answer).split(''));
+                }, 300);
+                setTimeout(() => {
+                    recordAndAdvance('jamais');
+                }, 1800); // 300ms shake + 1500ms reveal
+                return;
+            }
+
+            // Reset boxes after shake
+            setTimeout(() => {
+                setFb('idle');
+                setWord('');
+                setDigits(Array(numDigits).fill(''));
+            }, 300);
+        }
+    }, [q, attempts, premierEssai, hasTimer, responseStart, numDigits, recordAndAdvance]);
+
+    // Digit input handlers
+    const press = useCallback((d) => {
+        if (lockRef.current || (fb !== 'idle')) return;
+        setDigits(prev => {
+            const idx = prev.findIndex(x => x === '');
+            if (idx === -1) return prev;
+            // First key → record start time
+            if (idx === 0 && prev.every(x => x === '')) {
+                setResponseStart(Date.now());
+            }
+            const next = [...prev];
+            next[idx] = d;
+            // Last digit filled → trigger completion
+            if (idx === numDigits - 1) {
+                setTimeout(() => handleComplete(parseInt(next.join(''), 10)), 0);
+            }
+            return next;
+        });
+    }, [fb, numDigits, handleComplete]);
+
+    const del = useCallback(() => {
+        if (lockRef.current || fb !== 'idle') return;
+        setDigits(prev => {
+            let idx = -1;
+            for (let i = prev.length - 1; i >= 0; i--) {
+                if (prev[i] !== '') { idx = i; break; }
+            }
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next[idx] = '';
+            return next;
+        });
+    }, [fb]);
+
+    // Physical keyboard
+    const onKeyRef = useRef();
+    onKeyRef.current = (e) => {
+        if (e.key >= '0' && e.key <= '9') press(e.key);
+        else if (e.key === 'Backspace') del();
+    };
     useEffect(() => {
-        if (!autoValidate || fb !== 'idle' || lockRef.current || !input) return;
-        if (estReponseExacte(input, q.answer)) { submit(); return; }
-        const id = setTimeout(submit, 1200);
-        return () => clearTimeout(id);
-    }, [input, autoValidate, q.answer, fb, submit]);
-
-    const press = (d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); };
-    const del = () => { if (!lockRef.current) setInput(v => v.slice(0, -1)); };
-
-    // Clavier physique (desktop)
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key >= '0' && e.key <= '9') press(e.key);
-            else if (e.key === 'Backspace') del();
-            else if (e.key === 'Enter') submit();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
-
-    // Swipe gauche sur la zone de réponse = effacer tout
-    const answerRef = useRef(null);
-    const touchStartX = useRef(0);
-    useEffect(() => {
-        const el = answerRef.current;
-        if (!el) return;
-        const onStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-        const onEnd = (e) => {
-            const dx = e.changedTouches[0].clientX - touchStartX.current;
-            if (dx < -60 && !lockRef.current) setInput('');
-        };
-        el.addEventListener('touchstart', onStart, { passive: true });
-        el.addEventListener('touchend', onEnd, { passive: true });
-        return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd); };
+        const handler = (e) => onKeyRef.current?.(e);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
     }, []);
 
     const pct = endless ? 0 : (answered / length) * 100;
     const timerPct = hasTimer ? remaining / timer : 1;
     const timerWarn = hasTimer && remaining <= 10;
-
-    // Streak milestone animation
     const streakMilestone = [10, 20, 30, 50, 100].includes(streak) && fb === 'correct';
+
+    const activeIndex = digits.findIndex(d => d === '');
 
     return (
         <div className="screen-enter game-zone">
@@ -449,15 +518,28 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
                 </div>
             )}
 
-            {/* Question */}
+            {/* Question + Cases */}
             <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
-                <div
-                    ref={answerRef}
-                    className={`answer-box${fb === 'correct' ? ' answer-box--correct' : fb === 'wrong' ? ' answer-box--wrong' : ''}`}
-                >
-                    {input === '' && fb === 'idle' ? <span className="caret" /> : input || '—'}
+
+                {/* Digit boxes */}
+                <div className="digit-boxes" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    {digits.map((d, i) => (
+                        <div
+                            key={i}
+                            className={[
+                                'digit-box',
+                                i === activeIndex && fb === 'idle' ? 'digit-box--active' : '',
+                                fb === 'correct' ? 'digit-box--correct' : '',
+                                fb === 'wrong' ? 'digit-box--wrong' : '',
+                                fb === 'reveal' ? 'digit-box--reveal' : '',
+                            ].filter(Boolean).join(' ')}
+                        >
+                            {d || (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
+                        </div>
+                    ))}
                 </div>
+
                 <div
                     className="feedback-word"
                     style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}
@@ -469,21 +551,10 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
                 )}
             </div>
 
-            {/* Correction persistante en chrono — l'élève la lit à son rythme */}
-            {hasTimer && lastError && (
-                <div style={{
-                    textAlign: 'center', fontSize: 14, fontWeight: 700,
-                    color: 'var(--coral-dk)', padding: '6px 0', marginBottom: 4,
-                }}>
-                    {lastError}
-                </div>
-            )}
-
             {/* Pavé numérique */}
             <Keypad
                 onPress={press}
                 onDelete={del}
-                onSubmit={submit}
                 disabled={lockRef.current}
             />
 
@@ -512,20 +583,26 @@ function Quiz({ tables, length, timer, mastery, autoValidate, onQuit, onDone }) 
 
 function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSetup }) {
     if (!result) return null;
-    const { score, answered, maxStreak, wrong, seconds, timerMode } = result;
-    const pct = answered ? Math.round((score / answered) * 100) : 0;
+    const { score, scorePremierEssai, answered, maxStreak, resultats, seconds, timerMode } = result;
+    const rattrapees = score - (scorePremierEssai || 0);
+    const pct = answered ? Math.round(((scorePremierEssai || score) / answered) * 100) : 0;
     const stars = pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0;
     const msg = stars === 3 ? 'Champion des tables ! 🏆'
         : stars === 2 ? 'Très bien joué !'
             : stars === 1 ? 'Bon début, continue !'
                 : 'On retente ? Tu vas y arriver !';
-    const wrongTables = [...new Set(wrong.map(w => w.a))].sort((a, b) => a - b);
 
-    // Badges renvoyés par le serveur
+    // Tables à revoir (tout ce qui n'est pas premier coup)
+    const wrongTables = [...new Set(
+        (resultats || []).filter(r => r.result !== 'premier').map(r => r.a)
+    )].sort((a, b) => a - b);
+
+    // Erreurs détaillées pour affichage
+    const erreurs = (resultats || []).filter(r => r.result === 'jamais');
+
     const badges = serverResult?.nouveaux_badges || [];
     const enAttente = serverResult?.enAttente;
 
-    // Confettis uniquement si réussite (≥ 70%)
     useEffect(() => {
         if (pct >= 70) {
             import('canvas-confetti').then(mod => {
@@ -547,12 +624,26 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
 
                 <h2 className="font-display" style={{ fontSize: 26, fontWeight: 800, marginTop: 8 }}>{msg}</h2>
 
+                {/* Deux chiffres — premier coup + rattrapées */}
+                <div style={{
+                    background: 'var(--surface-alt)', borderRadius: 'var(--radius-md)',
+                    padding: '16px 12px', margin: '14px 0',
+                }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--mint-dk)' }}>
+                        {scorePremierEssai ?? score} / {answered}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-soft)' }}>
+                        du premier coup
+                    </div>
+                    {rattrapees > 0 && (
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sun)', marginTop: 4 }}>
+                            +{rattrapees} rattrapée{rattrapees > 1 ? 's' : ''} au 2ᵉ essai
+                        </div>
+                    )}
+                </div>
+
                 {/* Stats */}
                 <div className="stat-grid">
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>{score}/{answered}</span>
-                        <span className="stat__label">Bonnes réponses</span>
-                    </div>
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--coral)' }}>{maxStreak}</span>
                         <span className="stat__label">Meilleure série</span>
@@ -567,30 +658,28 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
                     </div>
                 </div>
 
-                {/* Moyenne par question en mode chrono */}
-                {timerMode && answered > 0 && (
+                {/* Moyenne par question */}
+                {answered > 0 && (
                     <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-soft)', marginBottom: 14 }}>
                         ⚡ {(seconds / answered).toFixed(1)}s par question en moyenne
                     </p>
                 )}
 
                 {/* Erreurs à revoir */}
-                {wrong.length > 0 && (
+                {erreurs.length > 0 && (
                     <div style={{
                         textAlign: 'left', background: 'var(--surface-alt)',
                         borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16
                     }}>
-                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8 }}>À revoir :</p>
-                        {wrong.map((w, i) => (
+                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8 }}>Jamais trouvées :</p>
+                        {erreurs.map((e, i) => (
                             <div key={i} style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
-                                {w.a} × {w.b} = <b style={{ color: 'var(--mint-dk)' }}>{w.answer}</b>
-                                <span style={{ color: 'var(--coral)', marginLeft: 8, fontSize: 14 }}>
-                                    (tu as mis {w.given})
-                                </span>
+                                {e.a} × {e.b} = <b style={{ color: 'var(--mint-dk)' }}>{e.a * e.b}</b>
                             </div>
                         ))}
                     </div>
                 )}
+
                 {/* Badges débloqués */}
                 {badges.length > 0 && (
                     <div style={{

@@ -280,6 +280,7 @@ export async function enregistrerSession(s) {
         p_plus_haute_table: s.plusHauteTable ?? null,
         p_maitrise: s.maitrise ?? {},
         p_defi_id: s.defiId ?? null,
+        p_score_premier_essai: s.scorePremierEssai ?? null,
     };
 
     const r = await rpc('enregistrer_session', params);
@@ -303,6 +304,7 @@ export async function enregistrerSessionProf(s) {
         p_serie_max: s.serieMax ?? 0,
         p_sans_faute_max: s.sansFauteMax ?? 0,
         p_plus_haute_table: s.plusHauteTable ?? null,
+        p_score_premier_essai: s.scorePremierEssai ?? null,
     });
 }
 

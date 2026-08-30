@@ -145,64 +145,163 @@ presque terminé : il reste la restauration de session au démarrage.
 
 ## Partie 4 — Connexion Google (le chemin principal)
 
-**À faire dans le navigateur, une seule fois. Antigravity ne peut pas.**
+**À faire dans le navigateur, une seule fois. Antigravity ne peut pas** — et
+son propre compte Google ne pourra jamais se connecter, l'audience étant
+limitée au domaine `saintho.fr`.
 
 Les élèves ont tous un compte Google scolaire qu'ils utilisent déjà dans Safari
 pour les Google Forms. Sur un iPad où la session est ouverte, se connecter
 devient **une tape** — sans mail, sans code, sans attente.
 
-### 4.1 — Déclarer l'application dans Google Cloud Console
+⚠️ **L'interface Google a changé.** L'ancien menu *APIs et services › Écran de
+consentement OAuth* n'existe plus : tout est passé sous **Google Auth
+Platform**, avec quatre rubriques (Branding, Audience, Clients, Data Access).
+Les liens ci-dessous y mènent directement.
 
-Sur [console.cloud.google.com](https://console.cloud.google.com), avec ton
-compte administrateur Workspace.
+### Toutes les adresses, au même endroit
 
-**a. Créer ou choisir un projet** — nommé par exemple `calcul-mental-saintho`.
+| Où | Adresse |
+|---|---|
+| Google Auth Platform — vue d'ensemble | https://console.cloud.google.com/auth/overview |
+| — Branding (nom, logo, contact) | https://console.cloud.google.com/auth/branding |
+| — **Audience (Interne / Externe)** | https://console.cloud.google.com/auth/audience |
+| — Clients (ID client OAuth) | https://console.cloud.google.com/auth/clients |
+| — Data Access (scopes) | https://console.cloud.google.com/auth/scopes |
+| Supabase — Providers | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/auth/providers |
+| Supabase — URL Configuration | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/auth/url-configuration |
+| Supabase — SQL Editor | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/sql/new |
+| Supabase — Table Editor | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/editor |
+| Supabase — Comptes créés | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/auth/users |
+| Supabase — Journal d'authentification | https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/logs/auth-logs |
+| Admin Workspace (créer une adresse) | https://admin.google.com/ac/users |
 
-**b. Écran de consentement OAuth**
-*APIs et services › Écran de consentement OAuth*
+### 4.1 — Le projet Google Cloud
+
+Avec ton compte **administrateur Workspace**, pas un compte personnel.
+Crée ou choisis un projet, par exemple `calcul-mental-saintho`.
+
+### 4.2 — Branding
+
+https://console.cloud.google.com/auth/branding
 
 | Champ | Valeur |
 |---|---|
-| Type d'utilisateur | **Interne** ⚠️ |
 | Nom de l'application | Calcul Mental Saintho |
-| E-mail d'assistance | ton adresse |
-| Domaine autorisé | `saintho.fr` |
+| E-mail d'assistance | aymeri.desjardins@saintho.fr |
+| Coordonnées du développeur | aymeri.desjardins@saintho.fr |
 
-⚠️ **« Interne » est le réglage important.** Il limite la connexion aux comptes
-du Workspace `saintho.fr` : un Gmail personnel ne peut même pas aller au bout du
-parcours. C'est la porte fermée en amont.
+C'est ce nom que les élèves verront sur l'écran Google.
 
-**c. Créer les identifiants**
-*APIs et services › Identifiants › Créer › ID client OAuth*
+### 4.3 — Audience : **Interne** ⚠️
 
-- Type : **Application Web**
-- URI de redirection autorisés :
-  `https://lkukdlspcgqtiimvwlsd.supabase.co/auth/v1/callback`
+https://console.cloud.google.com/auth/audience
 
-Note l'**ID client** et le **code secret**. Le secret ne se réaffiche pas ;
-si tu le perds, on en régénère un.
+Choisis **Interne** (*Internal*). C'est le réglage qui compte : il limite la
+connexion aux comptes du Workspace `saintho.fr`. Un Gmail personnel ne peut même
+pas aller au bout du parcours — la porte est fermée chez Google, en amont de
+l'application.
 
-### 4.2 — Déclarer Google dans Supabase
+Effet de bord voulu : aucun agent, aucun prestataire, aucun compte extérieur ne
+peut se connecter, même pour tester.
 
-*Authentication › Sign In / Providers › Google* → activer, coller l'ID client et
-le code secret, enregistrer.
+### 4.4 — Client OAuth
 
-### 4.3 — Autoriser les adresses de retour
-
-*Authentication › URL Configuration*
+https://console.cloud.google.com/auth/clients → **Créer un client**
 
 | Champ | Valeur |
 |---|---|
-| Site URL | `https://calcul-mental-saintho.vercel.app` |
-| Redirect URLs | ajouter `http://localhost:5173/**` |
+| Type d'application | **Application Web** |
+| Nom | Supabase — Calcul Mental |
+| Origines JavaScript autorisées | `http://localhost:5173` (facultatif) |
+| **URI de redirection autorisés** | `https://lkukdlspcgqtiimvwlsd.supabase.co/auth/v1/callback` |
+
+⚠️ L'URI de redirection doit être **exactement** celle-ci, sans barre finale.
+C'est l'erreur numéro un : Google renvoie alors `redirect_uri_mismatch`.
+
+Note l'**ID client** et le **code secret**. Le secret ne se réaffiche jamais ;
+si tu le perds, on en régénère un, ça ne casse rien.
+
+### 4.5 — Déclarer Google dans Supabase
+
+https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/auth/providers
+
+Ouvre **Google**, active-le, colle l'ID client et le code secret, enregistre.
+
+### 4.6 — Autoriser les adresses de retour
+
+https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/auth/url-configuration
+
+| Champ | Valeur |
+|---|---|
+| Site URL | l'URL Vercel de production |
+| Redirect URLs | `http://localhost:5173/**` **et** l'URL Vercel suivie de `/**` |
 
 ⚠️ **Le `localhost` est indispensable pour développer.** Sans lui, la connexion
 échoue en local avec une erreur de redirection — et on cherche longtemps.
+Le `**` couvre les sous-chemins ; un seul `*` ne les couvrirait pas.
 
-### 4.4 — Vérifier
+### 4.7 — Inscrire les comptes
 
-Depuis l'application : bouton « Se connecter avec Google » → le sélecteur de
-compte n'affiche que les adresses `@saintho.fr` → retour dans l'app, connecté.
+Une adresse Google valide ne donne **aucun droit** : c'est la présence dans
+`eleves` ou `profs` qui autorise. Sans cette étape, tout le monde arrive sur
+« compte non reconnu » — ce qui est le comportement correct, mais pas très
+utile pour tester.
+
+⚠️ **Le premier administrateur se crée à la main.** `creer_prof()` exige d'être
+déjà administrateur : impossible de démarrer par l'application.
+
+https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/sql/new
+
+```sql
+-- Les deux administrateurs (enseignants avec tous les droits)
+insert into public.profs (email, nom, role) values
+  ('aymeri.desjardins@saintho.fr', 'Aymeri Desjardins', 'admin'),
+  ('cyrille.moreau@saintho.fr',    'Cyrille Moreau',    'admin')
+on conflict (email) do update set role = 'admin', actif = true;
+
+-- Les premieres eleves de la beta
+-- ⚠️ Corriger les classes : elles determinent le classement « ma classe »
+--    et le niveau. Deux classes differentes = test plus complet.
+insert into public.eleves (email, nom, prenom, classe) values
+  ('lou.audran@saintho.fr',     'Audran', 'Lou',     '61'),
+  ('adeliya.brandi@saintho.fr', 'Brandi', 'Adeliya', '62')
+on conflict (email) do nothing;
+
+-- Rattrapage : si un compte s'est deja connecte AVANT d'etre inscrit,
+-- le trigger de rattachement n'a pas pu jouer.
+update public.profs p set user_id = u.id
+  from auth.users u
+ where lower(u.email) = lower(p.email) and p.user_id is null;
+```
+
+Vérification :
+
+```sql
+select email, nom, role, actif, user_id is not null as deja_connecte
+  from public.profs order by role, nom;
+select email, prenom, nom, classe, plafond_tables
+  from public.eleves where email like '%@saintho.fr' order by classe;
+```
+
+### 4.8 — Vérifier, dans cet ordre
+
+| # | Test | Attendu |
+|---|---|---|
+| 1 | Ouvrir l'app sans session | écran de connexion |
+| 2 | « Se connecter avec Google » | le sélecteur n'affiche que des `@saintho.fr` |
+| 3 | Avec `aymeri.desjardins@saintho.fr` | accueil **enseignant**, bouton Administration visible |
+| 4 | Avec une adresse élève inscrite | accueil **élève**, son prénom, tables 1 à 10 |
+| 5 | Avec un Gmail personnel | Google refuse (audience Interne) |
+| 6 | Recharger la page connecté | on reste connecté |
+| 7 | Un Sprint de 20 questions, tout juste | **20 / 20 du premier coup** |
+| 8 | Ouvrir les Classements | les points de la partie y apparaissent |
+
+Si le test 2 échoue avec `redirect_uri_mismatch` : l'URI du 4.4 ne correspond
+pas au caractère près. Si l'app revient au login en boucle après Google : c'est
+`detectSessionInUrl` dans `api.js` — il doit rester à `true`.
+
+Le journal d'authentification dit toujours ce qui s'est passé :
+https://supabase.com/dashboard/project/lkukdlspcgqtiimvwlsd/logs/auth-logs
 
 ---
 

@@ -60,6 +60,7 @@ export default function Leaderboards({ onBack, identite, estProf }) {
     const [palier, setPalier] = useState(null);
     const [recordCat, setRecordCat] = useState('serie');
     const [niveauClasse, setNiveauClasse] = useState(null);
+    const [niveauxDisponibles, setNiveauxDisponibles] = useState([]);
 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -99,6 +100,13 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                     setData([]);
                 } else {
                     setData(res.data || []);
+                    // Déduire les niveaux disponibles des classes renvoyées
+                    if (onglet === 'classes' && niveauClasse === null && res.data?.length) {
+                        const niveaux = [...new Set(
+                            res.data.map(r => (r.nom_affiche || '')[0]).filter(Boolean)
+                        )].sort();
+                        setNiveauxDisponibles(niveaux);
+                    }
                 }
             } catch {
                 if (!annule) setErreur('Erreur réseau.');
@@ -222,20 +230,23 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                     </div>
 
                     {/* Filtre par niveau (Classes uniquement) */}
-                    {onglet === 'classes' && (
+                    {onglet === 'classes' && niveauxDisponibles.length > 0 && (
                         <div style={{ display: 'flex', gap: 4 }}>
-                            {[{ id: null, label: 'Tout le collège' },
-                              { id: '6', label: '6ᵉ' },
-                              { id: '5', label: '5ᵉ' },
-                              { id: '4', label: '4ᵉ' },
-                              { id: '3', label: '3ᵉ' }].map(n => (
+                            <button
+                                className={`chip${niveauClasse === null ? ' chip--navy' : ''}`}
+                                style={{ flex: 1, width: 'auto', fontSize: 12, height: 36 }}
+                                onClick={() => setNiveauClasse(null)}
+                            >
+                                Tous
+                            </button>
+                            {niveauxDisponibles.map(n => (
                                 <button
-                                    key={n.id ?? 'all'}
-                                    className={`chip${niveauClasse === n.id ? ' chip--navy' : ''}`}
+                                    key={n}
+                                    className={`chip${niveauClasse === n ? ' chip--navy' : ''}`}
                                     style={{ flex: 1, width: 'auto', fontSize: 12, height: 36 }}
-                                    onClick={() => setNiveauClasse(n.id)}
+                                    onClick={() => setNiveauClasse(n)}
                                 >
-                                    {n.label}
+                                    {n}ᵉ
                                 </button>
                             ))}
                         </div>
@@ -262,7 +273,20 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                         Joue quelques parties pour apparaître ici !
                     </p>
                 </div>
-            ) : (
+            ) : (() => {
+                const topValue = data[0]?.valeur ?? data[0]?.points ?? data[0]?.moyenne ?? 0;
+                if (topValue === 0) return (
+                    <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+                        <p style={{ fontSize: 40, marginBottom: 8 }}>🏜</p>
+                        <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 15 }}>
+                            Aucun résultat pour ces filtres.
+                        </p>
+                        <p style={{ color: 'var(--text-soft)', fontSize: 13, marginTop: 4 }}>
+                            Joue quelques parties pour apparaître ici !
+                        </p>
+                    </div>
+                );
+                return (
                 <>
                     {/* Podium top 3 */}
                     {data.length >= 3 && (
@@ -290,7 +314,8 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                         ))}
                     </div>
                 </>
-            )}
+                );
+            })()}
         </div>
     );
 }

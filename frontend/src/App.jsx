@@ -8,7 +8,7 @@ import Challenges from './screens/Challenges';
 import Leaderboards from './screens/Leaderboards';
 import Profile from './screens/Profile';
 import Admin from './screens/Admin';
-import { sessionActive, quiSuisJe, seDeconnecter, viderFile } from './api';
+import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil } from './api';
 import branding from './branding';
 
 /**
@@ -35,6 +35,7 @@ export default function App() {
     const [erreurMessage, setErreurMessage] = useState('');
     const [screen, setScreen] = useState('home');
     const [tablesADemarrer, setTablesADemarrer] = useState(null);
+    const [maitrise, setMaitrise] = useState({});
 
     const estProf = identite?.type === 'prof';
     const estAdmin = identite?.admin === true;
@@ -88,6 +89,15 @@ export default function App() {
             // session identifiée — pas avant, sinon viderFile() jette
             // les parties faute de permission.
             viderFile().catch(() => {});
+            // Charger la grille de maîtrise — un seul appel, réutilisée
+            // par Practice et Challenges pour pondérer les tirages.
+            if (data.type === 'eleve') {
+                monProfil().then(res => {
+                    if (res.ok && res.data?.maitrise) {
+                        setMaitrise(res.data.maitrise);
+                    }
+                }).catch(() => {});
+            }
         } else {
             // type === 'inconnu' ou inattendu
             setAppState('inconnu');
@@ -283,10 +293,11 @@ export default function App() {
                     estProf={estProf}
                     onPlafondChange={handlePlafondChange}
                     tablesInitiales={tablesADemarrer}
+                    maitrise={maitrise}
                 />
             )}
             {screen === 'challenges' && (
-                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} />
+                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} />
             )}
             {screen === 'leaderboards' && (
                 <Leaderboards onBack={goHome} identite={identite} estProf={estProf} />

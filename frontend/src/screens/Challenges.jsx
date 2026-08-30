@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { newQuestion, PRAISE, makeHint, ALL_TABLES, estReponseExacte } from '../logic/questions';
-import { buildWeights, construireErreurs, construireMaitrise } from '../logic/mastery';
+import { newQuestion, PRAISE, makeHint, ALL_TABLES } from '../logic/questions';
+import { buildWeights, construireErreurs, construireMaitrise, cleFait } from '../logic/mastery';
 import { enregistrerSession, enregistrerSessionProf } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
 
 /**
  * Challenges — Mode Défis
- * 5 types : Sprint, Sans faute, Contre-la-montre, Montée, Classe
- * Écran de sélection → configuration → jeu → résultats
+ * 4 types jouables : Sprint, Sans faute, Contre-la-montre, Montée
+ * + Défi de classe (à implémenter)
+ *
+ * Modèle à cases (28/08) : autant de cases que de chiffres dans la
+ * réponse. Chrono par question (3s) sauf Sans faute.
+ * Scoring : premier essai / rattrapé / jamais.
  */
+
+const QUESTION_TIMER = 3; // secondes par question
 
 const CHALLENGE_TYPES = [
     {
@@ -39,8 +45,8 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange }) {
-    const [phase, setPhase] = useState('select'); // select | config | play | results
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp }) {
+    const [phase, setPhase] = useState('select');
     const [challengeType, setChallengeType] = useState(null);
     const [joinCode, setJoinCode] = useState('');
     const [selectedTables, setSelectedTables] = useState([2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -54,10 +60,9 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange 
         setServerResult(null);
         setPhase('results');
 
-        // Préparation de la session pour enregistrerSession
         const mode = challengeType?.id || 'sprint';
-        const erreurs = construireErreurs(r.wrong || []);
-        const maitrise = construireMaitrise(r.wrong || [], r.right || []);
+        const maitrise = construireMaitrise(r.resultats || []);
+        const erreurs = construireErreurs(r.resultats || []);
 
         let tables = selectedTables;
         if (mode === 'climb') {
@@ -66,18 +71,16 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange 
             for (let i = 2; i <= maxT; i++) tables.push(i);
         }
 
-        const nbQuestions = r.answered || (r.score + (r.errors || 0)) || 0;
-        const score = Math.min(nbQuestions, Math.max(0, r.score ?? 0));
-
         const session = {
             mode,
             tables,
-            nbQuestions,
-            score,
+            nbQuestions: r.answered || 0,
+            score: r.score || 0,
+            scorePremierEssai: r.scorePremierEssai ?? null,
             erreurs,
             dureeS: Math.round(r.time || 0),
-            serieMax: r.maxStreak || r.streak || 0,
-            sansFauteMax: mode === 'flawless' ? (r.streak || 0) : (r.maxStreak || 0),
+            serieMax: r.maxStreak || 0,
+            sansFauteMax: mode === 'flawless' ? (r.maxStreak || 0) : (r.maxStreak || 0),
             plusHauteTable: mode === 'climb' ? (r.highestTable || null) : null,
             maitrise,
         };
@@ -86,11 +89,8 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange 
         enregistrer(session).then(res => {
             if (res.ok) {
                 setServerResult(res.data);
-                // Remonter le plafond mis à jour si la Montée l'a changé
                 const np = res.data?.plafond_tables;
-                if (np && np !== plafond) {
-                    onPlafondChange?.(np);
-                }
+                if (np && np !== plafond) onPlafondChange?.(np);
             } else {
                 setServerResult({ erreur: res.error, enAttente: res.enAttente });
             }
@@ -129,6 +129,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange 
             <ChallengePlay
                 type={challengeType}
                 tables={selectedTables}
+                maitrise={maitriseProp}
                 onQuit={() => setPhase('select')}
                 onDone={handleDone}
             />
@@ -192,7 +193,6 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
                 </div>
             </div>
 
-            {/* Types de défis */}
             {CHALLENGE_TYPES.map(type => (
                 <button
                     key={type.id}
@@ -218,8 +218,6 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode }) {
 
 function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) {
     const isClimb = type.id === 'climb';
-
-    // Tables autorisées pour ce compte
     const availableTables = ALL_TABLES.filter(t => t <= Math.max(10, plafond));
 
     const toggle = (t) => {
@@ -268,37 +266,36 @@ function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) 
                 </div>
             )}
 
-            {/* Règles */}
             <div className="card" style={{ marginBottom: 14 }}>
                 <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
                     📋 Règles
                 </h3>
                 {type.id === 'sprint' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-                        <li>20 questions chrono</li>
-                        <li>Classement par temps total</li>
-                        <li>+3 secondes de pénalité par erreur</li>
+                        <li>20 questions, 3s par question</li>
+                        <li>1er essai = 1 pt, rattrapé = ½ pt</li>
+                        <li>Classement par score total</li>
                     </ul>
                 )}
                 {type.id === 'flawless' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
                         <li>Questions en flux continu</li>
                         <li>La première erreur t'arrête !</li>
-                        <li>Gagne la plus longue série</li>
+                        <li>Pas de chrono par question</li>
                     </ul>
                 )}
                 {type.id === 'countdown' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-                        <li>2 minutes chrono</li>
-                        <li>Maximum de bonnes réponses</li>
-                        <li>Les erreurs retirent 1 point (plancher 0)</li>
+                        <li>2 minutes chrono, 3s par question</li>
+                        <li>1er essai = 1 pt, rattrapé = ½ pt</li>
+                        <li>Maximum de points !</li>
                     </ul>
                 )}
                 {type.id === 'climb' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-                        <li>Commence à la table 2</li>
+                        <li>Commence à la table 2, 3s par question</li>
                         <li>5 questions par palier, ≥4 justes pour passer</li>
-                        <li>Débloque les tables supérieures pour l'entraînement !</li>
+                        <li>Débloque les tables supérieures !</li>
                     </ul>
                 )}
                 {type.id === 'class' && (
@@ -324,93 +321,269 @@ function ChallengeConfig({ type, tables, setTables, plafond, onBack, onStart }) 
 
 /* ===================== PLAY ===================== */
 
-function ChallengePlay({ type, tables, onQuit, onDone }) {
+function ChallengePlay({ type, tables, maitrise, onQuit, onDone }) {
     const activeTables = tables && tables.length > 0 ? tables : [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-    if (type.id === 'sprint') return <SprintPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
-    if (type.id === 'flawless') return <FlawlessPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
-    if (type.id === 'countdown') return <CountdownPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'sprint') return <SprintPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'flawless') return <FlawlessPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
+    if (type.id === 'countdown') return <CountdownPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
     if (type.id === 'climb') return <ClimbPlay onQuit={onQuit} onDone={onDone} />;
-    return <SprintPlay tables={activeTables} onQuit={onQuit} onDone={onDone} />;
+    return <SprintPlay tables={activeTables} maitrise={maitrise} onQuit={onQuit} onDone={onDone} />;
 }
 
-/* --- Sprint : 20 questions, classement par temps --- */
-function SprintPlay({ tables, onQuit, onDone }) {
-    const total = 20;
-    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
+/* ================================================================
+ * Shared hook for digit-box quiz logic with per-question timer.
+ *
+ * Returns everything needed to render a quiz with digit boxes,
+ * a question timer bar, and first-attempt scoring.
+ * ================================================================ */
+
+function useQuizEngine({ tables, maitrise, hasQuestionTimer }) {
+    const weights = useMemo(() => buildWeights(tables, maitrise || {}), [tables, maitrise]);
     const [q, setQ] = useState(() => newQuestion(tables, null, weights));
-    const [input, setInput] = useState('');
-    const [answered, setAnswered] = useState(0);
-    const [errors, setErrors] = useState(0);
+    const [digits, setDigits] = useState(() => Array(String(q.answer).length).fill(''));
     const [fb, setFb] = useState('idle');
     const [word, setWord] = useState('');
+    const [premierEssai, setPremierEssai] = useState(true);
+    const [qTimerActive, setQTimerActive] = useState(false);
+    const [qTimerExpired, setQTimerExpired] = useState(false);
     const lockRef = useRef(false);
-    const startRef = useRef(Date.now());
-    const wrongRef = useRef([]);
-    const rightRef = useRef([]);
+    const resultatsRef = useRef([]);
+    const qTimerRef = useRef(null);
 
-    const submit = useCallback(() => {
-        if (lockRef.current || !input) return;
-        lockRef.current = true;
-        const ok = parseInt(input, 10) === q.answer;
-        const next = answered + 1;
-        setAnswered(next);
+    // ── Compteurs : refs pour la logique, état pour l'affichage ──
+    // Une closure capturée par un setTimeout lit l'état du rendu
+    // précédent : à la dernière question, le score partirait
+    // amputé d'une unité. Les refs sont la seule source de vérité
+    // que onDone doit lire.
+    const scoreRef = useRef(0);
+    const premierRef = useRef(0);
+    const answeredRef = useRef(0);
+    const maxStreakRef = useRef(0);
+    const streakRef = useRef(0);
+    const [score, setScore] = useState(0);
+    const [scorePremierEssai, setScorePremierEssai] = useState(0);
+    const [answered, setAnswered] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [maxStreak, setMaxStreak] = useState(0);
 
-        if (ok) {
-            setFb('correct');
-            setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
-            rightRef.current.push({ a: q.a, b: q.b });
+    const numDigits = String(q.answer).length;
+
+    // Question timer (3s from first keypress)
+    useEffect(() => {
+        if (!hasQuestionTimer || !qTimerActive || qTimerExpired) return;
+        qTimerRef.current = setTimeout(() => {
+            setQTimerExpired(true);
+        }, QUESTION_TIMER * 1000);
+        return () => clearTimeout(qTimerRef.current);
+    }, [hasQuestionTimer, qTimerActive, qTimerExpired]);
+
+    const resetQuestion = useCallback((newQ) => {
+        lockRef.current = false;
+        setFb('idle'); setWord('');
+        setPremierEssai(true);
+        setQTimerActive(false); setQTimerExpired(false);
+        clearTimeout(qTimerRef.current);
+        setQ(newQ);
+        setDigits(Array(String(newQ.answer).length).fill(''));
+    }, []);
+
+    /** Enregistre le résultat d'une question. Met à jour refs ET état.
+     *  Retourne les valeurs à jour (post-incrément) pour la logique appelante. */
+    const recordResult = useCallback((result) => {
+        resultatsRef.current.push({ a: q.a, b: q.b, result });
+        answeredRef.current += 1;
+        setAnswered(a => a + 1);
+
+        if (result === 'premier') {
+            scoreRef.current += 1;
+            premierRef.current += 1;
+            setScore(s => s + 1);
+            setScorePremierEssai(s => s + 1);
+            streakRef.current += 1;
+            if (streakRef.current > maxStreakRef.current) maxStreakRef.current = streakRef.current;
+            setStreak(streakRef.current);
+            setMaxStreak(maxStreakRef.current);
+        } else if (result === 'rattrape') {
+            scoreRef.current += 1;
+            setScore(s => s + 1);
+            streakRef.current = 0;
+            setStreak(0);
         } else {
-            setErrors(e => e + 1);
-            setFb('wrong');
-            setWord(`${q.a} × ${q.b} = ${q.answer}`);
-            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
+            streakRef.current = 0;
+            setStreak(0);
         }
 
-        setTimeout(() => {
-            lockRef.current = false;
-            setFb('idle'); setWord(''); setInput('');
-            if (next >= total) {
-                const elapsed = (Date.now() - startRef.current) / 1000;
-                const errCount = errors + (ok ? 0 : 1);
-                onDone({
-                    answered: total,
-                    errors: errCount,
-                    time: elapsed,
-                    score: total - errCount,
-                    wrong: wrongRef.current,
-                    right: rightRef.current,
-                    maxStreak: total - errCount,
-                });
-            } else {
-                setQ(prev => newQuestion(tables, prev, weights));
+        return {
+            answered: answeredRef.current,
+            score: scoreRef.current,
+            premier: premierRef.current,
+            maxStreak: maxStreakRef.current,
+        };
+    }, [q]);
+
+    const press = useCallback((d) => {
+        if (lockRef.current || fb !== 'idle') return;
+        setDigits(prev => {
+            const idx = prev.findIndex(x => x === '');
+            if (idx === -1) return prev;
+            if (idx === 0 && prev.every(x => x === '') && hasQuestionTimer) {
+                setQTimerActive(true);
             }
-        }, ok ? 250 : 500);
-    }, [input, q, answered, errors, tables, weights, onDone]);
+            const next = [...prev];
+            next[idx] = d;
+            return next;
+        });
+    }, [fb, hasQuestionTimer]);
 
-    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
-    useEffect(() => {
-        if (fb !== 'idle' || lockRef.current || !input) return;
-        if (estReponseExacte(input, q.answer)) { submit(); return; }
-        const id = setTimeout(submit, 1200);
-        return () => clearTimeout(id);
-    }, [input, q.answer, fb, submit]);
+    const del = useCallback(() => {
+        if (lockRef.current || fb !== 'idle') return;
+        setDigits(prev => {
+            let idx = -1;
+            for (let i = prev.length - 1; i >= 0; i--) {
+                if (prev[i] !== '') { idx = i; break; }
+            }
+            if (idx === -1) return prev;
+            const next = [...prev];
+            next[idx] = '';
+            return next;
+        });
+    }, [fb]);
 
-    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
-    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
-
+    // Keyboard handler
     const onKeyRef = useRef();
     onKeyRef.current = (e) => {
         if (e.key >= '0' && e.key <= '9') press(e.key);
         else if (e.key === 'Backspace') del();
-        else if (e.key === 'Enter') submit();
     };
-
     useEffect(() => {
         const handler = (e) => onKeyRef.current?.(e);
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, []);
+
+    return {
+        q, digits, setDigits, fb, setFb, word, setWord,
+        premierEssai, setPremierEssai,
+        score, scorePremierEssai, answered, streak, maxStreak,
+        scoreRef, premierRef, answeredRef, maxStreakRef,
+        qTimerActive, qTimerExpired, setQTimerExpired, setQTimerActive,
+        lockRef, resultatsRef, numDigits, weights,
+        resetQuestion, recordResult, press, del,
+        qTimerRef,
+    };
+}
+
+// Render digit boxes inline (used by all play modes)
+function renderDigitBoxes(digits, fb, numDigits) {
+    const activeIndex = digits.findIndex(d => d === '');
+    return (
+        <div className="digit-boxes" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            {digits.map((d, i) => (
+                <div
+                    key={i}
+                    className={[
+                        'digit-box',
+                        i === activeIndex && fb === 'idle' ? 'digit-box--active' : '',
+                        fb === 'correct' ? 'digit-box--correct' : '',
+                        fb === 'wrong' ? 'digit-box--wrong' : '',
+                        fb === 'reveal' ? 'digit-box--reveal' : '',
+                    ].filter(Boolean).join(' ')}
+                >
+                    {d || (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// Render question timer bar
+function renderQuestionTimer(active, expired) {
+    if (!active && !expired) return null;
+    return (
+        <div className="question-timer" style={{ marginTop: 8 }}>
+            <i
+                className={`question-timer__fill${expired ? ' question-timer__fill--warn' : ''}`}
+                style={{
+                    width: expired ? '0%' : (active ? '0%' : '100%'),
+                    transition: active && !expired ? `width ${QUESTION_TIMER}s linear` : 'none',
+                }}
+                ref={(el) => {
+                    // Force reflow to trigger transition
+                    if (el && active && !expired) {
+                        el.style.width = '100%';
+                        el.getBoundingClientRect();
+                        el.style.width = '0%';
+                    }
+                }}
+            />
+        </div>
+    );
+}
+
+/* --- Sprint : 20 questions, 3s/question --- */
+function SprintPlay({ tables, maitrise, onQuit, onDone }) {
+    const total = 20;
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true });
+    const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
+        qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
+        score, answered,
+        scoreRef, premierRef, answeredRef, maxStreakRef,
+        resetQuestion, recordResult, press, del } = engine;
+
+    const startRef = useRef(Date.now());
+
+    const advanceOrDone = useCallback(() => {
+        if (answeredRef.current >= total) {
+            onDone({
+                answered: total,
+                score: scoreRef.current,
+                scorePremierEssai: premierRef.current,
+                maxStreak: maxStreakRef.current,
+                resultats: resultatsRef.current,
+                time: (Date.now() - startRef.current) / 1000,
+            });
+        } else {
+            resetQuestion(newQuestion(tables, q, weights));
+        }
+    }, [tables, q, weights, onDone, resetQuestion]);
+
+    // Handle question timer expiry → show answer then advance
+    useEffect(() => {
+        if (!qTimerExpired || lockRef.current) return;
+        lockRef.current = true;
+        setFb('reveal');
+        setDigits(String(q.answer).split(''));
+        setWord(`${q.a} × ${q.b} = ${q.answer}`);
+        recordResult('jamais');
+        const id = setTimeout(advanceOrDone, 800);
+        return () => clearTimeout(id);
+    }, [qTimerExpired]);
+
+    // Handle digit completion
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current) return;
+        const allFilled = digits.every(d => d !== '') && digits.length === numDigits;
+        if (!allFilled) return;
+
+        const value = parseInt(digits.join(''), 10);
+        const ok = value === q.answer;
+
+        if (ok) {
+            lockRef.current = true;
+            setFb('correct');
+            setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+            recordResult(premierEssai ? 'premier' : 'rattrape');
+            setTimeout(advanceOrDone, 400);
+        } else {
+            setPremierEssai(false);
+            setFb('wrong');
+            setTimeout(() => {
+                setFb('idle'); setWord('');
+                setDigits(Array(numDigits).fill(''));
+            }, 300);
+        }
+    }, [digits]);
 
     return (
         <div className="screen-enter game-zone">
@@ -418,147 +591,108 @@ function SprintPlay({ tables, onQuit, onDone }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span className="pill">⚡ Sprint</span>
                 <span className="pill">{answered}/{total}</span>
-                <span className="pill" style={{ color: errors > 0 ? 'var(--coral)' : undefined }}>❌ {errors}</span>
+                <span className="pill">⭐ {score}</span>
             </div>
             <div className="progress-bar" style={{ marginBottom: 16 }}>
                 <i className="progress-bar__fill" style={{ width: `${(answered / total) * 100}%` }} />
             </div>
             <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
-                <div className={`answer-box${fb === 'correct' ? ' answer-box--correct' : fb === 'wrong' ? ' answer-box--wrong' : ''}`}>
-                    {input === '' && fb === 'idle' ? <span className="caret" /> : input || '—'}
-                </div>
+                {renderDigitBoxes(digits, fb, numDigits)}
+                {renderQuestionTimer(qTimerActive, qTimerExpired)}
                 <div className="feedback-word" style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}>
                     {word}
                 </div>
             </div>
-            <Keypad onPress={press} onDelete={del} onSubmit={submit} />
+            <Keypad onPress={press} onDelete={del} />
         </div>
     );
 }
 
-/* --- Sans faute : la première erreur arrête --- */
-function FlawlessPlay({ tables, onQuit, onDone }) {
-    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
-    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
-    const [input, setInput] = useState('');
-    const [streak, setStreak] = useState(0);
-    const [fb, setFb] = useState('idle');
-    const [word, setWord] = useState('');
-    const lockRef = useRef(false);
-    const startRef = useRef(Date.now());
-    const wrongRef = useRef([]);
-    const rightRef = useRef([]);
+/* --- Sans faute : première erreur → fin, pas de chrono question --- */
+function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: false });
+    const { q, digits, setDigits, fb, setFb, word, setWord,
+        lockRef, resultatsRef, numDigits, weights,
+        streak, scoreRef, premierRef, answeredRef, maxStreakRef,
+        resetQuestion, recordResult, press, del } = engine;
 
-    const submit = useCallback(() => {
-        if (lockRef.current || !input) return;
-        lockRef.current = true;
-        const ok = parseInt(input, 10) === q.answer;
+    const startRef = useRef(Date.now());
+
+    // Handle digit completion — Sans faute : first complete answer decides
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current) return;
+        const allFilled = digits.every(d => d !== '') && digits.length === numDigits;
+        if (!allFilled) return;
+
+        const value = parseInt(digits.join(''), 10);
+        const ok = value === q.answer;
 
         if (ok) {
-            setStreak(s => s + 1);
+            lockRef.current = true;
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
-            rightRef.current.push({ a: q.a, b: q.b });
+            recordResult('premier');
             setTimeout(() => {
-                lockRef.current = false;
-                setFb('idle'); setWord(''); setInput('');
-                setQ(prev => newQuestion(tables, prev, weights));
-            }, 250);
+                resetQuestion(newQuestion(tables, q, weights));
+            }, 400);
         } else {
+            // Game over
+            lockRef.current = true;
             setFb('wrong');
             setWord(`${q.a} × ${q.b} = ${q.answer}`);
-            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
+            recordResult('jamais');
             setTimeout(() => {
-                const elapsed = (Date.now() - startRef.current) / 1000;
+                const s = scoreRef.current; // = nombre de bonnes avant l'erreur
                 onDone({
-                    streak,
-                    score: streak,
-                    answered: streak + 1,
-                    time: elapsed,
+                    streak: s, score: s, scorePremierEssai: s,
+                    answered: answeredRef.current,
+                    maxStreak: maxStreakRef.current,
+                    time: (Date.now() - startRef.current) / 1000,
                     lastQuestion: `${q.a}×${q.b}`,
-                    wrong: wrongRef.current,
-                    right: rightRef.current,
-                    maxStreak: streak,
+                    resultats: resultatsRef.current,
                 });
             }, 1200);
         }
-    }, [input, q, streak, tables, weights, onDone]);
-
-    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
-    useEffect(() => {
-        if (fb !== 'idle' || lockRef.current || !input) return;
-        if (estReponseExacte(input, q.answer)) { submit(); return; }
-        const id = setTimeout(submit, 1200);
-        return () => clearTimeout(id);
-    }, [input, q.answer, fb, submit]);
-
-    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
-    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
-
-    const onKeyRef = useRef();
-    onKeyRef.current = (e) => {
-        if (e.key >= '0' && e.key <= '9') press(e.key);
-        else if (e.key === 'Backspace') del();
-        else if (e.key === 'Enter') submit();
-    };
-
-    useEffect(() => {
-        const handler = (e) => onKeyRef.current?.(e);
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+    }, [digits]);
 
     return (
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                 <span className="pill" style={{
-                    fontSize: 24,
-                    background: streak >= 10 ? 'linear-gradient(135deg, var(--gold-light), var(--gold))' : undefined,
-                    color: streak >= 10 ? '#fff' : undefined,
+                    background: 'linear-gradient(135deg, var(--gold-light), var(--gold))',
+                    color: '#fff', fontSize: 20, padding: '8px 28px',
                 }}>
                     🔥 {streak}
                 </span>
             </div>
             <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
-                <div className={`answer-box${fb === 'correct' ? ' answer-box--correct' : fb === 'wrong' ? ' answer-box--wrong' : ''}`}>
-                    {input === '' && fb === 'idle' ? <span className="caret" /> : input || '—'}
-                </div>
+                {renderDigitBoxes(digits, fb, numDigits)}
                 <div className="feedback-word" style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}>
                     {word}
                 </div>
             </div>
-            <Keypad onPress={press} onDelete={del} onSubmit={submit} />
+            <Keypad onPress={press} onDelete={del} />
         </div>
     );
 }
 
-/* --- Contre-la-montre : 2 min, max de bonnes réponses --- */
-function CountdownPlay({ tables, onQuit, onDone }) {
+/* --- Contre-la-montre : 2 min, 3s/question --- */
+function CountdownPlay({ tables, maitrise, onQuit, onDone }) {
     const duration = 120;
-    const weights = useMemo(() => buildWeights(tables, {}), [tables]);
-    const [q, setQ] = useState(() => newQuestion(tables, null, weights));
-    const [input, setInput] = useState('');
-    const [score, setScore] = useState(0);
-    const [lastError, setLastError] = useState(''); // Correction persistante
-    const [streak, setStreak] = useState(0);
-    const [maxStreak, setMaxStreak] = useState(0);
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true });
+    const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
+        qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
+        score,
+        scoreRef, premierRef, answeredRef, maxStreakRef,
+        resetQuestion, recordResult, press, del } = engine;
+
     const [remaining, setRemaining] = useState(duration);
-    const [fb, setFb] = useState('idle');
-    const [word, setWord] = useState('');
-    const lockRef = useRef(false);
-    const scoreRef = useRef(0);
-    const answeredRef = useRef(0);
-    const maxStreakRef = useRef(0);
     const timedOut = useRef(false);
-    const wrongRef = useRef([]);
-    const rightRef = useRef([]);
 
-    useEffect(() => { scoreRef.current = score; }, [score]);
-    useEffect(() => { maxStreakRef.current = maxStreak; }, [maxStreak]);
-
+    // Global countdown
     useEffect(() => {
         const id = setInterval(() => {
             setRemaining(r => {
@@ -569,11 +703,10 @@ function CountdownPlay({ tables, onQuit, onDone }) {
                         setTimeout(() => {
                             onDone({
                                 score: scoreRef.current,
+                                scorePremierEssai: premierRef.current,
                                 answered: answeredRef.current,
-                                time: duration,
                                 maxStreak: maxStreakRef.current,
-                                wrong: wrongRef.current,
-                                right: rightRef.current,
+                                time: duration, resultats: resultatsRef.current,
                             });
                         }, 0);
                     }
@@ -585,62 +718,47 @@ function CountdownPlay({ tables, onQuit, onDone }) {
         return () => clearInterval(id);
     }, [onDone]);
 
-    const submit = useCallback(() => {
-        if (lockRef.current || !input || timedOut.current) return;
+    const advanceQuestion = useCallback(() => {
+        if (timedOut.current) return;
+        resetQuestion(newQuestion(tables, q, weights));
+    }, [tables, q, weights, resetQuestion]);
+
+    // Question timer expiry
+    useEffect(() => {
+        if (!qTimerExpired || lockRef.current || timedOut.current) return;
         lockRef.current = true;
-        const ok = parseInt(input, 10) === q.answer;
-        answeredRef.current += 1;
+        setFb('reveal');
+        setDigits(String(q.answer).split(''));
+        setWord(`${q.a} × ${q.b} = ${q.answer}`);
+        recordResult('jamais');
+        const id = setTimeout(advanceQuestion, 800);
+        return () => clearTimeout(id);
+    }, [qTimerExpired]);
+
+    // Digit completion
+    useEffect(() => {
+        if (fb !== 'idle' || lockRef.current || timedOut.current) return;
+        const allFilled = digits.every(d => d !== '') && digits.length === numDigits;
+        if (!allFilled) return;
+
+        const value = parseInt(digits.join(''), 10);
+        const ok = value === q.answer;
 
         if (ok) {
-            setScore(s => s + 1);
-            setStreak(s => {
-                const next = s + 1;
-                setMaxStreak(m => Math.max(m, next));
-                return next;
-            });
+            lockRef.current = true;
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
-            rightRef.current.push({ a: q.a, b: q.b });
+            recordResult(premierEssai ? 'premier' : 'rattrape');
+            setTimeout(advanceQuestion, 250);
         } else {
-            setScore(s => Math.max(0, s - 1));
-            setStreak(0);
+            setPremierEssai(false);
             setFb('wrong');
-            setWord(`${q.a} × ${q.b} = ${q.answer}`);
-            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
-            setLastError(`⚠️ ${q.a} × ${q.b} = ${q.answer}`);
+            setTimeout(() => {
+                setFb('idle'); setWord('');
+                setDigits(Array(numDigits).fill(''));
+            }, 300);
         }
-
-        setTimeout(() => {
-            if (timedOut.current) return;
-            lockRef.current = false;
-            setFb('idle'); setWord(''); setInput('');
-            setQ(prev => newQuestion(tables, prev, weights));
-        }, ok ? 250 : 800);
-    }, [input, q, tables, weights]);
-
-    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
-    useEffect(() => {
-        if (fb !== 'idle' || lockRef.current || !input || timedOut.current) return;
-        if (estReponseExacte(input, q.answer)) { submit(); return; }
-        const id = setTimeout(submit, 1200);
-        return () => clearTimeout(id);
-    }, [input, q.answer, fb, submit]);
-
-    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
-    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
-
-    const onKeyRef = useRef();
-    onKeyRef.current = (e) => {
-        if (e.key >= '0' && e.key <= '9') press(e.key);
-        else if (e.key === 'Backspace') del();
-        else if (e.key === 'Enter') submit();
-    };
-
-    useEffect(() => {
-        const handler = (e) => onKeyRef.current?.(e);
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+    }, [digits]);
 
     const timerWarn = remaining <= 10;
 
@@ -659,158 +777,129 @@ function CountdownPlay({ tables, onQuit, onDone }) {
             </div>
             <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
-                <div className={`answer-box${fb === 'correct' ? ' answer-box--correct' : fb === 'wrong' ? ' answer-box--wrong' : ''}`}>
-                    {input === '' && fb === 'idle' ? <span className="caret" /> : input || '—'}
-                </div>
+                {renderDigitBoxes(digits, fb, numDigits)}
+                {renderQuestionTimer(qTimerActive, qTimerExpired)}
                 <div className="feedback-word" style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}>
                     {word}
                 </div>
             </div>
-            {/* Correction persistante — l'élève la lit à son rythme */}
-            {lastError && (
-                <div style={{
-                    textAlign: 'center', fontSize: 14, fontWeight: 700,
-                    color: 'var(--coral-dk)', padding: '6px 0', marginBottom: 4,
-                }}>
-                    {lastError}
-                </div>
-            )}
-            <Keypad onPress={press} onDelete={del} onSubmit={submit} />
+            <Keypad onPress={press} onDelete={del} />
         </div>
     );
 }
 
-/* --- Montée des tables : palier par palier --- */
+/* --- Montée des tables : palier par palier, 3s/question --- */
 function ClimbPlay({ onQuit, onDone }) {
     const [currentTable, setCurrentTable] = useState(2);
     const [questionsInLevel, setQuestionsInLevel] = useState(0);
     const [correctInLevel, setCorrectInLevel] = useState(0);
-    const [totalQuestions, setTotalQuestions] = useState(0);
-    const [totalCorrect, setTotalCorrect] = useState(0);
-    const [streak, setStreak] = useState(0);
-    const [maxStreak, setMaxStreak] = useState(0);
-    const [q, setQ] = useState(() => newQuestion([2], null, null));
-    const [input, setInput] = useState('');
-    const [fb, setFb] = useState('idle');
-    const [word, setWord] = useState('');
     const [levelMsg, setLevelMsg] = useState('');
-    const lockRef = useRef(false);
+
+    const engine = useQuizEngine({ tables: [currentTable], maitrise: {}, hasQuestionTimer: true });
+    const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
+        qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits,
+        scoreRef, premierRef, answeredRef, maxStreakRef,
+        resetQuestion, recordResult, press, del } = engine;
+
     const startRef = useRef(Date.now());
-    const wrongRef = useRef([]);
-    const rightRef = useRef([]);
 
-    const submit = useCallback(() => {
-        if (lockRef.current || !input) return;
-        lockRef.current = true;
-        const ok = parseInt(input, 10) === q.answer;
-        const nextQ = questionsInLevel + 1;
-        const nextCorrect = correctInLevel + (ok ? 1 : 0);
-        const nextTotalQ = totalQuestions + 1;
-        const nextTotalCorrect = totalCorrect + (ok ? 1 : 0);
-
-        setQuestionsInLevel(nextQ);
-        setCorrectInLevel(nextCorrect);
-        setTotalQuestions(nextTotalQ);
-        setTotalCorrect(nextTotalCorrect);
-
-        if (ok) {
-            setStreak(s => {
-                const next = s + 1;
-                setMaxStreak(m => Math.max(m, next));
-                return next;
-            });
-            setFb('correct');
-            setWord('✓');
-            rightRef.current.push({ a: q.a, b: q.b });
-        } else {
-            setStreak(0);
-            setFb('wrong');
-            setWord(`${q.a} × ${q.b} = ${q.answer}`);
-            wrongRef.current.push({ a: q.a, b: q.b, answer: q.answer, given: input });
-        }
-
-        setTimeout(() => {
-            lockRef.current = false;
-            setFb('idle'); setWord(''); setInput('');
-
-            if (nextQ >= 5) {
-                // Fin du palier (5 questions)
-                if (nextCorrect >= 4) {
-                    // Réussi (≥ 4 bonnes réponses) → palier suivant
-                    const nextTable = currentTable + 1;
-                    if (nextTable > 20) {
-                        // Victoire totale !
-                        onDone({
-                            highestTable: 20,
-                            score: nextTotalCorrect,
-                            answered: nextTotalQ,
-                            maxStreak,
-                            time: (Date.now() - startRef.current) / 1000,
-                            perfect: true,
-                            wrong: wrongRef.current,
-                            right: rightRef.current,
-                        });
-                    } else {
-                        setCurrentTable(nextTable);
-                        setQuestionsInLevel(0);
-                        setCorrectInLevel(0);
-                        setLevelMsg(`Table ${nextTable} ! 🧗`);
-                        setTimeout(() => setLevelMsg(''), 1500);
-                        setQ(newQuestion([nextTable], null, null));
-                    }
-                } else {
-                    // Raté → fin du parcours
+    const handleLevelEnd = useCallback((nextQ, nextCorrect) => {
+        if (nextQ >= 5) {
+            if (nextCorrect >= 4) {
+                const nextTable = currentTable + 1;
+                if (nextTable > 20) {
                     onDone({
-                        highestTable: currentTable - 1,
-                        score: nextTotalCorrect,
-                        answered: nextTotalQ,
-                        maxStreak,
+                        highestTable: 20,
+                        score: scoreRef.current,
+                        scorePremierEssai: premierRef.current,
+                        answered: answeredRef.current,
+                        maxStreak: maxStreakRef.current,
                         time: (Date.now() - startRef.current) / 1000,
-                        perfect: false,
-                        wrong: wrongRef.current,
-                        right: rightRef.current,
+                        perfect: true, resultats: resultatsRef.current,
                     });
+                } else {
+                    setCurrentTable(nextTable);
+                    setQuestionsInLevel(0); setCorrectInLevel(0);
+                    setLevelMsg(`Table ${nextTable} ! 🧗`);
+                    setTimeout(() => setLevelMsg(''), 1500);
+                    resetQuestion(newQuestion([nextTable], null, null));
                 }
             } else {
-                setQ(prev => newQuestion([currentTable], prev, null));
+                onDone({
+                    highestTable: currentTable - 1,
+                    score: scoreRef.current,
+                    scorePremierEssai: premierRef.current,
+                    answered: answeredRef.current,
+                    maxStreak: maxStreakRef.current,
+                    time: (Date.now() - startRef.current) / 1000,
+                    perfect: false, resultats: resultatsRef.current,
+                });
             }
-        }, ok ? 250 : 600);
-    }, [input, q, questionsInLevel, correctInLevel, totalQuestions, totalCorrect, currentTable, maxStreak, onDone]);
+            return true;
+        }
+        return false;
+    }, [currentTable, onDone, resetQuestion]);
 
-    // Auto-validation : correspondance exacte immédiate + 1200 ms d'inactivité
+    const recordAndAdvance = useCallback((result) => {
+        recordResult(result); // refs updated synchronously
+        const nextQ = questionsInLevel + 1;
+        const nextCorrect = correctInLevel + (result !== 'jamais' ? 1 : 0);
+        setQuestionsInLevel(nextQ);
+        setCorrectInLevel(nextCorrect);
+
+        const delay = result === 'premier' ? 400 : 800;
+        setTimeout(() => {
+            if (!handleLevelEnd(nextQ, nextCorrect)) {
+                resetQuestion(newQuestion([currentTable], q, null));
+            }
+        }, delay);
+    }, [q, questionsInLevel, correctInLevel, currentTable, handleLevelEnd, resetQuestion, recordResult]);
+
+    // Question timer expiry
     useEffect(() => {
-        if (fb !== 'idle' || lockRef.current || !input) return;
-        if (estReponseExacte(input, q.answer)) { submit(); return; }
-        const id = setTimeout(submit, 1200);
-        return () => clearTimeout(id);
-    }, [input, q.answer, fb, submit]);
+        if (!qTimerExpired || lockRef.current) return;
+        lockRef.current = true;
+        setFb('reveal');
+        setDigits(String(q.answer).split(''));
+        setWord(`${q.a} × ${q.b} = ${q.answer}`);
+        recordAndAdvance('jamais');
+    }, [qTimerExpired]);
 
-    const press = useCallback((d) => { if (!lockRef.current && input.length < 3) setInput(v => v + d); }, [input]);
-    const del = useCallback(() => { if (!lockRef.current) setInput(v => v.slice(0, -1)); }, []);
-
-    const onKeyRef = useRef();
-    onKeyRef.current = (e) => {
-        if (e.key >= '0' && e.key <= '9') press(e.key);
-        else if (e.key === 'Backspace') del();
-        else if (e.key === 'Enter') submit();
-    };
-
+    // Digit completion
     useEffect(() => {
-        const handler = (e) => onKeyRef.current?.(e);
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+        if (fb !== 'idle' || lockRef.current) return;
+        const allFilled = digits.every(d => d !== '') && digits.length === numDigits;
+        if (!allFilled) return;
+
+        const value = parseInt(digits.join(''), 10);
+        const ok = value === q.answer;
+
+        if (ok) {
+            lockRef.current = true;
+            setFb('correct');
+            setWord('✓');
+            recordAndAdvance(premierEssai ? 'premier' : 'rattrape');
+        } else {
+            setPremierEssai(false);
+            setFb('wrong');
+            setTimeout(() => {
+                setFb('idle'); setWord('');
+                setDigits(Array(numDigits).fill(''));
+            }, 300);
+        }
+    }, [digits]);
 
     return (
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span className="pill">🧗 Table {currentTable}</span>
+                <span className="pill" style={{ background: 'var(--purple)', color: '#fff' }}>
+                    🧗 Table {currentTable}
+                </span>
                 <span className="pill">{questionsInLevel}/5</span>
                 <span className="pill" style={{ color: 'var(--mint-dk)' }}>✅ {correctInLevel}</span>
             </div>
 
-            {/* Barre de palier */}
             <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
                 {ALL_TABLES.slice(1).map(t => (
                     <div key={t} style={{
@@ -832,14 +921,13 @@ function ClimbPlay({ onQuit, onDone }) {
 
             <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
-                <div className={`answer-box${fb === 'correct' ? ' answer-box--correct' : fb === 'wrong' ? ' answer-box--wrong' : ''}`}>
-                    {input === '' && fb === 'idle' ? <span className="caret" /> : input || '—'}
-                </div>
+                {renderDigitBoxes(digits, fb, numDigits)}
+                {renderQuestionTimer(qTimerActive, qTimerExpired)}
                 <div className="feedback-word" style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}>
                     {word}
                 </div>
             </div>
-            <Keypad onPress={press} onDelete={del} onSubmit={submit} />
+            <Keypad onPress={press} onDelete={del} />
         </div>
     );
 }
@@ -851,26 +939,15 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
     const enAttente = serverResult?.enAttente;
     const nouveauPlafond = serverResult?.plafond_tables || null;
 
-    // Déterminer si le résultat est une vraie réussite méritant confettis
     const isSuccess = useMemo(() => {
         if (!result) return false;
-        if (type.id === 'sprint') {
-            const errs = result.errors || 0;
-            return errs <= 2;
-        }
-        if (type.id === 'flawless') {
-            return (result.streak || 0) >= 10;
-        }
-        if (type.id === 'countdown') {
-            return (result.score || 0) >= 15;
-        }
-        if (type.id === 'climb') {
-            return (result.highestTable || 0) >= 10 || result.perfect;
-        }
+        if (type.id === 'sprint') return (result.scorePremierEssai || 0) >= 16;
+        if (type.id === 'flawless') return (result.streak || 0) >= 10;
+        if (type.id === 'countdown') return (result.score || 0) >= 15;
+        if (type.id === 'climb') return (result.highestTable || 0) >= 10 || result.perfect;
         return false;
     }, [type.id, result]);
 
-    // Confetti uniquement sur vraie réussite
     useEffect(() => {
         if (isSuccess) {
             import('canvas-confetti').then(mod => {
@@ -884,47 +961,52 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
 
     if (!result) return null;
 
+    const rattrapees = (result.score || 0) - (result.scorePremierEssai || 0);
+
     return (
         <div className="screen-enter">
             <div className="card" style={{ textAlign: 'center' }}>
-                {/* Podium emoji */}
                 <div style={{ fontSize: 64, marginBottom: 8 }}>
                     {isSuccess ? '🏆' : '💪'}
                 </div>
 
                 <h2 className="font-display" style={{ fontSize: 26, fontWeight: 800 }}>
                     {type.id === 'sprint' && `Sprint terminé !`}
-                    {type.id === 'flawless' && `Série de ${result.streak} !`}
+                    {type.id === 'flawless' && `Série de ${result.streak || result.maxStreak} !`}
                     {type.id === 'countdown' && `${result.score} points !`}
                     {type.id === 'climb' && (result.perfect ? 'Toutes les tables maîtrisées ! 🎉' : `Table ${result.highestTable} atteinte !`)}
                 </h2>
 
+                {/* Deux chiffres — premier coup + rattrapées */}
+                <div style={{
+                    background: 'var(--surface-alt)', borderRadius: 'var(--radius-md)',
+                    padding: '16px 12px', margin: '14px 0',
+                }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--mint-dk)' }}>
+                        {result.scorePremierEssai ?? result.score} / {result.answered}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-soft)' }}>
+                        du premier coup
+                    </div>
+                    {rattrapees > 0 && (
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sun)', marginTop: 4 }}>
+                            +{rattrapees} rattrapée{rattrapees > 1 ? 's' : ''} au 2ᵉ essai
+                        </div>
+                    )}
+                </div>
+
                 <div className="stat-grid" style={{ marginTop: 16 }}>
                     {type.id === 'sprint' && (
-                        <>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>{result.answered - result.errors}/{result.answered}</span>
-                                <span className="stat__label">Bonnes réponses</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--coral)' }}>{result.errors}</span>
-                                <span className="stat__label">Erreurs (+{result.errors * 3}s)</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{(result.time + result.errors * 3).toFixed(1)}s</span>
-                                <span className="stat__label">Temps total</span>
-                            </div>
-                        </>
+                        <div className="stat">
+                            <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{result.time?.toFixed(1)}s</span>
+                            <span className="stat__label">Temps total</span>
+                        </div>
                     )}
                     {type.id === 'flawless' && (
                         <>
                             <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--gold)' }}>🔥 {result.streak}</span>
+                                <span className="stat__value" style={{ color: 'var(--gold)' }}>🔥 {result.streak || result.maxStreak}</span>
                                 <span className="stat__label">Sans faute</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{result.time.toFixed(1)}s</span>
-                                <span className="stat__label">Temps</span>
                             </div>
                             <div className="stat">
                                 <span className="stat__value" style={{ color: 'var(--coral)' }}>{result.lastQuestion}</span>
@@ -933,42 +1015,19 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                         </>
                     )}
                     {type.id === 'countdown' && (
-                        <>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>⭐ {result.score}</span>
-                                <span className="stat__label">Score</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{result.answered}</span>
-                                <span className="stat__label">Questions</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--navy)' }}>2:00</span>
-                                <span className="stat__label">Chrono</span>
-                            </div>
-                        </>
+                        <div className="stat">
+                            <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{result.answered}</span>
+                            <span className="stat__label">Questions</span>
+                        </div>
                     )}
                     {type.id === 'climb' && (
-                        <>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--purple)' }}>🧗 {result.highestTable}</span>
-                                <span className="stat__label">Plus haute table</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>{result.time.toFixed(1)}s</span>
-                                <span className="stat__label">Temps</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: result.perfect ? 'var(--gold)' : 'var(--coral)' }}>
-                                    {result.perfect ? '🌟' : '💪'}
-                                </span>
-                                <span className="stat__label">{result.perfect ? 'Parfait !' : 'Continue !'}</span>
-                            </div>
-                        </>
+                        <div className="stat">
+                            <span className="stat__value" style={{ color: 'var(--purple)' }}>🧗 {result.highestTable}</span>
+                            <span className="stat__label">Plus haute table</span>
+                        </div>
                     )}
                 </div>
 
-                {/* Badges débloqués */}
                 {badges.length > 0 && (
                     <div style={{
                         textAlign: 'center', background: 'linear-gradient(135deg, #FFF8E1, #FFF0C0)',
@@ -979,16 +1038,13 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                             🏅 Nouveau{badges.length > 1 ? 'x' : ''} badge{badges.length > 1 ? 's' : ''} !
                         </p>
                         {badges.map((b, i) => (
-                            <div key={i} className="anim-pop" style={{
-                                fontSize: 18, fontWeight: 700, marginBottom: 4,
-                            }}>
+                            <div key={i} className="anim-pop" style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
                                 {b.emoji || '🏅'} {b.nom || b}
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Table débloquée par la Montée */}
                 {type.id === 'climb' && nouveauPlafond && ancienPlafond && nouveauPlafond > ancienPlafond && (
                     <div className="anim-pop" style={{
                         textAlign: 'center', background: 'linear-gradient(135deg, #E8F5E9, #C8E6C9)',
@@ -1004,7 +1060,6 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                     </div>
                 )}
 
-                {/* Partie sauvegardée hors-ligne */}
                 {enAttente && (
                     <p style={{
                         fontSize: 13, color: 'var(--text-soft)', fontWeight: 600,

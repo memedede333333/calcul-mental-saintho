@@ -1,31 +1,64 @@
-import React, { useState } from 'react';
-import { ALL_TABLES } from '../logic/questions';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { masteryColor } from '../logic/mastery';
+import {
+    listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
+    definirPlafondClasse, elevesSansConnexion,
+    listeProfs, creerProf, modifierProf, desactiverProf,
+    importerEleves, journalAdmin,
+} from '../api.js';
 
 /**
- * Admin — Dashboard enseignant (Phase 7)
- * Tabs : Roster, PINs, Suivi, Config
+ * Admin — Dashboard enseignant / administrateur
+ *
+ * Onglets visibles :
+ *   - Élèves          (tout enseignant)
+ *   - Enseignants      (admin seulement)
+ *   - Import           (admin seulement)
+ *   - Journal          (admin seulement)
+ *
+ * Les classes viennent de listeClasses(), jamais d'une constante.
  */
 
-// Données démo
-const DEMO_STUDENTS = [
-    { id: 'demo001', nom: 'Dupont', prénom: 'Alice', classe: '6A', email: 'alice@saintho.org', tables: '1-10', avatar: '🌟', actif: true, premiere_connexion: 'non' },
-    { id: 'demo002', nom: 'Martin', prénom: 'Bob', classe: '6A', email: 'bob@saintho.org', tables: '1-10', avatar: '🚀', actif: true, premiere_connexion: 'non' },
-    { id: 'demo003', nom: 'Bernard', prénom: 'Clara', classe: '6A', email: 'clara@saintho.org', tables: '1-15', avatar: '🎯', actif: true, premiere_connexion: 'oui' },
-    { id: 'demo004', nom: 'Petit', prénom: 'David', classe: '6B', email: 'david@saintho.org', tables: '1-10', avatar: '⚡', actif: true, premiere_connexion: 'oui' },
-    { id: 'demo005', nom: 'Robert', prénom: 'Emma', classe: '6B', email: 'emma@saintho.org', tables: '1-12', avatar: '🌈', actif: true, premiere_connexion: 'non' },
-    { id: 'demo006', nom: 'Leroy', prénom: 'Félix', classe: '6A', email: 'felix@saintho.org', tables: '1-10', avatar: '🎸', actif: false, premiere_connexion: 'oui' },
-];
+export default function Admin({ onBack, identite }) {
+    const estAdmin = identite?.admin === true;
+    const [tab, setTab] = useState('eleves');
+    const [classes, setClasses] = useState([]);
+    const [selectedClass, setSelectedClass] = useState('');
+    const [loading, setLoading] = useState(true);
 
-const CLASSES = ['6A', '6B', '6C', '5A', '5B'];
+    // Charger les classes au montage
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            const res = await listeClasses();
+            if (cancelled) return;
+            if (res.ok && res.data) {
+                setClasses(res.data);
+                if (res.data.length > 0 && !selectedClass) {
+                    setSelectedClass(res.data[0].classe);
+                }
+            }
+            setLoading(false);
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
-export default function Admin({ onBack, user }) {
-    const [tab, setTab] = useState('roster');
-    const [students, setStudents] = useState(DEMO_STUDENTS);
-    const [selectedClass, setSelectedClass] = useState('6A');
+    const refreshClasses = useCallback(async () => {
+        const res = await listeClasses();
+        if (res.ok && res.data) setClasses(res.data);
+    }, []);
 
-    const filtered = students.filter(s => s.classe === selectedClass);
-    const activeCount = filtered.filter(s => s.actif).length;
+    const tabs = [
+        { id: 'eleves', label: '📋 Élèves' },
+        ...(estAdmin ? [
+            { id: 'profs', label: '👩‍🏫 Enseignants' },
+            { id: 'import', label: '📥 Import' },
+            { id: 'journal', label: '📜 Journal' },
+        ] : []),
+    ];
+
+    const currentClassInfo = classes.find(c => c.classe === selectedClass);
 
     return (
         <div className="screen-enter">
@@ -36,458 +69,612 @@ export default function Admin({ onBack, user }) {
                     ⚙️ Administration
                 </h1>
                 <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 13 }}>
-                    {user?.nom || 'Enseignant'} — {selectedClass}
+                    {identite?.nom || 'Enseignant'}{estAdmin ? ' — admin' : ''}
                 </p>
             </div>
 
-            {/* Sélecteur de classe */}
-            <div className="chips" style={{ justifyContent: 'center', marginBottom: 14 }}>
-                {CLASSES.map(c => (
-                    <button
-                        key={c}
-                        className={`chip${c === selectedClass ? ' chip--navy' : ''}`}
-                        style={{ width: 50, height: 42, fontSize: 16 }}
-                        onClick={() => setSelectedClass(c)}
-                    >
-                        {c}
-                    </button>
-                ))}
-            </div>
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                    <div className="spinner" />
+                </div>
+            ) : (
+                <>
+                    {/* Sélecteur de classe */}
+                    {classes.length > 0 && (tab === 'eleves') && (
+                        <div className="chips" style={{ justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+                            {classes.map(c => (
+                                <button
+                                    key={c.classe}
+                                    className={`chip${c.classe === selectedClass ? ' chip--navy' : ''}`}
+                                    style={{ minWidth: 50, height: 42, fontSize: 16 }}
+                                    onClick={() => setSelectedClass(c.classe)}
+                                >
+                                    {c.classe}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
-            {/* Onglets admin */}
-            <div className="viz-tabs" style={{ marginBottom: 14 }}>
-                {[
-                    { id: 'roster', label: '📋 Roster' },
-                    { id: 'pins', label: '🔑 PINs' },
-                    { id: 'suivi', label: '📊 Suivi' },
-                    { id: 'config', label: '⚙️ Config' },
-                ].map(t => (
-                    <button
-                        key={t.id}
-                        className={`viz-tab${tab === t.id ? ' viz-tab--active' : ''}`}
-                        onClick={() => setTab(t.id)}
-                        style={{ fontSize: 13 }}
-                    >
-                        {t.label}
-                    </button>
-                ))}
-            </div>
+                    {/* Onglets */}
+                    <div className="viz-tabs" style={{ marginBottom: 14 }}>
+                        {tabs.map(t => (
+                            <button
+                                key={t.id}
+                                className={`viz-tab${tab === t.id ? ' viz-tab--active' : ''}`}
+                                onClick={() => setTab(t.id)}
+                                style={{ fontSize: 13 }}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
 
-            {tab === 'roster' && (
-                <RosterTab
-                    students={filtered}
-                    activeCount={activeCount}
-                    selectedClass={selectedClass}
-                    setStudents={setStudents}
-                    allStudents={students}
-                />
+                    {tab === 'eleves' && (
+                        <ElevesTab
+                            selectedClass={selectedClass}
+                            classInfo={currentClassInfo}
+                            onRefresh={refreshClasses}
+                            estAdmin={estAdmin}
+                        />
+                    )}
+                    {tab === 'profs' && estAdmin && <ProfsTab />}
+                    {tab === 'import' && estAdmin && <ImportTab onRefresh={refreshClasses} />}
+                    {tab === 'journal' && estAdmin && <JournalTab />}
+                </>
             )}
-            {tab === 'pins' && <PinsTab students={filtered} selectedClass={selectedClass} />}
-            {tab === 'suivi' && <SuiviTab students={filtered} selectedClass={selectedClass} />}
-            {tab === 'config' && <ConfigTab selectedClass={selectedClass} />}
         </div>
     );
 }
 
-/* ===================== ROSTER ===================== */
+/* ===================== ÉLÈVES ===================== */
 
-function RosterTab({ students, activeCount, selectedClass, setStudents, allStudents }) {
+function ElevesTab({ selectedClass, classInfo, onRefresh, estAdmin }) {
+    const [eleves, setEleves] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
-    const [newNom, setNewNom] = useState('');
-    const [newPrenom, setNewPrenom] = useState('');
-    const [newEmail, setNewEmail] = useState('');
+    const [showInactifs, setShowInactifs] = useState(false);
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(null); // eleveId en cours d'action
 
-    const toggleActive = (id) => {
-        setStudents(all => all.map(s => s.id === id ? { ...s, actif: !s.actif } : s));
+    // Plafond
+    const [plafondEnCours, setPlafondEnCours] = useState(false);
+
+    const charger = useCallback(async () => {
+        if (!selectedClass) return;
+        setLoading(true);
+        // On charge la liste des élèves sans connexion pour cette classe
+        const res = await elevesSansConnexion(selectedClass);
+        if (res.ok && res.data) {
+            setEleves(res.data);
+        }
+        setLoading(false);
+    }, [selectedClass]);
+
+    useEffect(() => { charger(); }, [charger]);
+
+    const handleToggleActif = async (eleve) => {
+        setBusy(eleve.eleve_id);
+        setMsg('');
+        const res = eleve.actif
+            ? await desactiverEleve(eleve.eleve_id)
+            : await reactiverEleve(eleve.eleve_id);
+        if (!res.ok) setMsg(`❌ ${res.error}`);
+        else {
+            setMsg(eleve.actif ? '✅ Élève désactivé' : '✅ Élève réactivé');
+            await charger();
+            await onRefresh();
+        }
+        setBusy(null);
     };
 
-    const addStudent = () => {
-        if (!newNom.trim() || !newPrenom.trim()) return;
-        const id = `new_${Date.now()}`;
-        const newS = {
-            id, nom: newNom.trim(), prénom: newPrenom.trim(),
-            email: newEmail.trim() || `${newPrenom.toLowerCase()}.${newNom.toLowerCase()}@saintho.org`,
-            classe: selectedClass, tables: '1-10', avatar: '🎯', actif: true, premiere_connexion: 'oui',
-        };
-        setStudents(all => [...all, newS]);
-        setNewNom(''); setNewPrenom(''); setNewEmail(''); setShowAdd(false);
+    const handlePlafond = async (plafond) => {
+        setPlafondEnCours(true);
+        setMsg('');
+        const res = await definirPlafondClasse(selectedClass, plafond);
+        if (res.ok) {
+            setMsg(`✅ Plafond de ${selectedClass} → tables 1-${plafond}`);
+            await onRefresh();
+        } else {
+            setMsg(`❌ ${res.error}`);
+        }
+        setPlafondEnCours(false);
     };
+
+    const actifs = eleves.filter(e => e.actif !== false);
+    const inactifs = eleves.filter(e => e.actif === false);
+
+    if (!selectedClass) {
+        return (
+            <div className="card" style={{ textAlign: 'center', padding: 24 }}>
+                <p style={{ color: 'var(--text-soft)', fontWeight: 700 }}>
+                    Aucune classe disponible. Importez des élèves pour commencer.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div>
+            {/* Info classe */}
             <div className="card" style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                        Classe {selectedClass} — {activeCount} élève{activeCount > 1 ? 's' : ''} actif{activeCount > 1 ? 's' : ''}
+                        Classe {selectedClass} — {classInfo?.eleves_actifs ?? actifs.length} élève{(classInfo?.eleves_actifs ?? actifs.length) > 1 ? 's' : ''} actif{(classInfo?.eleves_actifs ?? actifs.length) > 1 ? 's' : ''}
                     </h3>
                     <button className="btn btn--mint" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => setShowAdd(!showAdd)}>
                         + Ajouter
                     </button>
                 </div>
 
-                {showAdd && (
-                    <div style={{ background: 'var(--surface-alt)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                            <input placeholder="Prénom" value={newPrenom} onChange={e => setNewPrenom(e.target.value)}
-                                style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-                            <input placeholder="Nom" value={newNom} onChange={e => setNewNom(e.target.value)}
-                                style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-                        </div>
-                        <input placeholder="Email (optionnel)" value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)', marginBottom: 8 }} />
-                        <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={addStudent}>
-                            Ajouter l'élève
-                        </button>
-                    </div>
-                )}
+                {showAdd && <AddStudentForm selectedClass={selectedClass} onDone={async () => { setShowAdd(false); await charger(); await onRefresh(); }} />}
 
-                {students.map(s => (
-                    <div key={s.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
-                        borderBottom: '1px solid var(--border)', opacity: s.actif ? 1 : 0.5,
-                    }}>
-                        <span style={{ fontSize: 24 }}>{s.avatar}</span>
-                        <div style={{ flex: 1 }}>
-                            <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
-                                {s.prénom} {s.nom}
-                            </p>
-                            <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>{s.email}</p>
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', background: 'var(--surface-alt)', padding: '4px 8px', borderRadius: 8 }}>
-                            ×{s.tables}
-                        </span>
-                        <button
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18 }}
-                            onClick={() => toggleActive(s.id)}
-                            title={s.actif ? 'Désactiver' : 'Réactiver'}
-                        >
-                            {s.actif ? '✅' : '⛔'}
-                        </button>
-                    </div>
-                ))}
-
-                {students.length === 0 && (
-                    <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
-                        Aucun élève dans cette classe. Utilise « + Ajouter » pour en créer.
+                {msg && (
+                    <p style={{ fontSize: 12, fontWeight: 700, padding: '6px 0', color: msg.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
+                        {msg}
                     </p>
                 )}
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: 20 }}>
+                        <div className="spinner" />
+                    </div>
+                ) : actifs.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
+                        Aucun élève actif dans cette classe. Utilisez « + Ajouter » ou l'onglet Import.
+                    </p>
+                ) : (
+                    actifs.map(s => (
+                        <StudentRow
+                            key={s.eleve_id}
+                            eleve={s}
+                            busy={busy === s.eleve_id}
+                            onToggle={() => handleToggleActif(s)}
+                        />
+                    ))
+                )}
+
+                {/* Inactifs repliés */}
+                {inactifs.length > 0 && (
+                    <>
+                        <button
+                            className="btn btn--ghost"
+                            style={{ width: '100%', marginTop: 10, fontSize: 12 }}
+                            onClick={() => setShowInactifs(!showInactifs)}
+                        >
+                            {showInactifs ? '▾' : '▸'} {inactifs.length} élève{inactifs.length > 1 ? 's' : ''} inactif{inactifs.length > 1 ? 's' : ''}
+                        </button>
+                        {showInactifs && inactifs.map(s => (
+                            <StudentRow
+                                key={s.eleve_id}
+                                eleve={s}
+                                busy={busy === s.eleve_id}
+                                onToggle={() => handleToggleActif(s)}
+                            />
+                        ))}
+                    </>
+                )}
             </div>
+
+            {/* Plafond de tables */}
+            {estAdmin && (
+                <div className="card" style={{ marginBottom: 14 }}>
+                    <h3 className="font-display" style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+                        📐 Plafond de tables — {selectedClass}
+                    </h3>
+                    <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
+                        Relève le plafond quand la classe est prête. Ne redescend jamais un élève qui a débloqué plus haut.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {[10, 12, 15, 20].map(n => (
+                            <button
+                                key={n}
+                                className="chip"
+                                style={{ flex: 1, width: 'auto', fontSize: 15, height: 46 }}
+                                disabled={plafondEnCours}
+                                onClick={() => handlePlafond(n)}
+                            >
+                                1-{n}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function PinsTab({ students, selectedClass }) {
-    const [resetting, setResetting] = useState(null);
-    const [resetMsg, setResetMsg] = useState({});
+function StudentRow({ eleve, busy, onToggle }) {
+    const nom = eleve.nom || '';
+    const prenom = eleve.prenom || '';
+    const email = eleve.email || '';
+    const connecte = eleve.connecte !== false; // true si non renseigné
 
-    const handleResetPin = async (student) => {
-        setResetting(student.id);
-        setResetMsg({});
-        try {
-            const { api } = await import('../api.js');
-            const result = await api.adminResetPin(student.email);
-            setResetMsg({ [student.id]: result.ok ? '✅ Nouveau code envoyé !' : '❌ ' + (result.error || 'Erreur') });
-        } catch {
-            setResetMsg({ [student.id]: '✅ Code réinitialisé (démo)' });
+    return (
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
+            borderBottom: '1px solid var(--border)',
+            opacity: eleve.actif === false ? 0.5 : 1,
+        }}>
+            <span style={{ fontSize: 22 }}>{eleve.avatar_emoji || '👤'}</span>
+            <div style={{ flex: 1 }}>
+                <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
+                    {prenom} {nom}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                    {email}
+                    {!connecte && <span style={{ marginLeft: 6, color: 'var(--coral)', fontWeight: 700 }}>⏳ jamais connecté</span>}
+                </p>
+            </div>
+            <button
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy ? 0.4 : 1 }}
+                onClick={onToggle}
+                disabled={busy}
+                title={eleve.actif === false ? 'Réactiver' : 'Désactiver'}
+            >
+                {eleve.actif === false ? '♻️' : '⛔'}
+            </button>
+        </div>
+    );
+}
+
+function AddStudentForm({ selectedClass, onDone }) {
+    const [nom, setNom] = useState('');
+    const [prenom, setPrenom] = useState('');
+    const [email, setEmail] = useState('');
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const handleAdd = async () => {
+        if (!nom.trim() || !prenom.trim() || !email.trim()) {
+            setMsg('❌ Tous les champs sont obligatoires.');
+            return;
         }
-        setResetting(null);
+        setBusy(true);
+        setMsg('');
+        const res = await ajouterEleve({
+            email: email.trim(),
+            nom: nom.trim(),
+            prenom: prenom.trim(),
+            classe: selectedClass,
+        });
+        if (res.ok) {
+            await onDone();
+        } else {
+            setMsg(`❌ ${res.error}`);
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div style={{ background: 'var(--surface-alt)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input placeholder="Prénom" value={prenom} onChange={e => setPrenom(e.target.value)}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
+                <input placeholder="Nom" value={nom} onChange={e => setNom(e.target.value)}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
+            </div>
+            <input placeholder="Email Google" value={email} onChange={e => setEmail(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)', marginBottom: 8 }} />
+            {msg && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 6 }}>{msg}</p>}
+            <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={handleAdd} disabled={busy}>
+                {busy ? '⏳...' : "Ajouter l'élève"}
+            </button>
+        </div>
+    );
+}
+
+/* ===================== ENSEIGNANTS (admin) ===================== */
+
+function ProfsTab() {
+    const [profs, setProfs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showAdd, setShowAdd] = useState(false);
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(null);
+
+    const charger = useCallback(async () => {
+        setLoading(true);
+        const res = await listeProfs();
+        if (res.ok && res.data) setProfs(res.data);
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { charger(); }, [charger]);
+
+    const handleToggle = async (prof) => {
+        setBusy(prof.prof_id);
+        setMsg('');
+        if (prof.actif) {
+            const res = await desactiverProf(prof.prof_id);
+            if (res.ok) { setMsg('✅ Enseignant désactivé'); await charger(); }
+            else setMsg(`❌ ${res.error}`);
+        } else {
+            // Pas de reactiverProf — on modifie pour remettre actif
+            // (la fonction n'existe pas, on ne montre pas le bouton pour les inactifs)
+            setMsg('ℹ️ Contactez un administrateur pour réactiver un enseignant.');
+        }
+        setBusy(null);
+    };
+
+    const handleRoleChange = async (prof, newRole) => {
+        setBusy(prof.prof_id);
+        setMsg('');
+        const res = await modifierProf(prof.prof_id, { role: newRole });
+        if (res.ok) { setMsg(`✅ ${prof.nom} → ${newRole}`); await charger(); }
+        else setMsg(`❌ ${res.error}`);
+        setBusy(null);
     };
 
     return (
         <div className="card">
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                    🔑 Codes — {selectedClass}
+                    👩‍🏫 Enseignants — {profs.filter(p => p.actif).length} actif{profs.filter(p => p.actif).length > 1 ? 's' : ''}
                 </h3>
-                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
-                    Les codes sont envoyés par email. Utilise « Réinitialiser » pour en générer un nouveau.
-                </p>
+                <button className="btn btn--mint" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => setShowAdd(!showAdd)}>
+                    + Ajouter
+                </button>
             </div>
 
-            {/* Info première connexion */}
-            <div style={{
-                background: '#EBF5FF', borderRadius: 12, padding: 14, marginBottom: 14,
-                border: '1px solid #C0DAFF',
-            }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--navy)' }}>
-                    ℹ️ Code de première connexion : <b>3333</b>
-                </p>
-                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
-                    Chaque élève tape 3333 lors de sa première connexion. Un code personnel unique lui est alors envoyé par email.
-                </p>
-            </div>
+            {showAdd && <AddProfForm onDone={async () => { setShowAdd(false); await charger(); }} />}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                        <th style={{ textAlign: 'left', padding: '8px 4px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Élève</th>
-                        <th style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Statut</th>
-                        <th style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {students.filter(s => s.actif).map(s => (
-                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                            <td style={{ padding: '10px 4px' }}>
-                                <span style={{ fontSize: 18, marginRight: 6 }}>{s.avatar}</span>
-                                <span style={{ fontWeight: 600 }}>{s.prénom} {s.nom}</span>
-                                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-soft)' }}>{s.email}</span>
-                            </td>
-                            <td style={{ textAlign: 'center', fontSize: 12, fontWeight: 700 }}>
-                                <span style={{
-                                    padding: '4px 10px', borderRadius: 8,
-                                    background: s.premiere_connexion === 'oui' ? '#FFF3E0' : '#E8FFF0',
-                                    color: s.premiere_connexion === 'oui' ? '#E67E00' : 'var(--mint-dk)',
-                                }}>
-                                    {s.premiere_connexion === 'oui' ? '⏳ En attente' : '✅ Activé'}
-                                </span>
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '10px 4px' }}>
-                                <button
-                                    className="btn btn--ghost"
-                                    disabled={resetting === s.id}
-                                    style={{ fontSize: 12, padding: '6px 12px', whiteSpace: 'nowrap' }}
-                                    onClick={() => handleResetPin(s)}
-                                >
-                                    {resetting === s.id ? '⏳...' : '🔄 Réinitialiser'}
-                                </button>
-                                {resetMsg[s.id] && (
-                                    <p style={{ fontSize: 11, fontWeight: 700, marginTop: 4, color: 'var(--mint-dk)' }}>
-                                        {resetMsg[s.id]}
-                                    </p>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {msg && (
+                <p style={{ fontSize: 12, fontWeight: 700, padding: '6px 0', color: msg.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
+                    {msg}
+                </p>
+            )}
 
-            <p style={{ fontSize: 12, color: 'var(--text-soft)', textAlign: 'center', marginTop: 14, fontWeight: 600 }}>
-                💡 Quand tu réinitialises un code, l'ancien ne fonctionne plus. Le nouveau est envoyé par mail à l'élève.
-            </p>
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>
+            ) : profs.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
+                    Aucun enseignant trouvé.
+                </p>
+            ) : (
+                profs.filter(p => p.actif).map(p => (
+                    <div key={p.prof_id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
+                        borderBottom: '1px solid var(--border)',
+                    }}>
+                        <span style={{ fontSize: 22 }}>👤</span>
+                        <div style={{ flex: 1 }}>
+                            <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
+                                {p.nom}
+                            </p>
+                            <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                                {p.email}
+                                {p.classes?.length > 0 && ` — ${p.classes.join(', ')}`}
+                            </p>
+                        </div>
+                        <button
+                            className={`chip${p.role === 'admin' ? ' chip--gold' : ''}`}
+                            style={{ fontSize: 11, height: 28, minWidth: 60, cursor: 'pointer' }}
+                            disabled={busy === p.prof_id}
+                            onClick={() => handleRoleChange(p, p.role === 'admin' ? 'prof' : 'admin')}
+                            title={`Basculer ${p.role === 'admin' ? 'prof' : 'admin'}`}
+                        >
+                            {p.role === 'admin' ? '👑 admin' : '📚 prof'}
+                        </button>
+                        <button
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy === p.prof_id ? 0.4 : 1 }}
+                            onClick={() => handleToggle(p)}
+                            disabled={busy === p.prof_id}
+                            title="Désactiver"
+                        >
+                            ⛔
+                        </button>
+                    </div>
+                ))
+            )}
         </div>
     );
 }
 
-/* ===================== SUIVI ===================== */
+function AddProfForm({ onDone }) {
+    const [nom, setNom] = useState('');
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState('prof');
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
 
-function SuiviTab({ students, selectedClass }) {
-    const [view, setView] = useState('heatmap'); // heatmap | stats
+    const handleAdd = async () => {
+        if (!nom.trim() || !email.trim()) { setMsg('❌ Nom et email requis.'); return; }
+        setBusy(true); setMsg('');
+        const res = await creerProf({ email: email.trim(), nom: nom.trim(), role });
+        if (res.ok) { await onDone(); }
+        else { setMsg(`❌ ${res.error}`); setBusy(false); }
+    };
 
     return (
-        <div>
-            <div className="viz-tabs" style={{ marginBottom: 12 }}>
-                <button className={`viz-tab${view === 'heatmap' ? ' viz-tab--active' : ''}`} onClick={() => setView('heatmap')}>
-                    🗺 Heatmap
-                </button>
-                <button className={`viz-tab${view === 'stats' ? ' viz-tab--active' : ''}`} onClick={() => setView('stats')}>
-                    📊 Statistiques
-                </button>
+        <div style={{ background: 'var(--surface-alt)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input placeholder="Nom" value={nom} onChange={e => setNom(e.target.value)}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
+                <input placeholder="Email Google" value={email} onChange={e => setEmail(e.target.value)}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
             </div>
-
-            {view === 'heatmap' && <ClassHeatmap students={students} selectedClass={selectedClass} />}
-            {view === 'stats' && <ClassStats students={students} selectedClass={selectedClass} />}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <button className={`chip${role === 'prof' ? ' chip--navy' : ''}`}
+                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('prof')}>📚 Prof</button>
+                <button className={`chip${role === 'admin' ? ' chip--navy' : ''}`}
+                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('admin')}>👑 Admin</button>
+            </div>
+            {msg && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 6 }}>{msg}</p>}
+            <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={handleAdd} disabled={busy}>
+                {busy ? '⏳...' : "Ajouter l'enseignant"}
+            </button>
         </div>
     );
 }
 
-function ClassHeatmap({ students, selectedClass }) {
-    const activeStudents = students.filter(s => s.actif);
-    // Maîtrise agrégée de la classe (démo : rempli aléatoirement)
-    const range = ALL_TABLES.slice(0, 10); // Tables 1-10
+/* ===================== IMPORT (admin) ===================== */
+
+function ImportTab({ onRefresh }) {
+    const [csv, setCsv] = useState('');
+    const [result, setResult] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const fileRef = useRef(null);
+
+    const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => setCsv(ev.target.result);
+        reader.readAsText(file);
+    };
+
+    const handleImport = async () => {
+        if (!csv.trim()) return;
+        setBusy(true); setResult(null);
+
+        // Parse CSV : email, nom, prenom, classe
+        const lines = csv.trim().split('\n').filter(l => l.trim());
+        const eleves = [];
+        for (const line of lines) {
+            const parts = line.split(/[,;\t]/).map(s => s.trim());
+            if (parts.length < 4) continue;
+            // Skip header
+            if (parts[0].toLowerCase() === 'email') continue;
+            eleves.push({ email: parts[0], nom: parts[1], prenom: parts[2], classe: parts[3] });
+        }
+
+        if (eleves.length === 0) {
+            setResult({ ok: false, error: 'Aucun élève trouvé. Format : email, nom, prénom, classe' });
+            setBusy(false);
+            return;
+        }
+
+        const res = await importerEleves(eleves);
+        setResult(res.ok ? res.data : { error: res.error });
+        if (res.ok) await onRefresh();
+        setBusy(false);
+    };
 
     return (
         <div className="card">
             <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                Maîtrise de la classe {selectedClass}
+                📥 Import de rentrée
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
-                Moyenne sur {activeStudents.length} élèves actifs
+                Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.
+                L'import ne désactive jamais personne.
             </p>
 
-            <div
-                className="mastery-grid"
-                style={{ gridTemplateColumns: `80px repeat(${range.length}, 1fr)` }}
-            >
-                {/* Header */}
-                <div className="mastery-grid-hdr" style={{ fontSize: 11 }}>Élève</div>
-                {range.map(c => (
-                    <div key={c} className="mastery-grid-hdr">{c}</div>
-                ))}
+            <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile}
+                style={{ marginBottom: 10, fontSize: 13 }} />
 
-                {/* Lignes par élève */}
-                {activeStudents.map(s => (
-                    <React.Fragment key={s.id}>
-                        <div className="mastery-grid-hdr" style={{ fontSize: 10, textAlign: 'left', justifyContent: 'flex-start' }}>
-                            {s.avatar} {s.prénom.slice(0, 6)}
-                        </div>
-                        {range.map(t => {
-                            // Simuler une maîtrise aléatoire pour la démo
-                            const seed = (s.id.charCodeAt(4) + t * 7) % 5;
-                            const level = seed > 3 ? 3 : seed > 1 ? 2 : seed > 0 ? 1 : 0;
-                            return (
-                                <div
-                                    key={t}
-                                    className="mastery-grid-cell"
-                                    style={{ background: masteryColor(level), fontSize: 0 }}
-                                    title={`${s.prénom}: table ${t} — niveau ${level}`}
-                                />
-                            );
-                        })}
-                    </React.Fragment>
-                ))}
-            </div>
+            {csv && (
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 150, overflow: 'auto' }}>
+                    <pre style={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                        {csv.slice(0, 1000)}{csv.length > 1000 ? '\n…' : ''}
+                    </pre>
+                </div>
+            )}
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, fontSize: 11, fontWeight: 700 }}>
-                <span>🔴 À revoir</span>
-                <span>🟡 En cours</span>
-                <span>🟢 Maîtrisé</span>
-                <span>⬜ Pas testé</span>
-            </div>
+            <button className="btn btn--gold" style={{ width: '100%', fontSize: 14, padding: 12 }}
+                onClick={handleImport} disabled={busy || !csv.trim()}>
+                {busy ? '⏳ Import en cours…' : "Lancer l'import"}
+            </button>
+
+            {result && (
+                <div style={{ marginTop: 14 }}>
+                    {result.error ? (
+                        <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 13 }}>❌ {result.error}</p>
+                    ) : (
+                        <>
+                            <p style={{ color: 'var(--mint-dk)', fontWeight: 700, fontSize: 13 }}>
+                                ✅ Import terminé — {result.crees ?? '?'} créé{(result.crees ?? 0) > 1 ? 's' : ''}, {result.mis_a_jour ?? '?'} mis à jour
+                            </p>
+                            {result.lignes_ignorees?.length > 0 && (
+                                <div style={{ background: '#FFF8F0', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid #FFE0C0' }}>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral-dk)', marginBottom: 4 }}>
+                                        ⚠️ {result.lignes_ignorees.length} ligne{result.lignes_ignorees.length > 1 ? 's' : ''} ignorée{result.lignes_ignorees.length > 1 ? 's' : ''}
+                                    </p>
+                                    {result.lignes_ignorees.slice(0, 10).map((l, i) => (
+                                        <p key={i} style={{ fontSize: 11, color: 'var(--text-soft)' }}>{l.raison}: {l.email || '(vide)'}</p>
+                                    ))}
+                                </div>
+                            )}
+                            {result.actifs_absents_du_fichier?.length > 0 && (
+                                <div style={{ background: '#FFF3E0', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid #FFE0C0' }}>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: '#E67E00', marginBottom: 4 }}>
+                                        ℹ️ {result.actifs_absents_du_fichier.length} élève{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} actif{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} absent{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} du fichier
+                                    </p>
+                                    <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                                        Vérifiez au cas par cas — l'import ne les a pas désactivés.
+                                    </p>
+                                    {result.actifs_absents_du_fichier.slice(0, 10).map((e, i) => (
+                                        <p key={i} style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2 }}>
+                                            {e.prenom} {e.nom} ({e.classe})
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
 
-function ClassStats({ students, selectedClass }) {
-    const activeStudents = students.filter(s => s.actif);
+/* ===================== JOURNAL (admin) ===================== */
+
+function JournalTab() {
+    const [entries, setEntries] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            const res = await journalAdmin(200);
+            if (cancelled) return;
+            if (res.ok && res.data) setEntries(res.data);
+            setLoading(false);
+        })();
+        return () => { cancelled = true; };
+    }, []);
 
     return (
         <div className="card">
-            <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 14 }}>
-                Statistiques — {selectedClass}
+            <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
+                📜 Journal d'administration
             </h3>
 
-            <div className="stat-grid">
-                <div className="stat">
-                    <span className="stat__value" style={{ color: 'var(--navy)' }}>{activeStudents.length}</span>
-                    <span className="stat__label">Élèves actifs</span>
-                </div>
-                <div className="stat">
-                    <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>73%</span>
-                    <span className="stat__label">Taux moyen</span>
-                </div>
-                <div className="stat">
-                    <span className="stat__value" style={{ color: 'var(--coral)' }}>×7, ×8</span>
-                    <span className="stat__label">Tables difficiles</span>
-                </div>
-            </div>
-
-            <h4 className="font-display" style={{ fontSize: 16, fontWeight: 800, marginTop: 16, marginBottom: 10 }}>
-                🏆 Top de la classe
-            </h4>
-            {activeStudents.slice(0, 5).map((s, i) => (
-                <div key={s.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px',
-                    borderBottom: '1px solid var(--border)',
-                }}>
-                    <span className="font-display" style={{ fontWeight: 800, fontSize: 16, width: 24, textAlign: 'center', color: i < 3 ? 'var(--gold)' : 'var(--text-soft)' }}>
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                    </span>
-                    <span style={{ fontSize: 22 }}>{s.avatar}</span>
-                    <p className="font-display" style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
-                        {s.prénom} {s.nom}
-                    </p>
-                    <span className="font-display" style={{ fontWeight: 800, color: 'var(--mint-dk)', fontSize: 16 }}>
-                        {Math.floor(60 + Math.random() * 35)}%
-                    </span>
-                </div>
-            ))}
-
-            <h4 className="font-display" style={{ fontSize: 16, fontWeight: 800, marginTop: 16, marginBottom: 10 }}>
-                ⚠️ Élèves en difficulté
-            </h4>
-            <div style={{ background: '#FFF8F0', borderRadius: 12, padding: 14, border: '1px solid #FFE0C0' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--coral-dk)' }}>
-                    2 élèves en dessous de 50% de maîtrise
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>
+            ) : entries.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
+                    Aucune entrée dans le journal.
                 </p>
-                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
-                    💡 Conseil : assigner une révision ciblée sur les tables 7 et 8
-                </p>
-            </div>
-        </div>
-    );
-}
-
-/* ===================== CONFIG ===================== */
-
-function ConfigTab({ selectedClass }) {
-    const [authMode, setAuthMode] = useState('pin');
-    const [maxTable, setMaxTable] = useState(10);
-    const [defiEnabled, setDefiEnabled] = useState(true);
-
-    return (
-        <div>
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                    🔐 Mode d'authentification
-                </h3>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <button className={`chip${authMode === 'pin' ? ' chip--navy' : ''}`} style={{ flex: 1, width: 'auto', fontSize: 14, height: 44 }} onClick={() => setAuthMode('pin')}>
-                        🔑 PIN
-                    </button>
-                    <button className={`chip${authMode === 'google' ? ' chip--navy' : ''}`} style={{ flex: 1, width: 'auto', fontSize: 14, height: 44 }} onClick={() => setAuthMode('google')}>
-                        🔗 Google
-                    </button>
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 8 }}>
-                    {authMode === 'pin'
-                        ? '✅ Mode PIN : pas de dépendance Google, compatible MDM strict'
-                        : '⚠️ Mode Google : nécessite le whitelisting des domaines Google dans Jamf'}
-                </p>
-            </div>
-
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                    📐 Tables autorisées — {selectedClass}
-                </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                    Les élèves ne verront que les tables 1 à {maxTable}
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    {[10, 12, 15].map(n => (
-                        <button
-                            key={n}
-                            className={`chip${maxTable === n ? ' chip--gold' : ''}`}
-                            style={{ flex: 1, width: 'auto', fontSize: 16, height: 50 }}
-                            onClick={() => setMaxTable(n)}
-                        >
-                            1-{n}
-                        </button>
+            ) : (
+                <div style={{ maxHeight: 500, overflow: 'auto' }}>
+                    {entries.map((e, i) => (
+                        <div key={e.id || i} style={{
+                            padding: '8px 4px', borderBottom: '1px solid var(--border)',
+                            fontSize: 12,
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                <span style={{ fontWeight: 700, color: 'var(--navy)' }}>
+                                    {e.action} → {e.cible}
+                                </span>
+                                <span style={{ color: 'var(--text-soft)', fontSize: 11 }}>
+                                    {new Date(e.fait_le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                            {e.detail && (
+                                <p style={{ color: 'var(--text-soft)', fontSize: 11 }}>
+                                    {typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)}
+                                </p>
+                            )}
+                            <p style={{ color: 'var(--text-soft)', fontSize: 10, fontStyle: 'italic' }}>
+                                par {e.fait_par_nom || e.fait_par || '—'}
+                            </p>
+                        </div>
                     ))}
                 </div>
-            </div>
-
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                    ⚔️ Défis
-                </h3>
-                <label className="commutative-toggle" onClick={() => setDefiEnabled(!defiEnabled)}>
-                    <input type="checkbox" checked={defiEnabled} readOnly />
-                    Activer les défis entre élèves
-                </label>
-                {!defiEnabled && (
-                    <p style={{ fontSize: 12, color: 'var(--coral)', fontWeight: 700, marginTop: 6 }}>
-                        Les élèves ne pourront pas créer ni rejoindre de défis
-                    </p>
-                )}
-            </div>
-
-            <div className="card">
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                    🗄 Base de données
-                </h3>
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <button className="btn btn--ghost" style={{ flex: 1, fontSize: 13, padding: 12 }}>
-                        📥 Exporter CSV
-                    </button>
-                    <button className="btn btn--ghost" style={{ flex: 1, fontSize: 13, padding: 12, color: 'var(--coral)' }}>
-                        🗑 RAZ année
-                    </button>
-                </div>
-                <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginTop: 8, textAlign: 'center' }}>
-                    La RAZ supprime toutes les sessions et remet la maîtrise à zéro
-                </p>
-            </div>
+            )}
         </div>
     );
 }

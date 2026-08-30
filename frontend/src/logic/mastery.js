@@ -1,52 +1,43 @@
 /**
- * Maîtrise — gestion des niveaux de maîtrise par fait
- * Niveaux : -2 (très faible) → 0 (neutre) → +4 (maîtrisé)
+ * Maîtrise — échelle serveur unifiée
+ *
+ * UNE SEULE ÉCHELLE dans tout le projet : celle du serveur.
+ *   undefined = jamais vu · 1 = rouge · 2 = jaune · 3 = vert
+ *
+ * La base stocke ces valeurs dans `maitrise.niveau`,
+ * `construireMaitrise()` les produit, et `masteryColor()`
+ * les affiche. Pas de deuxième grille locale.
  */
 
+/** Clé normalisée : le plus petit d'abord. */
+export function cleFait(a, b) {
+    return `${Math.min(a, b)}_${Math.max(a, b)}`;
+}
+
 /**
- * Couleur de maîtrise (pour la grille 15×15)
+ * Couleur de maîtrise — échelle serveur (1/2/3).
  */
 export function masteryColor(val) {
     if (val === undefined || val === null) return '#E8E2D8'; // non testé → gris doux
     if (val >= 3) return '#00C9A7';   // maîtrisé → menthe
-    if (val >= 1) return '#F0B429';   // en cours → or
-    if (val >= 0) return '#FFB0C0';   // fragile → rose
-    return '#FF5A5F';                  // à revoir → corail
+    if (val >= 2) return '#F0B429';   // en cours → or
+    return '#FF5A5F';                 // à revoir → corail
 }
 
 /**
- * Met à jour la map de maîtrise locale après un quiz
- * @param {object} prev — maîtrise précédente { "3_7": 2, ... }
- * @param {object[]} wrong — questions ratées [{ a, b }, ...]
- * @param {object[]} right — questions réussies [{ a, b }, ...]
- * @returns {object} — nouvelle maîtrise
+ * Poids adaptatifs depuis les données de maîtrise serveur.
+ * Un fait rouge doit revenir bien plus souvent qu'un fait vert.
+ * C'est le meilleur rapport valeur/effort du projet (ECRANS.md).
  */
-export function updateMastery(prev, wrong, right) {
-    const m = { ...prev };
-    for (const w of wrong) {
-        const key = `${Math.min(w.a, w.b)}_${Math.max(w.a, w.b)}`;
-        m[key] = Math.max((m[key] || 0) - 1, -2);
-    }
-    for (const r of right) {
-        const key = `${Math.min(r.a, r.b)}_${Math.max(r.a, r.b)}`;
-        m[key] = Math.min((m[key] || 0) + 1, 4);
-    }
-    return m;
-}
-
-/**
- * Construit les poids adaptatifs depuis les données de maîtrise
- */
-export function buildWeights(tables, mastery, maxMultiplier = 10) {
+export function buildWeights(tables, maitrise, maxMultiplier = 20) {
     const w = {};
     for (const t of tables) {
         for (let m = 1; m <= maxMultiplier; m++) {
-            const key = `${Math.min(t, m)}_${Math.max(t, m)}`;
-            const val = mastery[key];
-            if (val === undefined) w[key] = 2;     // inconnu → priorité moyenne
-            else if (val <= 0) w[key] = 4;          // faible → haute priorité
-            else if (val <= 2) w[key] = 2;          // en apprentissage
-            else w[key] = 1;                        // maîtrisé → basse
+            const key = cleFait(t, m);
+            const v = maitrise?.[key];
+            // undefined=jamais vu → 3 (priorité moyenne-haute),
+            // 1=rouge → 5 (haute), 2=jaune → 3, 3=vert → 1 (basse)
+            w[key] = v === undefined ? 3 : v === 1 ? 5 : v === 2 ? 3 : 1;
         }
     }
     return w;
@@ -59,45 +50,59 @@ export function buildWeights(tables, mastery, maxMultiplier = 10) {
  *   - erreurs : ["7_8", "6_9"] — clés normalisées (petit_grand)
  *   - maitrise : {"7_8": 1, "6_9": 3} — 1 rouge, 2 jaune, 3 vert
  *
- * Les composants de quiz produisent :
- *   - wrong : [{ a, b, answer, given }]
- *   - right : [{ a, b }]
+ * Les composants de quiz produisent un tableau de résultats :
+ *   - { a, b, result: 'premier' | 'rattrape' | 'jamais' }
  * ================================================================= */
-
-/** Clé normalisée : le plus petit d'abord. */
-export function cleFait(a, b) {
-    return `${Math.min(a, b)}_${Math.max(a, b)}`;
-}
 
 /**
  * Construit la liste plate d'erreurs pour le serveur.
  * Dédupliquée : une table ratée deux fois n'apparaît qu'une fois.
+ * "Erreur" = jamais trouvé du premier coup (rattrape compte aussi).
  */
-export function construireErreurs(wrong) {
-    return [...new Set(wrong.map(w => cleFait(w.a, w.b)))];
+export function construireErreurs(resultats) {
+    return [...new Set(
+        resultats
+            .filter(r => r.result !== 'premier')
+            .map(r => cleFait(r.a, r.b))
+    )];
 }
 
 /**
  * Construit la map de maîtrise pour le serveur.
  *
- * Règle : chaque fait vu dans la partie reçoit un niveau :
- *   - 3 (vert)   : toujours réussi
- *   - 2 (jaune)  : réussi au moins une fois, raté au moins une fois
- *   - 1 (rouge)  : toujours raté
+ * Règle (migration 12, 28/08) :
+ *   - premier coup → 3 (vert)
+ *   - rattrapé     → 2 (jaune)
+ *   - jamais trouvé → 1 (rouge)
+ *
+ * Si un fait apparaît plusieurs fois, on garde le pire résultat.
  */
-export function construireMaitrise(wrong, right) {
-    const bons = new Set();
-    const mauvais = new Set();
-
-    for (const r of right) bons.add(cleFait(r.a, r.b));
-    for (const w of wrong) mauvais.add(cleFait(w.a, w.b));
-
+export function construireMaitrise(resultats) {
     const m = {};
-    for (const k of bons) {
-        m[k] = mauvais.has(k) ? 2 : 3;   // vu en bon ET en mauvais → jaune
-    }
-    for (const k of mauvais) {
-        if (!bons.has(k)) m[k] = 1;       // jamais réussi → rouge
+    const niveauDe = { premier: 3, rattrape: 2, jamais: 1 };
+    for (const r of resultats) {
+        const key = cleFait(r.a, r.b);
+        const n = niveauDe[r.result] || 1;
+        // Garder le pire (le plus bas)
+        if (m[key] === undefined || n < m[key]) {
+            m[key] = n;
+        }
     }
     return m;
+}
+
+/**
+ * Met à jour la maîtrise locale en session (après chaque question).
+ * Écrit directement le niveau serveur : 3/2/1.
+ */
+export function updateMastery(prev, a, b, result) {
+    const key = cleFait(a, b);
+    const niveauDe = { premier: 3, rattrape: 2, jamais: 1 };
+    const n = niveauDe[result] || 1;
+    const existing = prev[key];
+    // Garder le pire résultat de la session
+    if (existing === undefined || n < existing) {
+        return { ...prev, [key]: n };
+    }
+    return prev;
 }

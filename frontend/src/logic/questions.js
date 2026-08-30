@@ -91,15 +91,3 @@ export function newQuestion(tables, prev, weights, maxMultiplier = 10) {
     } while (prev && q.a === prev.a && q.b === prev.b && tries < 15);
     return q;
 }
-
-/**
- * Correspondance exacte — validation immédiate.
- * C'est ce qui rend le jeu rapide : bonne réponse = zéro tap de plus.
- *
- * Ne révèle PAS le nombre de chiffres de la réponse (contrairement à
- * l'ancienne shouldAutoValidate qui le divulguait via input.length).
- * Le délai de 1200 ms d'inactivité est géré côté composant.
- */
-export function estReponseExacte(input, correctAnswer) {
-    return input !== '' && parseInt(input, 10) === correctAnswer;
-}

@@ -28,6 +28,8 @@
   --purple-dk: #6F55A0;
   --sun: #F0B429;
   --sun-dk: #D69E1D;
+  --gold-dk: #A8861F;
+  --navy-dk: #101B33;
 
   /* Surfaces */
   --surface: #FFFFFF;
@@ -482,6 +484,46 @@ input, textarea, select, button { touch-action: manipulation; }
 
 .answer-box--correct { background: #D1FAE5; color: var(--mint-dk); }
 .answer-box--wrong { background: #FFE0E7; color: var(--coral-dk); }
+
+/* ── Digit Boxes (modèle à cases) ──────────────────────────────────── */
+.digit-boxes { margin-top: 10px; min-height: 60px; }
+
+.digit-box {
+  width: 52px; height: 58px;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 28px;
+  text-align: center; line-height: 58px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 2.5px solid var(--border);
+  color: var(--navy);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.digit-box--active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.digit-box--correct {
+  background: #D1FAE5; border-color: var(--mint); color: var(--mint-dk);
+}
+.digit-box--wrong {
+  background: #FFE0E7; border-color: var(--coral); color: var(--coral-dk);
+}
+.digit-box--reveal {
+  background: #E8F5E9; border-color: var(--mint); color: var(--mint-dk);
+}
+
+/* Question timer bar (chrono par question) */
+.question-timer {
+  height: 4px; border-radius: 2px;
+  background: var(--border); margin-top: 8px; overflow: hidden;
+}
+.question-timer__fill {
+  display: block; height: 100%; border-radius: 2px;
+  background: var(--gold);
+  transition: width linear;
+}
+.question-timer__fill--warn { background: var(--coral); }
 
 .caret {
   display: inline-block;
