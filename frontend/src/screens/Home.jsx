@@ -63,12 +63,12 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
                 </button>
 
                 <button className="mode-card" onClick={() => onGo('classe')} style={{
-                    opacity: 0.5, cursor: 'default', pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, var(--sky), var(--sky-dk))',
                 }}>
                     <span className="mode-card__emoji">🗺</span>
                     <span>
                         <div className="mode-card__title">Ma classe</div>
-                        <div className="mode-card__desc">Maîtrise agrégée — en construction</div>
+                        <div className="mode-card__desc">Maîtrise agrégée — qui bloque, sur quoi</div>
                     </span>
                 </button>
 

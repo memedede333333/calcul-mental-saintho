@@ -648,11 +648,13 @@ export type Database = {
       maitrise_classe: {
         Args: { p_classe: string }
         Returns: {
+          eleves_classe: number
           eleves_jaunes: number
           eleves_rouges: number
           eleves_total: number
           eleves_verts: number
           table_n: number
+          taux_couverture: number
           taux_maitrise: number
         }[]
       }

@@ -45,7 +45,7 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig }) {
     const [phase, setPhase] = useState('select');
     const [challengeType, setChallengeType] = useState(null);
     const [joinCode, setJoinCode] = useState('');
@@ -56,8 +56,22 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     const [defiInfo, setDefiInfo] = useState(null);
     // État d'envoi du résultat de défi : { etat: 'en_cours' | 'ok' | 'echec', message?, payload? }
     const [envoiDefi, setEnvoiDefi] = useState(null);
+    // Classe pré-sélectionnée depuis MaClasse
+    const [preSelectedClasse, setPreSelectedClasse] = useState(null);
 
     const plafond = identite?.profil?.plafond_tables || (estProf ? 20 : 10);
+
+    // Pré-remplissage depuis MaClasse : sauter directement en config
+    useEffect(() => {
+        if (defiPreConfig) {
+            const sprintType = CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0];
+            setChallengeType(sprintType);
+            setSelectedTables(defiPreConfig.tables || [2, 3, 4, 5]);
+            setPreSelectedClasse(defiPreConfig.classe || null);
+            setPhase('config');
+            clearPreConfig?.();
+        }
+    }, [defiPreConfig, clearPreConfig]);
 
     // --- Fin de partie SOLO ---
     const handleDone = useCallback((r) => {
@@ -182,12 +196,13 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 setTables={setSelectedTables}
                 plafond={plafond}
                 estProf={estProf}
-                onBack={() => setPhase('select')}
+                onBack={() => { setPreSelectedClasse(null); setPhase('select'); }}
                 onStart={(tables) => {
                     if (tables) setSelectedTables(tables);
                     setPhase('play');
                 }}
                 onCreateDefi={handleCreateDefi}
+                initialClasse={preSelectedClasse}
             />
         );
     }
@@ -399,14 +414,14 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
 
 /* ===================== CONFIG ===================== */
 
-function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi }) {
+function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi, initialClasse }) {
     const isClimb = type.id === 'climb';
     const isShareable = type.shareable === true;
     const availableTables = ALL_TABLES.filter(t => t <= Math.max(10, plafond));
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState(null);
     const [classes, setClasses] = useState([]);
-    const [selectedClasse, setSelectedClasse] = useState(null);
+    const [selectedClasse, setSelectedClasse] = useState(initialClasse || null);
 
     // Load classes for prof defi creation
     useEffect(() => {
@@ -414,7 +429,10 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
             listeClasses().then(res => {
                 if (res.ok && res.data) {
                     setClasses(res.data);
-                    if (res.data.length > 0) setSelectedClasse(res.data[0].classe);
+                    // Pré-sélection : initialClasse si fournie, sinon la première
+                    if (!selectedClasse && res.data.length > 0) {
+                        setSelectedClasse(res.data[0].classe);
+                    }
                 }
             });
         }

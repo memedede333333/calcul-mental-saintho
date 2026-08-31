@@ -9,6 +9,7 @@ import Leaderboards from './screens/Leaderboards';
 import Profile from './screens/Profile';
 import Admin from './screens/Admin';
 import MesDefis from './screens/MesDefis';
+import MaClasse from './screens/MaClasse';
 import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil } from './api';
 import branding from './branding';
 
@@ -36,6 +37,8 @@ export default function App() {
     const [erreurMessage, setErreurMessage] = useState('');
     const [screen, setScreen] = useState('home');
     const [tablesADemarrer, setTablesADemarrer] = useState(null);
+    // Pré-remplissage depuis "Ma classe" : { tables: [7,8], classe: '6A' }
+    const [defiPreConfig, setDefiPreConfig] = useState(null);
     const [maitrise, setMaitrise] = useState({});
 
     const estProf = identite?.type === 'prof';
@@ -310,10 +313,19 @@ export default function App() {
                 />
             )}
             {screen === 'challenges' && (
-                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} onGo={setScreen} />
+                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} onGo={setScreen} defiPreConfig={defiPreConfig} clearPreConfig={() => setDefiPreConfig(null)} />
             )}
             {screen === 'mes-defis' && (
                 <MesDefis onBack={goHome} estProf={estProf} />
+            )}
+            {screen === 'classe' && (
+                <MaClasse
+                    onBack={goHome}
+                    onLancerDefi={(tables, classe) => {
+                        setDefiPreConfig({ tables, classe });
+                        setScreen('challenges');
+                    }}
+                />
             )}
             {screen === 'leaderboards' && (
                 <Leaderboards onBack={goHome} identite={identite} estProf={estProf} />

@@ -491,4 +491,34 @@ select case when rejoindre_defi(:'cp')->>'auteur_nom' = 'M. Démonstration'
             then 'OK : nom complet du prof annonce a l eleve'
             else 'ECHEC : origine du defi de prof' end as verdict;
 
+-- =====================================================================
+-- MIGRATION 19 — maitrise_classe : effectif reel de la classe
+-- =====================================================================
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+
+\echo '=== 78. maitrise_classe distingue « qui a travaille » et « la classe » ==='
+select table_n, eleves_verts, eleves_total, eleves_classe, taux_maitrise, taux_couverture
+  from maitrise_classe('6A') order by table_n limit 4;
+select case when (select bool_and(eleves_total <= eleves_classe) from maitrise_classe('6A'))
+             and (select count(distinct eleves_classe) from maitrise_classe('6A')) = 1
+            then 'OK : effectif constant, jamais depasse'
+            else 'ECHEC : denominateur incoherent' end as verdict;
+
+\echo '=== 79. Un eleve qui n a rien travaille reste dans le denominateur ==='
+-- C'est le defaut que la migration 19 corrige : les eleves qui n'ont
+-- jamais ouvert la table de 7 disparaissaient du compte — or ce sont
+-- exactement ceux dont le professeur doit s'occuper.
+select ajouter_eleve('zoe.nouvelle@demo.saintho.fr','Nouvelle','Zoé','6A')->>'ok' as zoe_ajoutee;
+select case when (select bool_and(eleves_total < eleves_classe) from maitrise_classe('6A'))
+             and (select bool_and(taux_couverture < 100) from maitrise_classe('6A'))
+            then 'OK : Zoe est comptee comme non couverte, pas ignoree'
+            else 'ECHEC : l eleve sans activite disparait du denominateur' end as verdict;
+
+\echo '=== 80. Un eleve ne voit rien de la maitrise de sa classe ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (select count(*) from maitrise_classe('6A')) = 0
+            then 'OK : verrou prof_voit_classe en place'
+            else 'ECHEC : un eleve lit la maitrise de la classe' end as verdict;
+
 reset role;

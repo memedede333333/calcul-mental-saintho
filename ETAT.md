@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **31 août 2026** — 18 migrations, 77 cas de test verts.
+> Dernière mise à jour : **1er septembre 2026** — 19 migrations, 80 cas de test verts.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -32,7 +32,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **18 migrations**, 77 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **19 migrations**, 80 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -293,6 +293,18 @@ elles sont toujours nulles. *(31 août 2026, après le deuxième bug de ce type 
 le coût d'une exception à retenir côté React est un bug par écran. Une
 exception au contrat se paie une fois par écran, pour toujours.
 
+**Toute fonction qui renvoie un ratio nomme ses deux populations.**
+*(1er septembre 2026, après le troisième bug identique en deux jours.)*
+Migration 17 : « 2 / 1 ont terminé » — numérateur tous les joueurs,
+dénominateur les élèves d'une classe. Migration 19 : « 18 sur 20 » dans une
+classe de 27 — dénominateur les élèves ayant déjà travaillé la table. À chaque
+fois, deux populations différentes de part et d'autre de la barre de fraction,
+et à chaque fois l'erreur va dans le sens rassurant : elle **efface les élèves
+qui n'ont rien fait**. Donc : le `comment on function` dit de quelle population
+chaque compteur est tiré, et une fonction qui renvoie un dénominateur renvoie
+aussi le numérateur qui lui correspond — jamais deux compteurs que l'écran
+devra apparier lui-même.
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -302,7 +314,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-77 cas, dont une dizaine de tentatives de contournement qui doivent toutes
+80 cas, dont une dizaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -351,7 +363,10 @@ mais de la correction et deux écrans manquants, par ordre de valeur :
    « 📚 Défi de M. Desjardins — 6A » ou « 🎮 Défi de Lou A. » avant la
    première question.
 3. **« Ma classe »** — la grille de maîtrise agrégée, écran 15 de `ECRANS.md`.
-   `maitrise_classe(p_classe)` existe et est testée depuis la migration 4.
+   **C'est le lot en cours.** `maitrise_classe(p_classe)` existe depuis la
+   migration 4, complétée par la migration 19 (`eleves_classe`,
+   `taux_couverture`) : le dénominateur est enfin l'effectif de la classe et
+   non le nombre d'élèves ayant déjà travaillé la table.
    *Recommandation : avant la rentrée.* Tout le reste de l'application est
    fait pour les élèves ; c'est le seul écran qui donne une raison à un
    professeur de maths de rouvrir l'outil la semaine suivante.

@@ -56,6 +56,38 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 — Migration 19 : « 18 élèves sur 27 », et sur 27 pour de vrai
+
+**Constaté** — Avant d'ouvrir le chantier « Ma classe », relecture de
+`maitrise_classe()`. Elle renvoyait `eleves_total` : le nombre d'élèves ayant
+**déjà travaillé** la table, jamais l'effectif de la classe. Affiché tel quel,
+cela donne « 18 sur 20 » dans une classe de 27 — flatteur et faux. Les neuf
+élèves qui n'ont jamais ouvert la table de 7 disparaissaient du dénominateur,
+alors que ce sont exactement ceux dont le professeur doit s'occuper.
+
+**Troisième ratio en deux jours qui mélange deux populations** (17, 18, 19).
+Ce n'est plus une distraction, c'est un motif : dès qu'une fonction renvoie un
+numérateur et un dénominateur, il faut écrire noir sur blanc de quelle
+population chacun est tiré.
+
+**Fait** — Migration 19 (`20260901080000_maitrise_classe_effectif.sql`) :
+`eleves_classe` (effectif actif, constant sur toutes les lignes) et
+`taux_couverture` (% de la classe qui a travaillé la table) s'ajoutent à
+`eleves_total` et `taux_maitrise`, qui gardent leur sens — « 20 élèves ont
+travaillé cette table, 18 la maîtrisent » reste une phrase utile. L'écran doit
+pouvoir dire les deux. Trois cas de test (78 → 80), dont un qui ajoute une
+élève sans aucune activité et vérifie qu'elle **reste** au dénominateur. Suite
+portée à **80 cas, tous verts**.
+
+**Décidé** — Toute fonction renvoyant un ratio nomme explicitement ses deux
+populations dans son `comment on function`. Trois bugs identiques suffisent.
+
+**Ensuite** — Antigravity : l'écran « Ma classe » (écran 15), avec le bouton
+« Lancer un défi sur les tables 7 et 8 » pré-rempli. Aymeri : le test du défi à
+deux comptes, et le nom.
+
+---
+
 ## 2026-08-31 (12) — Migration 18 : « 2 / 1 ont terminé »
 
 **Constaté** — Antigravity a livré « Mes défis » et la salle des profs, et il a
