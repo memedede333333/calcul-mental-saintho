@@ -53,7 +53,7 @@ d'interface se juge à cette aune.
 | ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
 | ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitrise_classe()` existe en base et est testée : il ne manque que la grille. C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. |
 | ✅ **Écran « Mes défis »** | Livré par Antigravity le 31 août, points d'entrée côté prof et côté élève. Reste à voir en usage. |
-| ⬜ **Origine du défi affichée** (prof / élève) | SQL fait (migration 18) ; l'affichage reste à coder. |
+| ✅ **Origine du défi affichée** (prof / élève) | Migration 18 + écran `DefiIntro` livrés le 31 août. Reste à voir en usage. |
 
 ### Ce qui reste avant la rentrée — hors code
 
@@ -346,11 +346,10 @@ fondations, modes solo, défis, finitions). Ce qui reste n'est plus du montage
 mais de la correction et deux écrans manquants, par ordre de valeur :
 
 1. ✅ **« Mes défis »** et **la salle des profs** — livrés le 31 août.
-2. **Origine du défi à l'écran** — la migration 18 fournit `origine`,
-   `auteur_nom`, `participants_classe`. Badge « 📚 Travail de classe » ou
-   « 🎮 Défi amical », et le ratio de classe corrigé : afficher
-   `participants_classe / attendus` (jamais `participants / attendus`, qui
-   donnait « 2 / 1 » dès qu'un élève d'une autre classe jouait).
+2. ✅ **Origine du défi à l'écran** et ratio de classe corrigé — livrés le
+   31 août (commit `0d3b557`). Un écran `DefiIntro` annonce désormais
+   « 📚 Défi de M. Desjardins — 6A » ou « 🎮 Défi de Lou A. » avant la
+   première question.
 3. **« Ma classe »** — la grille de maîtrise agrégée, écran 15 de `ECRANS.md`.
    `maitrise_classe(p_classe)` existe et est testée depuis la migration 4.
    *Recommandation : avant la rentrée.* Tout le reste de l'application est
