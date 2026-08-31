@@ -1,32 +1,30 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { maitriseClasse, listeClasses } from '../api';
 
 /**
  * MaClasse — L'écran qui décide de l'adoption en salle des profs.
  *
- * Affiche, pour une classe choisie, une barre horizontale par table avec
- * QUATRE segments :
- *   vert   (var(--mint))   = élèves qui maîtrisent
- *   jaune  (var(--sun))    = en cours
- *   rouge  (var(--coral))  = en difficulté
- *   gris   (var(--border)) = n'ont pas encore travaillé cette table
+ * Le serveur renvoie UNE LIGNE PAR TABLE existant pour cette classe,
+ * travaillée ou non. L'écran ne fabrique plus la liste, ne la complète
+ * plus, ne la borne plus. Une table absente du retour n'existe pas
+ * pour cette classe.
  *
- * Le gris est le segment le plus important : c'est le travail qui n'a pas
- * eu lieu. Une table à 100 % de maîtrise et 30 % de couverture n'est PAS
- * acquise — ne la présente jamais en vert plein.
+ * Colonnes serveur (migration 20) :
+ *   travaillee             — au moins un élève l'a rencontrée
+ *   dans_le_plafond_commun — TOUS les élèves de la classe y ont droit
+ *   eleves_verts/jaunes/rouges/total — ceux qui ont travaillé
+ *   eleves_sans_trace      — effectif - total (calculé par le serveur)
+ *   eleves_classe          — effectif actif de la classe
+ *   taux_maitrise          — % verts parmi ceux qui ont travaillé
+ *   taux_couverture        — % de la classe qui l'a travaillée
  *
- * PIÈGE — Deux dénominateurs différents :
- *   eleves_total  = ceux qui ont DÉJÀ travaillé la table
- *   eleves_classe = l'effectif de la classe (constant)
- * Ne jamais afficher « X sur eleves_total » en le présentant comme un
- * ratio de classe. « 18 sur 20 » dans une classe de 27 est faux.
+ * Deux blocs :
+ *   1. Tables travaillées, triées par taux_maitrise croissant
+ *   2. Tables pas encore abordées (travaillee = false)
  *
- * Tri : table la plus faible en premier, pas l'ordre numérique.
- * Un prof ouvre cet écran pour trouver le problème, pas pour lire un
- * tableau.
- *
- * Le bouton en bas « Lancer un défi sur les tables X et Y » est pré-
- * rempli avec les 2-3 tables les plus faibles.
+ * Bouton défi : candidates = travaillee=true ET dans_le_plafond_commun=true,
+ * triées par taux_maitrise croissant, les 2-3 premières.
+ * Jamais de table non travaillée en candidate.
  */
 
 export default function MaClasse({ onBack, onLancerDefi }) {
@@ -73,48 +71,28 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     // Effectif de la classe (constant sur toutes les lignes)
     const effectif = data.length > 0 ? (data[0].eleves_classe || 0) : 0;
 
-    // Tables triées par faiblesse : la plus faible en premier
-    // Score de faiblesse = (eleves_verts / eleves_classe) pondéré par la couverture
-    // Une table non travaillée du tout = score 0 (la pire)
-    const tablesSorted = useMemo(() => {
-        if (!data.length) return [];
-        return [...data].sort((a, b) => {
-            // Score = verts / effectif (0 = pire, 1 = meilleur)
-            const scoreA = effectif > 0 ? (a.eleves_verts / effectif) : 0;
-            const scoreB = effectif > 0 ? (b.eleves_verts / effectif) : 0;
-            return scoreA - scoreB;
-        });
-    }, [data, effectif]);
+    // Bloc 1 : tables travaillées, triées par taux_maitrise croissant
+    const tablesTravaillees = useMemo(() => {
+        return data
+            .filter(d => d.travaillee)
+            .sort((a, b) => (a.taux_maitrise ?? 0) - (b.taux_maitrise ?? 0));
+    }, [data]);
 
-    // Tables jamais travaillées = tables de 2 à 20 absentes de `data`
-    const tablesPresentes = useMemo(() => new Set(data.map(d => d.table_n)), [data]);
-    const tablesAbsentes = useMemo(() => {
-        const abs = [];
-        for (let i = 2; i <= 20; i++) {
-            if (!tablesPresentes.has(i)) abs.push(i);
-        }
-        return abs;
-    }, [tablesPresentes]);
+    // Bloc 2 : tables pas encore abordées
+    const tablesNonAbordees = useMemo(() => {
+        return data.filter(d => !d.travaillee);
+    }, [data]);
 
-    // Tables les plus faibles pour le bouton défi (2 ou 3)
+    // Candidates pour le bouton défi : travaillee=true ET dans_le_plafond_commun=true
+    // triées par taux_maitrise croissant, les 2-3 premières
     const tablesDefi = useMemo(() => {
-        // Tables absentes d'abord (personne ne les a travaillées)
-        // puis les tables présentes triées par faiblesse
-        const candidates = [
-            ...tablesAbsentes.slice(0, 3),
-            ...tablesSorted.map(d => d.table_n),
-        ];
-        // Dédupliquer et limiter à 3
-        const seen = new Set();
-        const result = [];
-        for (const t of candidates) {
-            if (!seen.has(t) && result.length < 3) {
-                seen.add(t);
-                result.push(t);
-            }
-        }
-        return result.sort((a, b) => a - b);
-    }, [tablesAbsentes, tablesSorted]);
+        const candidates = tablesTravaillees
+            .filter(d => d.dans_le_plafond_commun)
+            .slice(0, 3)
+            .map(d => d.table_n)
+            .sort((a, b) => a - b);
+        return candidates;
+    }, [tablesTravaillees]);
 
     if (!classes.length && !loading) {
         return (
@@ -149,7 +127,6 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                 {classes.map(c => (
                     <button
                         key={c.classe}
-                        className={`chip ${selectedClasse === c.classe ? 'chip--active' : ''}`}
                         onClick={() => setSelectedClasse(c.classe)}
                         style={{
                             padding: '8px 16px', fontSize: 14, fontWeight: 700,
@@ -164,9 +141,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                     >
                         {c.classe}
                         {c.est_favorite && ' ★'}
-                        <span style={{
-                            fontSize: 11, marginLeft: 4, opacity: 0.7,
-                        }}>
+                        <span style={{ fontSize: 11, marginLeft: 4, opacity: 0.7 }}>
                             ({c.eleves_actifs})
                         </span>
                     </button>
@@ -189,8 +164,8 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             {selectedClasse} — {effectif} élève{effectif !== 1 ? 's' : ''} actif{effectif !== 1 ? 's' : ''}
                         </p>
                         <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginTop: 2 }}>
-                            {data.length} table{data.length !== 1 ? 's' : ''} travaillée{data.length !== 1 ? 's' : ''} sur 19
-                            {tablesAbsentes.length > 0 && ` · ${tablesAbsentes.length} jamais ouvertes`}
+                            {tablesTravaillees.length} table{tablesTravaillees.length !== 1 ? 's' : ''} travaillée{tablesTravaillees.length !== 1 ? 's' : ''}
+                            {tablesNonAbordees.length > 0 && ` · ${tablesNonAbordees.length} pas encore abordée${tablesNonAbordees.length !== 1 ? 's' : ''}`}
                         </p>
                     </div>
 
@@ -200,49 +175,77 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         marginBottom: 12, fontSize: 11, fontWeight: 700,
                         color: 'var(--text-soft)',
                     }}>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'var(--mint)', marginRight: 4, verticalAlign: 'middle' }} />Maîtrisé</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'var(--sun)', marginRight: 4, verticalAlign: 'middle' }} />En cours</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'var(--coral)', marginRight: 4, verticalAlign: 'middle' }} />Difficulté</span>
-                        <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 3, background: 'var(--border)', marginRight: 4, verticalAlign: 'middle' }} />Pas travaillé</span>
+                        <Legend color="var(--mint)" label="Maîtrisé" />
+                        <Legend color="var(--sun)" label="En cours" />
+                        <Legend color="var(--coral)" label="Difficulté" />
+                        <Legend color="var(--border)" label="Pas travaillé" />
                     </div>
 
-                    {/* Tables jamais travaillées en premier (gris plein) */}
-                    {tablesAbsentes.map(t => (
-                        <TableBar
-                            key={t}
-                            tableN={t}
-                            verts={0} jaunes={0} rouges={0}
-                            total={0} effectif={effectif}
-                            jamaisTravaillee
-                        />
-                    ))}
+                    {/* Bloc 1 : Tables travaillées, triées par faiblesse */}
+                    {tablesTravaillees.length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                            {tablesTravaillees.map(d => (
+                                <TableBar
+                                    key={d.table_n}
+                                    tableN={d.table_n}
+                                    verts={d.eleves_verts}
+                                    jaunes={d.eleves_jaunes}
+                                    rouges={d.eleves_rouges}
+                                    sansTrace={d.eleves_sans_trace}
+                                    effectif={d.eleves_classe}
+                                    tauxMaitrise={d.taux_maitrise}
+                                    dansPlafond={d.dans_le_plafond_commun}
+                                />
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Tables travaillées, triées par faiblesse */}
-                    {tablesSorted.map(d => (
-                        <TableBar
-                            key={d.table_n}
-                            tableN={d.table_n}
-                            verts={d.eleves_verts}
-                            jaunes={d.eleves_jaunes}
-                            rouges={d.eleves_rouges}
-                            total={d.eleves_total}
-                            effectif={effectif}
-                            tauxMaitrise={d.taux_maitrise}
-                            tauxCouverture={d.taux_couverture}
-                        />
-                    ))}
+                    {/* Bloc 2 : Tables pas encore abordées */}
+                    {tablesNonAbordees.length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                            <h3 style={{
+                                fontSize: 13, fontWeight: 800, color: 'var(--text-soft)',
+                                textTransform: 'uppercase', letterSpacing: '0.05em',
+                                marginBottom: 8,
+                            }}>
+                                Pas encore abordées
+                            </h3>
+                            {tablesNonAbordees.map(d => (
+                                <TableBar
+                                    key={d.table_n}
+                                    tableN={d.table_n}
+                                    verts={0} jaunes={0} rouges={0}
+                                    sansTrace={d.eleves_classe}
+                                    effectif={d.eleves_classe}
+                                    jamaisTravaillee
+                                    dansPlafond={d.dans_le_plafond_commun}
+                                />
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Le bouton qui fait tout */}
-                    {tablesDefi.length > 0 && effectif > 0 && (
+                    {/* Bouton défi — uniquement tables travaillées dans le plafond commun */}
+                    {tablesDefi.length > 0 ? (
                         <button
                             className="btn btn--gold"
                             style={{
                                 width: '100%', fontSize: 16, padding: '16px 24px',
-                                marginTop: 20,
+                                marginTop: 8,
                             }}
                             onClick={() => onLancerDefi?.(tablesDefi, selectedClasse)}
                         >
                             ⚔️ Lancer un défi sur les tables {tablesDefi.join(', ')}
+                        </button>
+                    ) : (
+                        <button
+                            className="btn btn--ghost"
+                            disabled
+                            style={{
+                                width: '100%', fontSize: 14, padding: '14px 24px',
+                                marginTop: 8, opacity: 0.5, cursor: 'default',
+                            }}
+                        >
+                            Pas encore assez de données pour un défi ciblé
                         </button>
                     )}
                 </>
@@ -251,20 +254,34 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     );
 }
 
+/* ===================== LÉGENDE ===================== */
+
+function Legend({ color, label }) {
+    return (
+        <span>
+            <span style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: 3,
+                background: color, marginRight: 4, verticalAlign: 'middle',
+            }} />
+            {label}
+        </span>
+    );
+}
+
 /* ===================== BARRE D'UNE TABLE ===================== */
 
-function TableBar({ tableN, verts, jaunes, rouges, total, effectif, tauxMaitrise, tauxCouverture, jamaisTravaillee }) {
-    const nonTravaille = effectif - total;
+function TableBar({ tableN, verts, jaunes, rouges, sansTrace, effectif, tauxMaitrise, jamaisTravaillee, dansPlafond }) {
     // Largeurs en pourcentage de l'effectif
     const pVerts = effectif > 0 ? (verts / effectif) * 100 : 0;
     const pJaunes = effectif > 0 ? (jaunes / effectif) * 100 : 0;
     const pRouges = effectif > 0 ? (rouges / effectif) * 100 : 0;
-    const pGris = effectif > 0 ? (nonTravaille / effectif) * 100 : 100;
+    const pGris = effectif > 0 ? (sansTrace / effectif) * 100 : 100;
 
     return (
         <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             marginBottom: 6, padding: '6px 0',
+            opacity: dansPlafond ? 1 : 0.55,
         }}>
             {/* Label */}
             <div style={{
@@ -274,6 +291,7 @@ function TableBar({ tableN, verts, jaunes, rouges, total, effectif, tauxMaitrise
                 fontFamily: 'var(--font-display)',
             }}>
                 × {tableN}
+                {!dansPlafond && <span style={{ fontSize: 10 }}> 🔒</span>}
             </div>
 
             {/* Barre */}
@@ -302,14 +320,14 @@ function TableBar({ tableN, verts, jaunes, rouges, total, effectif, tauxMaitrise
                                 transition: 'width 0.3s',
                             }} />
                         )}
-                        {/* Le gris = élèves n'ayant pas travaillé : le reste de la barre via background */}
+                        {/* Le gris restant = élèves sans trace — via background de la barre */}
                     </>
                 )}
             </div>
 
             {/* Texte résumé */}
             <div style={{
-                minWidth: 100, textAlign: 'right', fontSize: 12, fontWeight: 700,
+                minWidth: 110, textAlign: 'right', fontSize: 12, fontWeight: 700,
                 color: jamaisTravaillee ? 'var(--text-soft)' : 'var(--text)',
                 lineHeight: 1.3,
             }}>
@@ -320,9 +338,9 @@ function TableBar({ tableN, verts, jaunes, rouges, total, effectif, tauxMaitrise
                 ) : (
                     <>
                         <div>{verts} / {effectif} maîtrisent</div>
-                        {total < effectif && (
+                        {sansTrace > 0 && (
                             <div style={{ fontSize: 10, color: 'var(--text-soft)', fontWeight: 600 }}>
-                                {total} l'ont travaillée
+                                {sansTrace} sans trace
                             </div>
                         )}
                     </>

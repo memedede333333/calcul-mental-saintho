@@ -648,14 +648,17 @@ export type Database = {
       maitrise_classe: {
         Args: { p_classe: string }
         Returns: {
+          dans_le_plafond_commun: boolean
           eleves_classe: number
           eleves_jaunes: number
           eleves_rouges: number
+          eleves_sans_trace: number
           eleves_total: number
           eleves_verts: number
           table_n: number
           taux_couverture: number
           taux_maitrise: number
+          travaillee: boolean
         }[]
       }
       mes_defis: {
