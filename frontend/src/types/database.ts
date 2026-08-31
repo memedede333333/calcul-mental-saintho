@@ -668,6 +668,7 @@ export type Database = {
         Returns: Json
       }
       mon_profil: { Args: never; Returns: Json }
+      mon_profil_prof: { Args: never; Returns: Json }
       nb_admins_actifs: { Args: never; Returns: number }
       niveau_scolaire: { Args: { p_classe: string }; Returns: string }
       nom_public: { Args: { p_nom: string; p_prenom: string }; Returns: string }

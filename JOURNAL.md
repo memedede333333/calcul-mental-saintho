@@ -56,6 +56,24 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-31 (8) — Migration 16 + profil enseignant (Antigravity)
+
+**Migration 16 appliquée** — `mon_profil()` refuse explicitement les
+non-élèves (`ok: false`, `raison: 'pas_un_eleve'`). `mon_profil_prof()`
+renvoie le profil enseignant, ses records réels issus de `sessions_profs`, et
+son rang en Salle des profs.
+
+**Écran Profil enseignant** — `Profile.jsx` aiguille selon `identite.type` :
+- Écran élève existant inchangé (`ProfileEleve`).
+- Nouvel écran enseignant (`ProfileProf`) avec 3 blocs :
+  1. Identité : nom, email, rôle (Enseignant ou Administrateur).
+  2. Mes parties : records (points total, semaine, parties jouées, série,
+     sprint, chrono, plus haute table), rang en salle des profs si présent, ou
+     message « Tu n'as pas encore joué » + bouton « S'entraîner » si 0 partie.
+  3. Mes classes habituelles : favoris modifiables via `definirMesClasses()`,
+     ou mention « Aucune classe favorite. Tu les vois toutes. ».
+
+
 ## 2026-08-31 (7) — Migration 15 + accueil enseignant (Antigravity)
 
 **Migration 15 appliquée** — `liste_eleves(p_classe)` renvoie actifs ET

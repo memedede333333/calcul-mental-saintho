@@ -318,8 +318,10 @@ export default function App() {
                 <Profile
                     onBack={goHome}
                     identite={identite}
+                    estProf={estProf}
                     onLogout={handleDeconnexion}
                     onReviser={goPlayWithTables}
+                    onGo={setScreen}
                 />
             )}
             {screen === 'admin' && estAdmin && (

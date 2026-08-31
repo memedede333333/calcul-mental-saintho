@@ -227,6 +227,11 @@ export async function monProfil() {
     return rpc('mon_profil');
 }
 
+/** Le profil d'un enseignant — ses parties, ses records, son rang. */
+export async function monProfilProf() {
+    return rpc('mon_profil_prof');
+}
+
 /** Les 4 tables les plus ratées — alimente « Mes tables faibles ». */
 export async function mesTablesFaibles(combien = 4) {
     return rpc('mes_tables_faibles', { p_combien: combien });
@@ -654,7 +659,7 @@ export const api = {
     connexionGoogle, demanderCode, verifierCode,
     seDeconnecter, sessionActive, quiSuisJe,
     // élève
-    monProfil, mesTablesFaibles, changerAvatar,
+    monProfil, monProfilProf, mesTablesFaibles, changerAvatar,
     enregistrerSession, enregistrerSessionProf,
     // hors-ligne
     partiesEnAttente, viderFile, surFileChangee,

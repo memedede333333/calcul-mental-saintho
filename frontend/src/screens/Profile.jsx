@@ -1,14 +1,325 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { monProfil, mesTablesFaibles, changerAvatar } from '../api';
+import { monProfil, monProfilProf, mesTablesFaibles, changerAvatar, listeClasses, definirMesClasses } from '../api';
 import { masteryColor, cleFait } from '../logic/mastery';
 
 /**
- * Profile — Profil élève
- * Données serveur via monProfil(), grille de maîtrise dimensionnée par plafond,
- * changement d'avatar, bouton « Réviser mes cases rouges ».
+ * Profile — Aiguille vers ProfileEleve ou ProfileProf selon identite.type
  */
+export default function Profile({ onBack, identite, estProf, onLogout, onReviser, onGo }) {
+    const isProf = estProf || identite?.type === 'prof';
+    if (isProf) {
+        return <ProfileProf onBack={onBack} onLogout={onLogout} onGo={onGo} />;
+    }
+    return <ProfileEleve onBack={onBack} identite={identite} onLogout={onLogout} onReviser={onReviser} />;
+}
 
-// Définitions des badges (référence)
+/* ===================================================================
+ * PROFIL ENSEIGNANT
+ * ================================================================= */
+function ProfileProf({ onBack, onLogout, onGo }) {
+    const [loading, setLoading] = useState(true);
+    const [erreur, setErreur] = useState(null);
+    const [profil, setProfil] = useState(null);
+    const [records, setRecords] = useState(null);
+    const [rang, setRang] = useState(null);
+    const [allClasses, setAllClasses] = useState([]);
+    const [editingClasses, setEditingClasses] = useState(false);
+    const [selectedClasses, setSelectedClasses] = useState([]);
+    const [savingClasses, setSavingClasses] = useState(false);
+    const [msgClasses, setMsgClasses] = useState('');
+
+    const charger = useCallback(async () => {
+        setLoading(true);
+        setErreur(null);
+        const res = await monProfilProf();
+        if (!res.ok) {
+            setErreur(res.error || 'Impossible de charger le profil enseignant.');
+            setLoading(false);
+            return;
+        }
+        const d = res.data;
+        setProfil(d.profil);
+        setRecords(d.records);
+        setRang(d.rang_salle_des_profs);
+        setSelectedClasses(d.profil?.classes || []);
+
+        const cRes = await listeClasses();
+        if (cRes.ok && cRes.data) {
+            setAllClasses(cRes.data);
+        }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => {
+        charger();
+    }, [charger]);
+
+    const handleSaveClasses = async () => {
+        setSavingClasses(true);
+        setMsgClasses('');
+        const res = await definirMesClasses(selectedClasses);
+        if (res.ok) {
+            setProfil(prev => ({ ...prev, classes: selectedClasses }));
+            setEditingClasses(false);
+            setMsgClasses('✅ Classes enregistrées');
+            setTimeout(() => setMsgClasses(''), 3000);
+        } else {
+            setMsgClasses(`❌ ${res.error || "Erreur d'enregistrement"}`);
+        }
+        setSavingClasses(false);
+    };
+
+    const toggleClass = (c) => {
+        setSelectedClasses(prev =>
+            prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
+        );
+    };
+
+    if (loading) {
+        return (
+            <div className="screen-enter" style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', minHeight: '50vh', gap: 16,
+            }}>
+                <div className="spinner" />
+                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                    Chargement du profil…
+                </p>
+            </div>
+        );
+    }
+
+    if (erreur) {
+        return (
+            <div className="screen-enter" style={{ textAlign: 'center', padding: 40 }}>
+                <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 16 }}>{erreur}</p>
+                <button className="btn btn--ghost" style={{ marginTop: 16 }} onClick={onBack}>
+                    ‹ Retour
+                </button>
+            </div>
+        );
+    }
+
+    const nbSessions = records?.nb_sessions || 0;
+
+    return (
+        <div className="screen-enter">
+            <button className="btn-back" onClick={onBack}>‹ Accueil</button>
+
+            {/* 1. Identité */}
+            <div className="card" style={{ textAlign: 'center', marginBottom: 14, padding: '20px 16px' }}>
+                <div style={{ fontSize: 56, marginBottom: 8 }}>
+                    👨‍🏫
+                </div>
+                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--navy)', marginBottom: 4 }}>
+                    {profil?.nom || 'Professeur'}
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
+                    {profil?.email || ''}
+                </p>
+                <span
+                    className={`chip${profil?.est_admin ? ' chip--gold' : ''}`}
+                    style={{ fontSize: 12, height: 28, padding: '0 14px' }}
+                >
+                    {profil?.est_admin ? '👑 Administrateur' : '📚 Enseignant'}
+                </span>
+            </div>
+
+            {/* 2. Mes parties */}
+            <div className="card" style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
+                        🎮 Mes parties
+                    </h3>
+                    {rang && (
+                        <span className="chip chip--gold" style={{ fontSize: 12, fontWeight: 800 }}>
+                            🏅 {rang}ᵉ en salle des profs
+                        </span>
+                    )}
+                </div>
+
+                {nbSessions === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                        <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 14, marginBottom: 14 }}>
+                            Tu n'as pas encore joué.
+                        </p>
+                        <button
+                            className="btn btn--mint"
+                            style={{ fontSize: 15, padding: '10px 24px' }}
+                            onClick={() => onGo?.('play')}
+                        >
+                            🚀 S'entraîner
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div className="stat-grid" style={{ marginBottom: 14 }}>
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>
+                                    {records?.points_total || 0}
+                                </span>
+                                <span className="stat__label">
+                                    💰 Points total {records?.points_semaine > 0 ? `(+${records.points_semaine} 7j)` : ''}
+                                </span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--navy)' }}>
+                                    {records?.nb_sessions || 0}
+                                </span>
+                                <span className="stat__label">📊 Parties jouées</span>
+                            </div>
+                            <div className="stat">
+                                <span className="stat__value" style={{ color: 'var(--coral)' }}>
+                                    {records?.meilleure_serie || 0}
+                                </span>
+                                <span className="stat__label">🔥 Meilleure série</span>
+                            </div>
+                            {records?.meilleur_sprint > 0 && (
+                                <div className="stat">
+                                    <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
+                                        {records.meilleur_sprint}s
+                                    </span>
+                                    <span className="stat__label">⚡ Meilleur sprint</span>
+                                </div>
+                            )}
+                            {records?.meilleur_chrono > 0 && (
+                                <div className="stat">
+                                    <span className="stat__value" style={{ color: 'var(--gold)' }}>
+                                        {records.meilleur_chrono}
+                                    </span>
+                                    <span className="stat__label">⏱️ Meilleur chrono</span>
+                                </div>
+                            )}
+                            {records?.plus_haute_table > 0 && (
+                                <div className="stat">
+                                    <span className="stat__value" style={{ color: 'var(--purple)' }}>
+                                        {records.plus_haute_table}
+                                    </span>
+                                    <span className="stat__label">🏔️ Plus haute table</span>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            className="btn btn--mint"
+                            style={{ width: '100%', fontSize: 14, padding: '10px 16px' }}
+                            onClick={() => onGo?.('play')}
+                        >
+                            🚀 S'entraîner
+                        </button>
+                    </>
+                )}
+            </div>
+
+            {/* 3. Mes classes habituelles */}
+            <div className="card" style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
+                        🗺 Mes classes habituelles
+                    </h3>
+                    {!editingClasses && (
+                        <button
+                            className="btn btn--ghost"
+                            style={{ fontSize: 13, padding: '6px 12px' }}
+                            onClick={() => {
+                                setSelectedClasses(profil?.classes || []);
+                                setEditingClasses(true);
+                            }}
+                        >
+                            ✏️ Modifier
+                        </button>
+                    )}
+                </div>
+
+                {msgClasses && (
+                    <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: msgClasses.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
+                        {msgClasses}
+                    </p>
+                )}
+
+                {!editingClasses ? (
+                    profil?.classes?.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {profil.classes.map(c => (
+                                <span key={c} className="chip chip--mint" style={{ fontSize: 13, fontWeight: 700, padding: '4px 12px' }}>
+                                    {c}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ color: 'var(--text-soft)', fontSize: 13, fontWeight: 600 }}>
+                            Aucune classe favorite. Tu les vois toutes.
+                        </p>
+                    )
+                ) : (
+                    <div>
+                        <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
+                            Sélectionne tes classes favorites :
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                            {allClasses.length === 0 ? (
+                                <p style={{ fontSize: 12, color: 'var(--text-soft)' }}>Aucune classe disponible</p>
+                            ) : (
+                                allClasses.map(cl => {
+                                    const code = cl.classe;
+                                    const selected = selectedClasses.includes(code);
+                                    return (
+                                        <button
+                                            key={code}
+                                            type="button"
+                                            onClick={() => toggleClass(code)}
+                                            className={`chip ${selected ? 'chip--mint' : ''}`}
+                                            style={{
+                                                fontSize: 13,
+                                                fontWeight: 700,
+                                                padding: '6px 12px',
+                                                cursor: 'pointer',
+                                                border: selected ? '2px solid var(--mint)' : '2px solid var(--border)',
+                                                background: selected ? 'var(--mint-lt)' : 'var(--surface)',
+                                            }}
+                                        >
+                                            {selected ? '✓ ' : ''}{code}
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button
+                                className="btn btn--mint"
+                                style={{ flex: 1, fontSize: 13, padding: '8px 14px' }}
+                                disabled={savingClasses}
+                                onClick={handleSaveClasses}
+                            >
+                                {savingClasses ? 'Enregistrement…' : 'Enregistrer'}
+                            </button>
+                            <button
+                                className="btn btn--ghost"
+                                style={{ flex: 1, fontSize: 13, padding: '8px 14px' }}
+                                disabled={savingClasses}
+                                onClick={() => setEditingClasses(false)}
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Déconnexion */}
+            <button
+                className="btn btn--ghost"
+                style={{ width: '100%', fontSize: 15, color: 'var(--coral)' }}
+                onClick={onLogout}
+            >
+                Se déconnecter
+            </button>
+        </div>
+    );
+}
+
+/* ===================================================================
+ * PROFIL ÉLÈVE
+ * ================================================================= */
 const BADGE_DEFS = {
     streak_10: { emoji: '🔥', name: 'Flamme', desc: 'Série de 10 sans faute' },
     streak_20: { emoji: '🔥🔥', name: 'Brasier', desc: 'Série de 20 sans faute' },
@@ -33,7 +344,7 @@ const PALIER_STYLE = {
     expert:     { label: 'Expert',     emoji: '🏆', color: 'var(--gold)', bg: 'rgba(201, 162, 39, 0.12)' },
 };
 
-export default function Profile({ onBack, identite, onLogout, onReviser }) {
+function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
     const [loading, setLoading] = useState(true);
     const [erreur, setErreur] = useState(null);
     const [profil, setProfil] = useState(null);

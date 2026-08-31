@@ -22,30 +22,69 @@ d'interface se juge à cette aune.
 
 ---
 
-## 2. État au 27 août 2026
+## 2. État au 28 août 2026 — le code est terminé
+
+### Ce qui est fait
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ 11 migrations, 60 cas de test |
-| Client API (`frontend/src/api.js`) | ✅ écrit, 28 appels RPC vérifiés |
-| Connexion MCP Supabase ↔ Antigravity | ✅ opérationnelle (OAuth) |
-| Migrations appliquées sur la base de dev | ✅ 11 migrations + seed, vérifié |
-| `@supabase/supabase-js` installé | ✅ |
-| `frontend/.env.local` | ✅ (projet `lkukdlspcgqtiimvwlsd`) |
-| Types TypeScript (`database.ts`) | ✅ générés, 10 tables + 40 RPC |
-| Écrans React — Lot 0 (démarrage, connexion, accueils) | ✅ App.jsx, Login.jsx, Home.jsx |
-| Écrans React — Étape 2 (enregistrement des parties solo) | ✅ Practice.jsx, Challenges.jsx (libre, sprint, sans faute, chrono, montée) |
-| Écrans React — Étape 3 (profil, classements) | ✅ Profile.jsx, Leaderboards.jsx |
-| Écrans React — Étapes 4-7 (défis de classe, prof, admin) | ⬜ à faire |
-| Application OAuth Google (mode Interne) | ⬜ à faire par l'administrateur |
-| Google activé dans Supabase + URLs de retour | ⬜ à faire par l'administrateur |
-| Modèle d'e-mail + SMTP (secours, non urgent) | ⬜ plus tard |
-| `*.supabase.co` autorisé dans Jamf | ⬜ à faire par l'administrateur |
-| Nom définitif de l'application | ⬜ en cours de choix |
+| Base de données, sécurité, logique métier | ✅ **16 migrations**, 63 cas de test verts |
+| Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
+| Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
+| **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
+| Comptes réels inscrits | ✅ 2 enseignants, 2 élèves de bêta |
+| Écrans élève — démarrage, connexion, accueil | ✅ |
+| Écrans élève — apprendre, s'entraîner, profil, classements | ✅ |
+| Écrans élève — les 5 modes de défi | ✅ |
+| **Défis partagés** — code, questions figées, classement temps réel | ✅ |
+| Écrans enseignant — accueil, profil, s'entraîner, lancer un défi | ✅ |
+| Écran Administration — élèves, enseignants, import, journal | ✅ |
+| Données de démonstration nettoyées de la base de dev | ✅ |
+
+### Ce qui n'a pas encore été éprouvé
+
+| | Pourquoi |
+|---|---|
+| ⬜ **Un défi joué à deux comptes simultanés** | Exige deux personnes en même temps — aucune relecture ne le remplace. C'est le dernier test fonctionnel du projet. |
+| ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
+| ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitriseClasse()` existe en base. |
+
+### Ce qui reste avant la rentrée — hors code
+
+| | Qui |
+|---|---|
+| ⬜ **Choisir le nom** — 3 formes, voir `NOM_ET_MARQUE.md` | Aymeri. **Bloque la passe visuelle.** |
+| ⬜ Logo, dans ses trois tailles | Aymeri |
+| ⬜ Passe visuelle avec Claude Design | après le nom |
+| ⬜ Base de **production** (projet Supabase séparé, région EU) | migrations seules, **aucun seed** |
+| ⬜ Import de rentrée des 350 élèves | onglet Import, format `email, nom, prénom, classe` |
+| ⬜ `*.supabase.co` autorisé dans Jamf | Aymeri |
+| ⬜ Web Clip Jamf — libellé et icône | après le nom |
+| ⬜ RGPD : registre de traitement, DPO, direction | Aymeri |
+| ⬜ SMTP Workspace (secours e-mail, non urgent) | facultatif |
 
 **Projet Supabase de développement** : `calcul-mental-dev`,
 référence `lkukdlspcgqtiimvwlsd`, région Francfort, PostgreSQL 17.
 Il n'existe **aucune base de production** à ce jour.
+
+### Comment on en est arrivé là
+
+Le code a été écrit par Antigravity, relu systématiquement contre le SQL, et
+corrigé à chaque lot. Ce que la relecture a attrapé, et qu'aucun `npm run build`
+n'aurait vu :
+
+- des badges de Montée distribués sans monter
+- une colonne fossile affichant « tables 1 à 10 » à un élève Expert
+- le profil et le classement montrant deux nombres différents pour la même chose
+- le 20/20 rendu littéralement inatteignable par une closure périmée
+- un écran Administration peuplé de six élèves inventés
+- deux variables CSS manquantes rendant deux cartes illisibles
+- une règle de points qui rendait l'abandon plus rentable que l'effort
+- un profil enseignant affichant « Découverte, tables 1 à 10 » à un adulte
+
+**Deux de ces défauts ont été trouvés par Aymeri en utilisant l'application, un
+par Antigravity relisant le SQL.** La relecture croisée n'est pas une formalité :
+c'est elle qui a fait la qualité de ce projet.
 
 ---
 

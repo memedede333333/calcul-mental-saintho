@@ -24,7 +24,7 @@
 --      qui s'appelle « mon profil » ne doit pas renvoyer un profil vide
 --      a quelqu'un qui a un profil ailleurs.
 --
---   2. `mon_profil_prof()` existe, symetrique, alimentee par
+--   2. `mon_profil_prof()` est creee, symetrique, alimentee par
 --      `sessions_profs`. Les enseignants peuvent jouer depuis la
 --      migration 9 ; il leur manquait l'ecran qui montre leurs propres
 --      resultats.
@@ -37,7 +37,6 @@ security definer
 set search_path = public
 as $$
   select case when public.eleve_courant() is null then
-    -- Refus explicite : le front doit afficher SON ecran, pas des zeros.
     jsonb_build_object('ok', false, 'raison', 'pas_un_eleve',
       'message', 'Ce profil est reserve aux eleves.')
   else
