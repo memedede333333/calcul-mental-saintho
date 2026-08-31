@@ -45,7 +45,7 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo }) {
     const [phase, setPhase] = useState('select');
     const [challengeType, setChallengeType] = useState(null);
     const [joinCode, setJoinCode] = useState('');
@@ -167,6 +167,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                     setPhase('defi-leaderboard');
                 }}
                 estProf={estProf}
+                onGo={onGo}
             />
         );
     }
@@ -257,7 +258,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
 /* ===================== SELECT ===================== */
 
-function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onViewDefi, estProf }) {
+function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onViewDefi, estProf, onGo }) {
     const [joinError, setJoinError] = useState(null);
     const [joinLoading, setJoinLoading] = useState(false);
     const [joinDefiId, setJoinDefiId] = useState(null); // for deja_joue → show leaderboard
@@ -341,6 +342,15 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
                         )}
                     </p>
                 )}
+                <div style={{ textAlign: 'center', marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                    <button
+                        className="btn btn--ghost"
+                        style={{ fontSize: 13, padding: '4px 12px', color: 'var(--text-soft)' }}
+                        onClick={() => onGo?.('mes-defis')}
+                    >
+                        📋 Mes défis passés
+                    </button>
+                </div>
             </div>
 
             {CHALLENGE_TYPES.map(type => (
@@ -1410,7 +1420,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
 
 /* ===================== DEFI LEADERBOARD ===================== */
 
-function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRetry, onHome, onBack }) {
+export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRetry, onHome, onBack }) {
     const [classement, setClassement] = useState([]);
     const [avancement, setAvancement] = useState(null);
     const [loading, setLoading] = useState(true);

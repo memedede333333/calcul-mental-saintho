@@ -8,6 +8,7 @@ import Challenges from './screens/Challenges';
 import Leaderboards from './screens/Leaderboards';
 import Profile from './screens/Profile';
 import Admin from './screens/Admin';
+import MesDefis from './screens/MesDefis';
 import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil } from './api';
 import branding from './branding';
 
@@ -309,7 +310,10 @@ export default function App() {
                 />
             )}
             {screen === 'challenges' && (
-                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} />
+                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} onGo={setScreen} />
+            )}
+            {screen === 'mes-defis' && (
+                <MesDefis onBack={goHome} estProf={estProf} />
             )}
             {screen === 'leaderboards' && (
                 <Leaderboards onBack={goHome} identite={identite} estProf={estProf} />

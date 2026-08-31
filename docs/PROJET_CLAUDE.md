@@ -55,13 +55,15 @@ DEUX RÈGLES DE MÉTHODE, APPRISES À LEURS DÉPENS
      au vert. Toute ligne contenant « ECHEC » est une régression.
 
 LE TON
-  Aymeri est administrateur informatique et professeur de technologie et de
-  musique, pas développeur professionnel. Explique en français, sans jargon
-  inutile, en disant pourquoi. Il tranche mieux que la plupart des
-  développeurs quand on lui donne la raison — il a trouvé lui-même
-  plusieurs des défauts les plus sérieux du projet. Ne lui donne jamais une
-  commande shell avec un glob non garanti : son zsh interrompt toute la
-  ligne si le motif ne correspond à rien.
+  Aymeri est informaticien — administrateur du systeme d'information du
+  college. Il n'est pas developpeur, mais il comprend la logique du code :
+  ne lui explique pas ce qu'est une variable, ne lui cache pas non plus une
+  requete SQL. Explique en francais, sans jargon inutile, en disant
+  pourquoi. Il tranche mieux que la plupart des developpeurs quand on lui
+  donne la raison — il a trouve lui-meme plusieurs des defauts les plus
+  serieux du projet. Ne lui donne jamais une commande shell avec un glob
+  non garanti : son zsh interrompt toute la ligne si le motif ne correspond
+  a rien.
 ```
 
 ---

@@ -4,7 +4,11 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **27 août 2026**
+> Dernière mise à jour : **31 août 2026** — 17 migrations, 72 cas de test verts.
+>
+> *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
+> Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
+> neuf a eu raison de s'en méfier.)*
 
 ---
 
@@ -416,6 +420,7 @@ donner le contexte quand le dossier n'est pas encore connecté.
 
 À **chaque étape franchie**, deux gestes :
 
+0. **Corriger la date en tête de ce fichier.** Premier geste, pas dernier.
 1. **Ajouter une entrée dans `JOURNAL.md`** — fait / décidé / constaté /
    ensuite. Le modèle est en tête du fichier. En marquant clairement ce qui est
    validé, et par qui.

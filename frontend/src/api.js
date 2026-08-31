@@ -471,6 +471,11 @@ export function suivreDefi(defiId, onChangement) {
     return () => { supabase.removeChannel(canal); };
 }
 
+/** Les défis que j'ai créés (prof ou élève), du plus récent au plus ancien, expirés compris. */
+export async function mesDefis({ limite = 20 } = {}) {
+    return rpc('mes_defis', { p_limite: limite });
+}
+
 /* ===================================================================
  * CLASSEMENTS
  *
@@ -665,7 +670,7 @@ export const api = {
     partiesEnAttente, viderFile, surFileChangee,
     // défis
     creerDefi, rejoindreDefi, terminerDefi,
-    classementDefi, avancementDefi, suivreDefi,
+    classementDefi, avancementDefi, suivreDefi, mesDefis,
     // classements
     classementProgression, classementRecords, classementClasses, classementProfs,
     // enseignant

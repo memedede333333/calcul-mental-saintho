@@ -46,6 +46,14 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
                     </span>
                 </button>
 
+                <button
+                    className="btn btn--ghost"
+                    style={{ fontSize: 13, padding: '8px 16px', marginTop: -4, marginBottom: 4 }}
+                    onClick={() => onGo('mes-defis')}
+                >
+                    📋 Mes défis passés
+                </button>
+
                 <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
                     <span className="mode-card__emoji">🚀</span>
                     <span>
