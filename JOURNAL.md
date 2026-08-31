@@ -56,6 +56,77 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (3) — Relecture de `cc1e08a` : le dénominateur est revenu par la porte du tri
+
+**Fait** — Vérification du lot « Ma classe » d'Antigravity **dans le code**, à
+`cc1e08a`, dépôt propre (aucune modification non commitée). Les six points de
+son rapport sont conformes : `tablesAbsentes` et la boucle `2..20` ont disparu,
+`eleves_sans_trace` vient du serveur, les deux blocs sont séparés, le bouton ne
+retient que `travaillee && dans_le_plafond_commun`, et le cas où aucune table ne
+qualifie est traité. `run.sh` rejoué de bout en bout sur un PostgreSQL neuf :
+**82 cas, 0 ECHEC** — vérifié par exécution, pas sur parole.
+
+**Constaté — cinquième occurrence du même défaut, cette fois dans le tri.**
+Le bloc 1 et le bouton se trient sur `taux_maitrise`, dont le dénominateur est
+`eleves_total` : ceux qui ont **déjà travaillé** la table, jamais la classe.
+C'est exactement le dénominateur que la migration 19 a été écrite pour ne plus
+laisser gouverner un affichage. Cas fabriqué et exécuté sur la base de test,
+classe de 6 élèves :
+
+```
+ table_n | eleves_verts | eleves_total | eleves_sans_trace | taux_maitrise | taux_couverture
+       4 |            2 |            5 |                 1 |            40 |              83
+       6 |            1 |            1 |                 5 |           100 |              17
+```
+
+Tri de l'écran : la table 6 finit **dernière**, donc présentée comme la mieux
+acquise de la classe — alors que cinq élèves sur six ne l'ont jamais ouverte.
+Un seul l'a vue, il a réussi, et 100 % d'un échantillon de un suffit à la
+classer première. `travaillee` est un seuil à **un** élève : il ne dit pas que
+la classe a travaillé la table, il dit que quelqu'un l'a vue une fois. L'écran
+reçoit `taux_couverture`, le documente en tête de fichier, et ne s'en sert
+nulle part.
+
+Les quatre premières occurrences étaient dans ce qu'un écran **affiche** ;
+celle-ci est dans ce qu'il **ordonne**. Un tri est un jugement : il se fait sur
+la population que le bouton concerne, c'est-à-dire la classe entière.
+
+**Constaté (2) — un défi de prof au-dessus du plafond est jouable, mais pas
+enregistrable.** Défaut indépendant du lot, trouvé en relisant `creer_defi`
+puis vérifié en base :
+
+```
+prof → creer_defi('sprint','{15}')   → code W2NEZ
+Alice (plafond 12) → rejoindre_defi  → ok: true, questions livrées
+Alice enregistre                     → REFUS : « Tu n'as pas encore debloque la table 15. »
+```
+
+`creer_defi` n'impose aucun plafond à un professeur ; `enregistrer_session` en
+impose un à l'élève. L'élève joue le défi en entier, puis perd son score.
+`Challenges.jsx` ligne 62 donne `plafond = 20` à un prof : le chemin manuel de
+« Lancer un défi » y mène en trois tapes. Le bouton de « Ma classe » est
+désormais borné à `dans_le_plafond_commun` et ne déclenche plus ce cas — mais
+il n'était que le chemin le plus probable, pas le seul.
+
+**Décidé** — Rien de tranché. Deux correctifs proposés à Antigravity (tri sur
+`eleves_verts / eleves_classe` croissant, départagé par `taux_couverture`
+décroissant ; `sansTrace={d.eleves_sans_trace}` au bloc 2) et une migration 21
+proposée à Aymeri, pour borner un défi de prof au plafond commun de la classe
+visée. ⏳ *en attente*
+
+**Constaté (méthode)** — Le dossier n'était pas connecté au début de cette
+relecture : elle a d'abord été faite sur le dépôt GitHub public, puis
+recontrôlée par empreinte SHA-256 contre la copie de travail une fois le
+dossier connecté — `MaClasse.jsx`, la migration 20 et `Challenges.jsx` sont
+identiques. Un rapport se vérifie dans le code ; encore faut-il être sûr de
+lire le bon code.
+
+**Ensuite** — Antigravity : le tri, la ligne 218, et `pGris` (ligne 278,
+calculé sans être utilisé — reste de la soustraction supprimée). Aymeri :
+trancher la migration 21, le test du défi à deux comptes, et le nom.
+
+---
+
 ## 2026-09-01 (2) — Migration 20 : le bouton qui lançait un défi sur ce que la classe n'avait jamais vu
 
 **Constaté** — Un chat neuf, **sans accès au dépôt**, n'ayant que la copie de

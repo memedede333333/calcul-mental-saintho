@@ -45,7 +45,25 @@ LE DÉPÔT
   `NOM_ET_MARQUE.md` : la check-list de bascule du nom.
   `SUPABASE_PAS_A_PAS.md` : Supabase, MCP, Google OAuth, comptes.
 
-DEUX RÈGLES DE MÉTHODE, APPRISES À LEURS DÉPENS
+UN LOT, UN MESSAGE
+  Aymeri n'est pas un canal de transmission : tout ce qui va de toi à
+  Antigravity passe par lui — il copie, il colle, il attend. Trois
+  corrections envoyees separement, ce sont trois allers-retours pour ce
+  qui tenait en un seul message.
+  Donc : ne lui donne rien a transmettre tant que le lot n'est pas
+  complet. Une relecture qui trouve un defaut d'ecran ET appelle une
+  migration attend que la migration soit ecrite et testee, puis part en
+  UN message couvrant tout : le SQL, les corrections d'interface, les
+  questions ouvertes, les cas de test attendus.
+  Deux exceptions, deux seulement : ce qui BLOQUE (Antigravity ne peut
+  pas avancer sans reponse) et ce qui AGGRAVE (il construit sur une base
+  fausse). Dans ces cas, envoie tout de suite en disant que c'est une
+  interruption et pourquoi.
+  Et quand tu poses une question a Aymeri, pose-la avec ta recommandation
+  et sa raison — il tranche vite quand on lui donne le pourquoi, il perd
+  du temps quand on lui presente deux options nues.
+
+TROIS RÈGLES DE MÉTHODE, APPRISES À LEURS DÉPENS
   1. Ne jamais affirmer le comportement d'une fonction SQL sans l'avoir
      exécutée. La quasi-totalité des défauts de ce projet vient d'un
      raisonnement sur le code au lieu d'une exécution. Une base locale se
@@ -53,6 +71,12 @@ DEUX RÈGLES DE MÉTHODE, APPRISES À LEURS DÉPENS
   2. Toute modification du SQL s'accompagne d'un cas de test ajouté à
      supabase/tests/01_scenario.sql, et le scénario complet doit repasser
      au vert. Toute ligne contenant « ECHEC » est une régression.
+  3. Un écran ne fabrique aucune population. Cinq bugs de ce projet
+     viennent d'un ratio, d'une liste ou d'un tri que React a déduit au
+     lieu de le recevoir du serveur — et l'erreur va toujours dans le
+     sens rassurant : elle efface les élèves qui n'ont rien fait. Si un
+     affichage a besoin d'un chiffre, c'est une colonne SQL, pas une
+     soustraction.
 
 LE TON
   Aymeri est informaticien — administrateur du systeme d'information du

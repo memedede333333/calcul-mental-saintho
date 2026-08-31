@@ -4,7 +4,8 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **1er septembre 2026** — 20 migrations, 82 cas de test verts.
+> Dernière mise à jour : **1er septembre 2026** — 20 migrations, 82 cas de test
+> verts, écran « Ma classe » livré (`cc1e08a`) et relu : deux correctifs en attente.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -51,7 +52,7 @@ d'interface se juge à cette aune.
 |---|---|
 | ⬜ **Un défi joué à deux comptes simultanés** | Exige deux personnes en même temps — aucune relecture ne le remplace. C'est le dernier test fonctionnel du projet. |
 | ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
-| ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitrise_classe()` existe en base et est testée : il ne manque que la grille. C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. |
+| ✅ **Écran « Ma classe »** (maîtrise agrégée) | Livré le 1er septembre (`cc1e08a`), sur la migration 20. Relu dans le code : deux correctifs en attente (le tri, et `eleves_sans_trace` au bloc 2). C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. Reste à voir en usage. |
 | ✅ **Écran « Mes défis »** | Livré par Antigravity le 31 août, points d'entrée côté prof et côté élève. Reste à voir en usage. |
 | ✅ **Origine du défi affichée** (prof / élève) | Migration 18 + écran `DefiIntro` livrés le 31 août. Reste à voir en usage. |
 
@@ -314,6 +315,27 @@ croyait faire du rattrapage et lançait une découverte sur des tables hors de
 portée. Une liste que l'écran devine est une population inventée : elle vient
 du serveur, ou elle n'existe pas.
 
+**Un tri se fait sur la population que le bouton concerne.** *(1er septembre
+2026, cinquième occurrence.)* L'écran « Ma classe » corrigé ne fabriquait plus
+aucune liste — mais il **ordonnait** les tables sur `taux_maitrise`, dont le
+dénominateur est « ceux qui ont déjà travaillé la table ». Une table qu'un seul
+élève sur six a vue et réussie affiche 100 % et se classe première du tableau,
+alors que cinq élèves ne l'ont jamais ouverte. `travaillee` est un seuil à
+**un** élève : il dit que quelqu'un a vu la table, pas que la classe l'a
+travaillée. Les quatre occurrences précédentes portaient sur ce qu'un écran
+affiche ; celle-ci sur ce qu'il classe. Un tri est un jugement, et il vaut ce
+que vaut sa population : on trie sur `eleves_verts / eleves_classe`, jamais sur
+un ratio dont le dénominateur est un échantillon.
+
+**Un défi ne propose que ce que ses destinataires ont le droit de jouer.**
+*(1er septembre 2026.)* `creer_defi` n'impose aucun plafond de tables à un
+professeur, mais `enregistrer_session` refuse à l'élève toute table au-dessus
+de son propre plafond. Vérifié en base : un défi de prof sur la table 15 est
+rejoint sans erreur par une élève plafonnée à 12, qui joue les vingt questions
+puis voit son score refusé à l'enregistrement. Refuser à la création vaut mieux
+que refuser après deux minutes de jeu — d'autant que l'élève, elle, n'a rien
+fait de mal. ⏳ *migration 21 proposée, en attente de décision.*
+
 **Une migration se numérote à l'heure où on l'écrit, jamais plus tard.**
 *(1er septembre 2026.)* La migration 19 porte l'horodatage `20260901080000`
 alors qu'elle a été appliquée à 00:00 : elle est datée dans le futur. Toute
@@ -342,6 +364,24 @@ précédente trompeuse : faux classements, records à zéro.
 **Aucune ressource chargée depuis un domaine externe.**
 Les iPads sont filtrés par MDM. Polices hébergées dans le projet. La seule chose
 que l'application contacte doit être Supabase.
+
+**Un lot, un message. Aymeri n'est pas un canal de transmission.**
+*(1er septembre 2026.)* Tout ce qui va d'un côté à l'autre passe par lui : il
+copie, il colle, il attend. Trois corrections envoyées séparément, ce sont
+trois allers-retours et trois attentes pour ce qui tenait en un message. Donc :
+**on ne transmet rien tant que le lot n'est pas complet.** Une relecture qui
+trouve un défaut d'écran et appelle une migration attend que la migration soit
+écrite ET testée, puis part en un seul message couvrant tout — le SQL, les
+corrections d'interface, les questions ouvertes.
+
+Deux exceptions, deux seulement : **ce qui bloque** (Antigravity ne peut pas
+avancer sans une réponse) et **ce qui aggrave** (il construit sur une base
+fausse, chaque minute de plus est du travail à refaire). Dans ces deux cas, on
+envoie tout de suite, en disant que c'est une interruption et pourquoi.
+
+Symétriquement : Antigravity reprend **les points un par un** dans son rapport,
+y compris pour dire « pas fait, parce que… ». Un point escamoté coûte un
+aller-retour de plus.
 
 **La refonte visuelle vient APRÈS la mise en fonctionnement.**
 L'application a déjà un système visuel cohérent et implémenté. Concevoir
@@ -380,15 +420,19 @@ mais de la correction et deux écrans manquants, par ordre de valeur :
    31 août (commit `0d3b557`). Un écran `DefiIntro` annonce désormais
    « 📚 Défi de M. Desjardins — 6A » ou « 🎮 Défi de Lou A. » avant la
    première question.
-3. **« Ma classe »** — la grille de maîtrise agrégée, écran 15 de `ECRANS.md`.
-   **C'est le lot en cours.** `maitrise_classe(p_classe)` existe depuis la
-   migration 4, complétée par la migration 19 (`eleves_classe`,
-   `taux_couverture`) : le dénominateur est enfin l'effectif de la classe et
-   non le nombre d'élèves ayant déjà travaillé la table.
-   *Recommandation : avant la rentrée.* Tout le reste de l'application est
-   fait pour les élèves ; c'est le seul écran qui donne une raison à un
-   professeur de maths de rouvrir l'outil la semaine suivante.
-4. Passe visuelle, **après** le choix du nom.
+3. ✅ **« Ma classe »** — livré le 1er septembre (`cc1e08a`), sur la
+   migration 20 : le serveur renvoie une ligne par table existant pour la
+   classe, l'écran n'en fabrique plus aucune.
+   **Deux correctifs restent à appliquer**, relevés à la relecture du code :
+   le tri se fait sur `taux_maitrise` (dénominateur = les seuls élèves ayant
+   travaillé la table) au lieu de `eleves_verts / eleves_classe` ; et le
+   bloc 2 passe `d.eleves_classe` là où le serveur donne
+   `d.eleves_sans_trace`. Voir `JOURNAL.md`, entrée du 1er septembre (3).
+4. **Migration 21 — borner un défi de prof au plafond commun de la classe.**
+   ⏳ *proposée, en attente de décision.* Aujourd'hui `creer_defi` ne plafonne
+   pas un professeur alors que `enregistrer_session` plafonne l'élève :
+   l'élève joue tout le défi puis voit son score refusé.
+5. Passe visuelle, **après** le choix du nom.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
