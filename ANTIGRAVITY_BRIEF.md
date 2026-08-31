@@ -125,6 +125,14 @@ supabase/migrations/20260826090500_palier_tous.sql    Tableau d'honneur du coll�
 supabase/migrations/20260827080000_administration.sql Gestion des élèves + journal
 supabase/migrations/20260827090000_comptes_profs.sql  Comptes enseignants, accès à toutes les classes
 supabase/migrations/20260827100000_profs_joueurs.sql  Les profs jouent + `qui_suis_je()`
+supabase/migrations/20260827110000_montee_reelle.sql  Badges de Montée : seulement en mode Montée
+supabase/migrations/20260827120000_profil_complet.sql Plafond, palier, points de la semaine
+supabase/migrations/20260828080000_premier_essai.sql  Points : 1 du premier coup, ½ au rattrapage
+supabase/migrations/20260828100000_score_progression.sql Score composite, fenêtre glissante
+supabase/migrations/20260828120000_defi_premier_essai.sql Même règle dans les défis
+supabase/migrations/20260828140000_liste_eleves.sql   `liste_eleves()` pour l'écran Administration
+supabase/migrations/20260828160000_profil_prof.sql    `mon_profil_prof()`, refus explicite aux élèves
+supabase/migrations/20260831090000_mes_defis.sql      `mes_defis()`, contrat uniforme des classements
 frontend/src/api.js                             Client Supabase complet — DÉJÀ ÉCRIT
 ECRANS.md                                       Consignes écran par écran
 archive/api_gas_ancien.js                       L'ancien client, pour mémoire

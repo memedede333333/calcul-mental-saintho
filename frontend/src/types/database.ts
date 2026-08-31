@@ -475,8 +475,10 @@ export type Database = {
       classement_profs: {
         Args: { p_categorie?: string; p_limite?: number; p_periode?: string }
         Returns: {
+          avatar: string
+          classe: string
           est_moi: boolean
-          nom: string
+          nom_affiche: string
           parties: number
           rang: number
           valeur: number
@@ -645,6 +647,21 @@ export type Database = {
           eleves_verts: number
           table_n: number
           taux_maitrise: number
+        }[]
+      }
+      mes_defis: {
+        Args: { p_limite?: number }
+        Returns: {
+          attendus: number
+          classe: string
+          code: string
+          cree_le: string
+          defi_id: string
+          encore_ouvert: boolean
+          expire_le: string
+          participants: number
+          tables: number[]
+          type: string
         }[]
       }
       mes_tables_faibles: { Args: { p_combien?: number }; Returns: number[] }

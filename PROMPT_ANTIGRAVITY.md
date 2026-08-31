@@ -2,9 +2,11 @@
 
 > Copie tout ce qui est entre les deux lignes et colle-le dans un chat neuf.
 >
-> **État au 27 août 2026** — le serveur MCP Supabase est connecté (projet
-> `calcul-mental-dev`, Francfort), la base est **encore vide**, tous les
-> fichiers sont dans le dépôt, rien n'a été appliqué ni installé.
+> **État au 31 août 2026** — l'application **fonctionne** : 17 migrations
+> appliquées sur `calcul-mental-dev` (Francfort), 72 cas de test verts, tous
+> les écrans construits, connexion Google validée en conditions réelles avec
+> de vrais comptes. Ce message n'est plus un message de démarrage : c'est un
+> message de **reprise**. Ne le lis pas comme une invitation à reconstruire.
 
 ---
 
@@ -27,18 +29,25 @@ avec ce qu'on fait maintenant.
 
 ## Où on en est
 
-Le backend Apps Script + Google Sheets a été remplacé par **Supabase**. Le front
-React/Vite existant est abouti et **doit être conservé**.
+Le backend Apps Script + Google Sheets a été remplacé par **Supabase**. Tout
+est en place et tourne.
 
-**Ce qui est déjà écrit, testé, et qu'il ne faut pas refaire :**
+**Ce qui est écrit, testé, appliqué — et qu'il ne faut pas refaire :**
 
-- **9 migrations** dans `supabase/migrations/` — schéma, sécurité RLS, fonctions
-  métier, pondération des tables, gestion des élèves et des comptes enseignants
-- **`frontend/src/api.js`** — client Supabase complet, 38 fonctions, les 28
-  appels RPC vérifiés un par un contre les migrations
-- **`supabase/tests/run.sh`** — 57 cas de vérification
+- **17 migrations** dans `supabase/migrations/` — schéma, sécurité RLS,
+  fonctions métier, pondération des tables, défis, comptes enseignants,
+  administration, score de progression
+- **`frontend/src/api.js`** — client Supabase complet, ~45 appels RPC vérifiés
+  un par un contre les migrations
+- **`supabase/tests/run.sh`** — **72 cas** de vérification, tous verts
+- **Tous les écrans**, élève et enseignant, y compris les défis à code avec
+  classement en temps réel
+- **La connexion Google** en mode « Interne » sur `saintho.fr`, validée avec de
+  vrais comptes élèves et enseignants
 
-**Ce qui n'est pas fait :** absolument tous les écrans. C'est ton travail.
+**Ce qui reste :** deux écrans (« Mes défis », « Ma classe »), quelques
+corrections, et la passe visuelle une fois le nom choisi. Le détail est dans
+`ETAT.md` §5.
 
 ## Ce que tu ne fais pas
 
@@ -52,19 +61,20 @@ React/Vite existant est abouti et **doit être conservé**.
 
 ## Premières étapes, dans l'ordre
 
-1. Confirme que tu vois le projet Supabase et qu'il est vide.
-2. `cd frontend && npm install @supabase/supabase-js` — il n'est pas installé.
-3. Applique les **9 migrations** dans l'ordre.
-4. Charge `supabase/seed.sql` — données de démonstration, base de dev
-   **uniquement**, jamais en production.
-5. Lance `./supabase/tests/run.sh`. Attendu : aucune ligne `ECHEC`, et plusieurs
-   messages `OK : refusé` — ce sont les tentatives de triche qui échouent comme
-   prévu.
-6. Récupère l'URL du projet et la clé anon via MCP, écris-les dans
-   `frontend/.env.local` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`), et
-   vérifie que ce fichier est ignoré par Git. Génère les types TypeScript.
+1. Confirme que tu vois le projet Supabase via MCP, et **liste les migrations
+   appliquées**. Attendu : 17, la dernière étant `20260831090000_mes_defis`.
+2. Vérifie que `frontend/.env.local` existe et que Git l'ignore. Régénère les
+   types TypeScript — le contrat de `classement_profs()` a changé le 31 août.
+3. Lance `./supabase/tests/run.sh`. Attendu : aucune ligne `ECHEC`, et
+   plusieurs `OK : refusé` — ce sont les tentatives de triche qui échouent
+   comme prévu.
+4. Lance l'application et connecte-toi. **Ton compte Google personnel ne
+   pourra jamais s'authentifier** : l'audience OAuth est « Interne », limitée
+   au domaine `saintho.fr`. C'est voulu. Demande à Aymeri de tester à ta
+   place plutôt que de réessayer.
 
-**Arrête-toi là et fais-moi un point.** N'enchaîne pas sur les écrans.
+**Arrête-toi là et fais-moi un point** en disant ce que tu as constaté sur la
+base — pas ce que tu as déduit du code.
 
 ## À chaque étape franchie, tu tiens le journal
 
@@ -111,6 +121,18 @@ Ensuite on suivra l'ordre de construction proposé à la fin de `ECRANS.md`.
 - **Les élèves ne s'inscrivent pas.** Ils sont pré-inscrits par import. Une
   adresse absente de la table `eleves` n'a accès à rien, même avec un compte
   créé. C'est la barrière d'entrée, ne la contourne pas.
+- **N'affirme jamais le comportement d'une fonction SQL sans l'avoir
+  exécutée.** C'est l'erreur qui a coûté le plus cher à ce projet : « cette
+  fonction lève une erreur pour un professeur » — elle renvoyait un succès
+  avec un profil nul, et un enseignant voyait « Découverte, tables 1 à 10 ».
+  La base est à un appel MCP de distance. Exécute, colle le résultat.
+- **Vérifie les colonnes une par une contre la définition SQL** avant de dire
+  qu'un écran est fait. Deux bugs identiques ont déjà été livrés ainsi
+  (`classe` puis `nom` au lieu de `nom_affiche`), chacun visible à l'œil nu
+  sur la première capture d'écran.
+- **N'abandonne jamais silencieusement un point d'une consigne.** Quand un
+  message en contient plusieurs, reprends-les un par un dans ton rapport, y
+  compris pour dire « pas fait, parce que… ».
 - **Utilise les variables CSS existantes** (`var(--navy)`, `var(--gold)`…),
   jamais de couleurs en dur : une refonte visuelle est prévue après la mise en
   fonctionnement.
@@ -137,4 +159,4 @@ base.
 
 ## Pour les sessions suivantes
 
-> Continue le projet Calcul Mental Saintho. Relis `ANTIGRAVITY_BRIEF.md` et `ECRANS.md`, dis-moi où tu en es, et reprends à l'étape suivante. Rappel : `./supabase/tests/run.sh` avant chaque commit, jamais de schéma inventé, jamais de couleur en dur.
+> Continue le projet Calcul Mental. Relis `ETAT.md` (§2 et §5), puis les trois dernières entrées de `JOURNAL.md`, dis-moi où tu en es, et reprends à l'étape suivante. Rappels : `./supabase/tests/run.sh` avant chaque commit ; jamais de schéma inventé — le SQL vient de Claude ; jamais de couleur en dur ; et n'affirme rien du comportement d'une fonction SQL sans l'avoir exécutée.

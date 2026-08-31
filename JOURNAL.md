@@ -56,6 +56,42 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-31 (10) — Remise à plat de la documentation avant changement de chat
+
+**Fait** — Passe complète sur les documents, pour qu'un chat neuf reprenne sans
+rien reperdre :
+
+- `ETAT.md` — §2 daté du 31 août (17 migrations, 72 cas) ; trois défauts
+  ajoutés au récit du §2 ; « Mes défis », « Ma classe » et l'origine des défis
+  listés dans ce qui n'est pas éprouvé ; §3 enrichi de trois décisions du jour ;
+  §5 « Pour l'agent » réécrit — le plan de construction en huit étapes était
+  terminé et induisait en erreur ; §6 réécrit avec le message de reprise et
+  l'avertissement sur le projet Claude.
+- `ANTIGRAVITY_BRIEF.md` — la liste des migrations du §5 en listait 9 sur 17.
+- `PROMPT_ANTIGRAVITY.md` — **c'était le document le plus dangereux du dépôt** :
+  il annonçait « la base est encore vide » et « ce qui n'est pas fait :
+  absolument tous les écrans, c'est ton travail ». Collé dans un Antigravity
+  neuf, il déclenchait une reconstruction complète par-dessus une application
+  qui marche. Réécrit en message de **reprise**. Trois règles de méthode
+  ajoutées, tirées des erreurs réellement commises.
+- `docs/PROJET_CLAUDE.md` — nouveau.
+
+**Constaté** — Les connaissances du **projet Claude** (côté claude.ai, pas le
+dépôt) décrivent encore l'architecture Google Apps Script + Google Sheets, et
+contiennent `AUDIT_HANDOFF.md`, `code.gs`, `gas.js` et six fichiers `.jsx` du
+25 août. Un chat neuf les lit avant même d'ouvrir le dossier : il ne pose pas
+de question, il répond faux avec assurance. Le ménage est à faire à la main
+dans claude.ai — la liste exacte est dans `docs/PROJET_CLAUDE.md`.
+
+**Décidé** — Une documentation périmée coûte plus cher qu'une documentation
+absente. Un document qui décrit une étape franchie doit être réécrit le jour où
+elle est franchie, pas archivé « au cas où ». Seul `archive/` échappe à la
+règle, parce qu'il est signalé comme périmé dès la première page de `ETAT.md`.
+
+**Ensuite** — Nouveau chat. Le message de reprise est au §6 de `ETAT.md`.
+
+---
+
 ## 2026-08-31 (9) — Migration 17 : le défi de prof avait une porte sans poignée
 
 **Constaté (en utilisant l'application, pas en la lisant)** — Trois défauts

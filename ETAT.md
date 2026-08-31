@@ -22,13 +22,13 @@ d'interface se juge à cette aune.
 
 ---
 
-## 2. État au 28 août 2026 — le code est terminé
+## 2. État au 31 août 2026 — le code est terminé
 
 ### Ce qui est fait
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **16 migrations**, 63 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **17 migrations**, 72 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -47,7 +47,9 @@ d'interface se juge à cette aune.
 |---|---|
 | ⬜ **Un défi joué à deux comptes simultanés** | Exige deux personnes en même temps — aucune relecture ne le remplace. C'est le dernier test fonctionnel du projet. |
 | ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
-| ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitriseClasse()` existe en base. |
+| ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitrise_classe()` existe en base et est testée : il ne manque que la grille. C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. |
+| ⬜ **Écran « Mes défis »** | Confié à Antigravity le 31 août. Sans lui, un professeur ne peut pas revenir au classement d'un défi qu'il a lancé. |
+| ⬜ **Origine du défi affichée** (prof / élève) | Décidé le 31 août, pas encore conçu. Demandera une migration 18. |
 
 ### Ce qui reste avant la rentrée — hors code
 
@@ -81,8 +83,13 @@ n'aurait vu :
 - deux variables CSS manquantes rendant deux cartes illisibles
 - une règle de points qui rendait l'abandon plus rentable que l'effort
 - un profil enseignant affichant « Découverte, tables 1 à 10 » à un adulte
+- un défi de professeur sans aucun chemin de retour : code noté, écran quitté,
+  résultat jamais revu — c'est-à-dire le moment même où l'outil devait servir
+- le nom du professeur affiché « — » dans la salle des profs (`nom` au lieu de
+  `nom_affiche` : **deuxième fois** que ce type d'écart de contrat frappe)
+- « 1 / 27 ont terminé » pour un défi lancé à deux copains
 
-**Deux de ces défauts ont été trouvés par Aymeri en utilisant l'application, un
+**Trois de ces défauts ont été trouvés par Aymeri en utilisant l'application, un
 par Antigravity relisant le SQL.** La relecture croisée n'est pas une formalité :
 c'est elle qui a fait la qualité de ce projet.
 
@@ -203,6 +210,24 @@ alimentent les classements permanents.
 5 défis ouverts maximum, 24 h de validité, jamais au-dessus de leur niveau
 débloqué.
 
+**Défi d'élève et défi de professeur : mêmes points, statuts différents.**
+*(31 août 2026.)* Un point mesure l'effort de celui qui répond, pas le grade de
+celui qui a créé le défi. Si un défi de professeur rapportait davantage, les
+défis entre copains mourraient en trois semaines — or ce sont eux qui font
+qu'un élève ouvre l'application à 19 h sans qu'on le lui demande. Ce qui change
+est le **statut** : un défi de professeur est du travail prescrit, le seul
+qu'on puisse évoquer en classe ou cocher « fait / pas fait ». La base sait déjà
+les distinguer (`cree_par_prof` XOR `cree_par_eleve`) ; il manque l'étiquette à
+l'écran. Garde-fous côté élève, déjà en place et suffisants : plafond de
+tables, 5 défis ouverts, 24 h, une seule participation par défi (clé primaire),
+et des points pondérés par la difficulté des tables — bourrer les tables de 2
+rapporte structurellement moins.
+
+**Le dénominateur n'appartient qu'aux défis de professeur.**
+« 18 / 27 ont terminé » a un sens pour une classe entière. Trois amis sur 27 ne
+sont pas « 3 / 27 » : pour un défi d'élève, on affiche « 3 ont joué », sans
+dénominateur.
+
 **Aucun champ de texte libre, nulle part.**
 Pas de nom de défi, pas de message, pas de pseudo. Dès qu'on laisse des
 collégiens écrire du texte que d'autres verront, il faut modérer — et personne
@@ -254,6 +279,16 @@ une identité qui n'existe plus.
 visible d'eux seuls. Deux tables sans intersection : un professeur ne peut pas
 apparaître dans un classement d'élèves, même par erreur de filtre.
 
+### Contrat des fonctions
+
+**Toutes les fonctions de classement renvoient les mêmes colonnes** —
+`rang, nom_affiche, classe, avatar, valeur, est_moi` — même quand deux d'entre
+elles sont toujours nulles. *(31 août 2026, après le deuxième bug de ce type :
+`classe` au lieu de `nom_affiche` dans l'onglet Classes, puis `nom` au lieu de
+`nom_affiche` dans la salle des profs.)* Le coût d'une colonne vide est nul ;
+le coût d'une exception à retenir côté React est un bug par écran. Une
+exception au contrat se paie une fois par écran, pour toujours.
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -263,7 +298,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-57 cas, dont une dizaine de tentatives de contournement qui doivent toutes
+72 cas, dont une dizaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -291,7 +326,8 @@ existantes**, jamais de couleurs en dur.
 | `SUPABASE_PAS_A_PAS.md` | Mise en route Supabase, MCP, Google OAuth, comptes |
 | `NOM_ET_MARQUE.md` | Check-list de bascule du nom — les 14 endroits à changer, dont 6 hors du code |
 | `JOURNAL.md` | L'historique : ce qui a été fait, décidé, constaté, étape par étape |
-| `PROMPT_ANTIGRAVITY.md` | Le message de démarrage à coller dans un chat neuf |
+| `PROMPT_ANTIGRAVITY.md` | Le message de démarrage à coller dans **Antigravity** |
+| `docs/PROJET_CLAUDE.md` | Les instructions à coller dans le projet Claude — voir §6 |
 | `docs/ecrans-et-defis.html` | Les maquettes visuelles élève et professeur |
 | `archive/` | ⚠️ Ancienne architecture Apps Script — **périmé, ne pas suivre** |
 
@@ -301,17 +337,25 @@ existantes**, jamais de couleurs en dur.
 
 ### Pour l'agent
 
-Voir `ECRANS.md`, section « Ordre de construction ». En résumé :
+**Les quatre lots de construction sont terminés** (`ANTIGRAVITY_BRIEF.md` §6 :
+fondations, modes solo, défis, finitions). Ce qui reste n'est plus du montage
+mais de la correction et deux écrans manquants, par ordre de valeur :
 
-1. Appliquer les migrations, charger le seed, lancer les tests
-2. Installer `@supabase/supabase-js`, créer `.env.local`
-3. Démarrage, connexion, écrans d'accueil
-4. Brancher les quatre modes solo existants — débloque profil, records, badges,
-   classements d'un coup
-5. Défis à code
-6. Suivi de classe
-7. Administration
-8. Finitions : hors-ligne, confettis, hooks
+1. **« Mes défis »** — branché sur `mes_defis()` (migration 17). Confié à
+   Antigravity le 31 août. Un professeur ne peut aujourd'hui pas revenir au
+   classement d'un défi qu'il a lancé : `rejoindre_defi()` refuse les
+   professeurs, et c'est le seul point d'entrée existant.
+2. **Salle des profs** — supprimer toute normalisation ajoutée côté React :
+   `classement_profs()` renvoie désormais les mêmes sept colonnes que les
+   autres classements.
+3. **« Ma classe »** — la grille de maîtrise agrégée, écran 15 de `ECRANS.md`.
+   `maitrise_classe(p_classe)` existe et est testée depuis la migration 4.
+   *Recommandation : avant la rentrée.* Tout le reste de l'application est
+   fait pour les élèves ; c'est le seul écran qui donne une raison à un
+   professeur de maths de rouvrir l'outil la semaine suivante.
+4. **Origine du défi** (prof / élève) affichée dans la liste et le classement.
+   Demandera une migration 18 — à écrire côté Claude, pas côté Antigravity.
+5. Passe visuelle, **après** le choix du nom.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
@@ -340,9 +384,33 @@ Voir `ECRANS.md`, section « Ordre de construction ». En résumé :
 
 ## 6. Reprendre dans un nouveau chat
 
-Colle ceci :
+### Le message à coller
 
-> Lis `ETAT.md` à la racine du dépôt, puis `ANTIGRAVITY_BRIEF.md` et `ECRANS.md`. Ignore le dossier `archive/`, il contient une architecture abandonnée. Dis-moi ensuite où en est le projet selon toi et ce que tu proposes comme prochaine étape.
+> Le dossier « Calcul mental » est connecté. Lis `ETAT.md` à la racine, puis
+> `ANTIGRAVITY_BRIEF.md` et `ECRANS.md`, et les trois dernières entrées de
+> `JOURNAL.md`. Ignore `archive/` : c'est l'ancienne architecture Apps Script,
+> abandonnée. Le partage du travail est fixe : **moi (Claude) je fais la
+> conception, le SQL et la relecture ; Antigravity écrit le React**, parce
+> qu'il voit le résultat à l'écran. Aymeri relaie les messages entre nous.
+> Dis-moi ensuite où en est le projet selon toi et ce que tu proposes comme
+> prochaine étape.
+
+### ⚠️ Avant d'ouvrir le nouveau chat — nettoyer le projet Claude
+
+Les connaissances du projet Claude décrivent encore **l'ancienne architecture**
+(Google Apps Script + Google Sheets + proxy Vercel). Un chat neuf les lira et
+partira faux dès la première réponse. À faire dans claude.ai :
+
+- **Remplacer les instructions du projet** par le texte donné dans
+  `docs/PROJET_CLAUDE.md`.
+- **Supprimer des connaissances** : `AUDIT_HANDOFF.md`, `code.gs`, `gas.js`,
+  `App.jsx`, `Login.jsx`, `Profile.jsx`, `Leaderboards.jsx`, `Challenges.jsx`,
+  `api.js`, `claude/DEMARRAGE.md`, `claude/ANTIGRAVITY_BRIEF.md`.
+  Tous datent d'avant la bascule vers Supabase, ou sont périmés.
+- **Garder** `claude/ETAT.md` — la copie de ce document, tenue à jour.
+
+Le dépôt sur le disque fait foi. Les connaissances du projet ne servent qu'à
+donner le contexte quand le dossier n'est pas encore connecté.
 
 ### La discipline à tenir
 
