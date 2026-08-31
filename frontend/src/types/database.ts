@@ -606,6 +606,24 @@ export type Database = {
           niveau: string
         }[]
       }
+      liste_eleves: {
+        Args: { p_classe?: string }
+        Returns: {
+          actif: boolean
+          avatar_emoji: string
+          classe: string
+          deja_connecte: boolean
+          derniere_connexion: string
+          eleve_id: string
+          email: string
+          nb_sessions: number
+          nom: string
+          palier: string
+          plafond_tables: number
+          points_semaine: number
+          prenom: string
+        }[]
+      }
       liste_profs: {
         Args: never
         Returns: {

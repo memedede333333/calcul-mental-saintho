@@ -54,6 +54,8 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     const [serverResult, setServerResult] = useState(null);
     // Défi partagé : info renvoyée par rejoindreDefi() ou creerDefi()
     const [defiInfo, setDefiInfo] = useState(null);
+    // État d'envoi du résultat de défi : { etat: 'en_cours' | 'ok' | 'echec', message?, payload? }
+    const [envoiDefi, setEnvoiDefi] = useState(null);
 
     const plafond = identite?.profil?.plafond_tables || (estProf ? 20 : 10);
 
@@ -101,21 +103,30 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     }, [challengeType, selectedTables, estProf, plafond, onPlafondChange]);
 
     // --- Fin de partie DÉFI : terminerDefi() seul (pas enregistrerSession) ---
+    const envoyerDefi = useCallback(async (payload) => {
+        setEnvoiDefi({ etat: 'en_cours' });
+        const res = await terminerDefi(payload);
+        setEnvoiDefi(res.ok
+            ? { etat: 'ok' }
+            : { etat: 'echec', message: res.error, payload }
+        );
+    }, []);
+
     const handleDoneDefi = useCallback((r) => {
         setResult(r);
         setPhase('defi-results');
 
         const maitrise = construireMaitrise(r.resultats || []);
-
-        terminerDefi({
+        const payload = {
             defiId: defiInfo.defi_id,
             score: r.score || 0,
             tempsS: Math.round(r.time || 0),
             erreurs: (r.answered || 0) - (r.score || 0),
             maitrise,
             scorePremierEssai: r.scorePremierEssai ?? null,
-        }).catch(() => {});
-    }, [defiInfo]);
+        };
+        envoyerDefi(payload);
+    }, [defiInfo, envoyerDefi]);
 
     // --- Rejoindre un défi ---
     const handleJoin = useCallback(async (code) => {
@@ -151,6 +162,10 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 joinCode={joinCode}
                 setJoinCode={setJoinCode}
                 onJoin={handleJoin}
+                onViewDefi={(defiId) => {
+                    setDefiInfo({ defi_id: defiId });
+                    setPhase('defi-leaderboard');
+                }}
                 estProf={estProf}
             />
         );
@@ -218,7 +233,9 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 result={result}
                 type={challengeType}
                 estProf={estProf}
-                onHome={() => { setDefiInfo(null); setPhase('select'); }}
+                envoiDefi={envoiDefi}
+                onRetry={() => envoiDefi?.payload && envoyerDefi(envoiDefi.payload)}
+                onHome={() => { setDefiInfo(null); setEnvoiDefi(null); setPhase('select'); }}
                 onBack={onBack}
             />
         );
@@ -240,7 +257,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
 /* ===================== SELECT ===================== */
 
-function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, estProf }) {
+function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onViewDefi, estProf }) {
     const [joinError, setJoinError] = useState(null);
     const [joinLoading, setJoinLoading] = useState(false);
     const [joinDefiId, setJoinDefiId] = useState(null); // for deja_joue → show leaderboard
@@ -317,11 +334,7 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, estP
                             <button
                                 className="btn btn--ghost"
                                 style={{ fontSize: 12, marginLeft: 8, padding: '4px 10px' }}
-                                onClick={() => {
-                                    // Navigate to defi leaderboard
-                                    // We reuse onJoin's side effects but for deja_joue we need to go to leaderboard directly
-                                    // This is handled by the parent via phase
-                                }}
+                                onClick={() => onViewDefi?.(joinDefiId)}
                             >
                                 Voir le classement
                             </button>
@@ -908,17 +921,30 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
 }
 
 /* --- Contre-la-montre : 2 min, 3s/question --- */
-function CountdownPlay({ tables, maitrise, onQuit, onDone }) {
-    const duration = 120;
-    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true });
+function CountdownPlay({ tables, maitrise, defiQuestions, defiDureeS, onQuit, onDone }) {
+    const duration = defiDureeS || 120;
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
         score,
         scoreRef, premierRef, answeredRef, maxStreakRef,
-        resetQuestion, recordResult, press, del } = engine;
+        resetQuestion, recordResult, press, del,
+        isDefi, nextDefiQuestion } = engine;
 
     const [remaining, setRemaining] = useState(duration);
     const timedOut = useRef(false);
+
+    const finishGame = useCallback(() => {
+        if (timedOut.current) return;
+        timedOut.current = true;
+        onDone({
+            score: scoreRef.current,
+            scorePremierEssai: premierRef.current,
+            answered: answeredRef.current,
+            maxStreak: maxStreakRef.current,
+            time: duration, resultats: resultatsRef.current,
+        });
+    }, [onDone, duration]);
 
     // Global countdown
     useEffect(() => {
@@ -926,30 +952,24 @@ function CountdownPlay({ tables, maitrise, onQuit, onDone }) {
             setRemaining(r => {
                 if (r <= 1) {
                     clearInterval(id);
-                    if (!timedOut.current) {
-                        timedOut.current = true;
-                        setTimeout(() => {
-                            onDone({
-                                score: scoreRef.current,
-                                scorePremierEssai: premierRef.current,
-                                answered: answeredRef.current,
-                                maxStreak: maxStreakRef.current,
-                                time: duration, resultats: resultatsRef.current,
-                            });
-                        }, 0);
-                    }
+                    setTimeout(finishGame, 0);
                     return 0;
                 }
                 return r - 1;
             });
         }, 1000);
         return () => clearInterval(id);
-    }, [onDone]);
+    }, [finishGame]);
 
     const advanceQuestion = useCallback(() => {
         if (timedOut.current) return;
-        resetQuestion(newQuestion(tables, q, weights));
-    }, [tables, q, weights, resetQuestion]);
+        if (isDefi) {
+            const hasMore = nextDefiQuestion();
+            if (!hasMore) finishGame(); // 120 questions épuisées
+        } else {
+            resetQuestion(newQuestion(tables, q, weights));
+        }
+    }, [tables, q, weights, resetQuestion, isDefi, nextDefiQuestion, finishGame]);
 
     // Question timer expiry
     useEffect(() => {
@@ -994,7 +1014,7 @@ function CountdownPlay({ tables, maitrise, onQuit, onDone }) {
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span className="pill">⭐ {score}</span>
+                <span className="pill">{isDefi ? '⚔️ Défi' : '⭐'} {score}</span>
                 <TimerRing seconds={remaining} total={duration} warn={timerWarn} />
             </div>
             <div className="progress-bar" style={{ marginBottom: 16 }}>
@@ -1301,6 +1321,245 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                     Relancer ⚔️
                 </button>
                 <button className="btn btn--ghost" style={{ width: '100%', marginBottom: 10 }} onClick={onHome}>
+                    Autres défis
+                </button>
+                <button className="btn-back" onClick={onBack}>‹ Accueil</button>
+            </div>
+        </div>
+    );
+}
+
+/* ===================== DEFI CODE SCREEN ===================== */
+
+function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
+    const [avancement, setAvancement] = useState(null);
+
+    // Compteur de participants en temps réel
+    useEffect(() => {
+        if (!defiInfo?.defi_id) return;
+
+        // Charger une première fois
+        avancementDefi(defiInfo.defi_id).then(res => {
+            if (res.ok) setAvancement(res.data);
+        });
+
+        // S'abonner aux changements
+        const unsub = suivreDefi(defiInfo.defi_id, () => {
+            avancementDefi(defiInfo.defi_id).then(res => {
+                if (res.ok) setAvancement(res.data);
+            });
+        });
+
+        return unsub;
+    }, [defiInfo?.defi_id]);
+
+    const nbParticipants = avancement?.termines || 0;
+
+    return (
+        <div className="screen-enter" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '70vh', textAlign: 'center',
+        }}>
+            <button className="btn-back" style={{ alignSelf: 'flex-start' }} onClick={onBack}>
+                ‹ Retour
+            </button>
+
+            <div style={{
+                background: 'linear-gradient(135deg, var(--navy), var(--navy-dk))',
+                borderRadius: 24, padding: estProf ? '48px 32px' : '32px 24px',
+                width: '100%', maxWidth: 500, marginTop: 24,
+            }}>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: estProf ? 20 : 16, marginBottom: 12 }}>
+                    {estProf ? 'Saisissez ce code dans Défis' : 'Donne ce code à tes copains'}
+                </p>
+
+                <div className="font-display" style={{
+                    fontSize: estProf ? 80 : 56, fontWeight: 900, color: 'var(--gold)',
+                    letterSpacing: 12, userSelect: 'all',
+                }}>
+                    {defiInfo?.code || '?????'}
+                </div>
+
+                <div style={{
+                    marginTop: 20, padding: '12px 0',
+                    borderTop: '1px solid rgba(255,255,255,0.15)',
+                }}>
+                    <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>
+                        👥 {nbParticipants}
+                    </span>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, marginTop: 4 }}>
+                        participant{nbParticipants !== 1 ? 's' : ''} {nbParticipants > 0 ? '' : 'pour le moment'}
+                    </p>
+                </div>
+            </div>
+
+            <button
+                className="btn btn--gold"
+                style={{ width: '100%', maxWidth: 500, fontSize: 20, padding: 16, marginTop: 20 }}
+                onClick={onStart}
+            >
+                📊 Voir le classement
+            </button>
+
+            <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 12 }}>
+                {estProf ? 'Le défi expire dans 7 jours.' : 'Le défi expire dans 24 heures.'}
+            </p>
+        </div>
+    );
+}
+
+/* ===================== DEFI LEADERBOARD ===================== */
+
+function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRetry, onHome, onBack }) {
+    const [classement, setClassement] = useState([]);
+    const [avancement, setAvancement] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const charger = useCallback(async () => {
+        const [cls, adv] = await Promise.all([
+            classementDefi(defiId),
+            avancementDefi(defiId),
+        ]);
+        if (cls.ok) setClassement(cls.data || []);
+        if (adv.ok) setAvancement(adv.data);
+        setLoading(false);
+    }, [defiId]);
+
+    useEffect(() => {
+        charger();
+
+        // Temps réel : recharger le classement à chaque nouveau participant
+        const unsub = suivreDefi(defiId, charger);
+        return unsub; // Désabonnement propre — pas d'accumulation de canaux
+    }, [defiId, charger]);
+
+    const termines = avancement?.termines || classement.length;
+    const attendus = avancement?.attendus || null;
+
+    return (
+        <div className="screen-enter">
+            <button className="btn-back" onClick={onHome}>‹ Défis</button>
+
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 48 }}>🏆</div>
+                <h2 className="font-display" style={{ fontSize: 24, fontWeight: 800 }}>
+                    Classement du défi
+                </h2>
+                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                    {attendus
+                        ? `${termines} / ${attendus} ont terminé`
+                        : `${termines} participant${termines !== 1 ? 's' : ''}`
+                    }
+                </p>
+            </div>
+
+            {/* Résultat personnel si vient de jouer */}
+            {result && (
+                <div className="card" style={{ marginBottom: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--gold)' }}>
+                        {result.score || 0} {type?.id === 'sprint' ? 'pts' : 'pts'}
+                    </div>
+                    {type?.id === 'sprint' && (
+                        <div style={{ fontSize: 14, color: 'var(--text-soft)', fontWeight: 600 }}>
+                            en {result.time?.toFixed(1)}s
+                        </div>
+                    )}
+                    <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
+                        {result.scorePremierEssai ?? result.score} / {result.answered} du premier coup
+                    </div>
+                </div>
+            )}
+
+            {/* État d'envoi du résultat */}
+            {envoiDefi?.etat === 'en_cours' && (
+                <div className="card" style={{
+                    marginBottom: 14, textAlign: 'center', padding: '14px 16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                }}>
+                    <div className="spinner" style={{ width: 18, height: 18 }} />
+                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-soft)' }}>
+                        Enregistrement de ta partie…
+                    </span>
+                </div>
+            )}
+            {envoiDefi?.etat === 'echec' && (
+                <div style={{
+                    background: 'rgba(255,90,95,0.08)', border: '2px solid var(--coral)',
+                    borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 14,
+                    textAlign: 'center',
+                }}>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--coral-dk)', marginBottom: 8 }}>
+                        Ta partie n'a pas été enregistrée — {envoiDefi.message || 'erreur inconnue'}
+                    </p>
+                    <button className="btn btn--coral" style={{ fontSize: 14, padding: '8px 20px' }} onClick={onRetry}>
+                        Réessayer
+                    </button>
+                </div>
+            )}
+
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: 40 }}>
+                    <div className="spinner" />
+                </div>
+            ) : classement.length === 0 ? (
+                <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+                    <p style={{ fontSize: 48 }}>🏜</p>
+                    <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                        Personne n'a encore terminé — le classement se remplira tout seul.
+                    </p>
+                </div>
+            ) : (
+                <div className="card">
+                    {classement.map((entry, i) => {
+                        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+                        return (
+                            <div
+                                key={entry.eleve_id || i}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '12px 8px',
+                                    borderBottom: i < classement.length - 1 ? '1px solid var(--border)' : 'none',
+                                    background: entry.est_moi ? 'rgba(201,162,39,0.08)' : 'transparent',
+                                    borderRadius: entry.est_moi ? 10 : 0,
+                                }}
+                            >
+                                <span style={{
+                                    fontSize: medal ? 22 : 16, fontWeight: 800, minWidth: 32, textAlign: 'center',
+                                    color: entry.est_moi ? 'var(--gold)' : 'var(--text-soft)',
+                                }}>
+                                    {medal || entry.rang || i + 1}
+                                </span>
+                                <span style={{ fontSize: 20 }}>{entry.avatar || '🎯'}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{
+                                        fontWeight: entry.est_moi ? 800 : 700, fontSize: 15,
+                                        color: entry.est_moi ? 'var(--navy)' : 'var(--text)',
+                                    }}>
+                                        {entry.nom_affiche || 'Anonyme'}
+                                        {entry.est_moi && ' (toi)'}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>
+                                        {entry.classe || ''}
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--gold)' }}>
+                                        {entry.score} pts
+                                    </div>
+                                    {entry.temps_s != null && (
+                                        <div style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>
+                                            {Number(entry.temps_s).toFixed(1)}s
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button className="btn btn--ghost" style={{ width: '100%' }} onClick={onHome}>
                     Autres défis
                 </button>
                 <button className="btn-back" onClick={onBack}>‹ Accueil</button>

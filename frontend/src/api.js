@@ -599,6 +599,11 @@ export async function elevesSansConnexion(classe = null) {
     return rpc('eleves_sans_connexion', { p_classe: classe });
 }
 
+/** Les élèves d'une classe — actifs ET désactivés. */
+export async function listeEleves(classe = null) {
+    return rpc('liste_eleves', { p_classe: classe });
+}
+
 /* ===================================================================
  * COMPTES ENSEIGNANTS  (administrateur uniquement)
  * ================================================================= */
@@ -662,7 +667,7 @@ export const api = {
     maitriseClasse, listeClasses, definirMesClasses,
     // administration
     importerEleves, ajouterEleve, modifierEleve,
-    desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion,
+    desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
 };
 

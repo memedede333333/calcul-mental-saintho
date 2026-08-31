@@ -60,8 +60,12 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
         enregistrer(session).then(res => {
             if (res.ok) {
                 setServerResult(res.data);
+                // Un enseignant n'a pas de plafond : le champ n'existe
+                // que pour les élèves. Sans ce cas, la valeur de repli
+                // le bloque à 10.
                 const np = res.data?.plafond_tables;
-                if (np && np !== (identite?.profil?.plafond_tables || 10)) {
+                const currentPlafond = estProf ? 20 : (identite?.profil?.plafond_tables || 10);
+                if (np && np !== currentPlafond) {
                     onPlafondChange?.(np);
                 }
             } else {
@@ -87,7 +91,7 @@ export default function Practice({ onBack, identite, estProf, onPlafondChange, t
                     timer={timer} setTimer={setTimer}
                     onStart={() => setPhase('quiz')}
                     onShowGrid={() => setShowGrid(true)}
-                    plafond={identite?.profil?.plafond_tables || 10}
+                    plafond={estProf ? 20 : (identite?.profil?.plafond_tables || 10)}
                 />
             </>
         );

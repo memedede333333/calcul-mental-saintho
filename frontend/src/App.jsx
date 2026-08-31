@@ -104,6 +104,18 @@ export default function App() {
         }
     }
 
+    // --- Rafraîchir l'identité après un changement de rôle ---
+    const refreshIdentite = useCallback(async () => {
+        const res = await quiSuisJe();
+        if (res.ok) {
+            setIdentite(res.data);
+            // Si le compte n'est plus admin/prof, revenir à l'accueil
+            if (res.data.type !== 'prof' && res.data.type !== 'eleve') {
+                setScreen('home');
+            }
+        }
+    }, []);
+
     // --- Réessayer après erreur serveur ---
     const handleReessayer = useCallback(async () => {
         setAppState('loading');
@@ -311,7 +323,7 @@ export default function App() {
                 />
             )}
             {screen === 'admin' && estAdmin && (
-                <Admin onBack={goHome} identite={identite} />
+                <Admin onBack={goHome} identite={identite} onIdentiteChange={refreshIdentite} />
             )}
         </Layout>
     );

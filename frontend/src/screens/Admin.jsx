@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { masteryColor } from '../logic/mastery';
 import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
-    definirPlafondClasse, elevesSansConnexion,
+    definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf,
     importerEleves, journalAdmin,
 } from '../api.js';
@@ -19,7 +19,7 @@ import {
  * Les classes viennent de listeClasses(), jamais d'une constante.
  */
 
-export default function Admin({ onBack, identite }) {
+export default function Admin({ onBack, identite, onIdentiteChange }) {
     const estAdmin = identite?.admin === true;
     const [tab, setTab] = useState('eleves');
     const [classes, setClasses] = useState([]);
@@ -117,7 +117,7 @@ export default function Admin({ onBack, identite }) {
                             estAdmin={estAdmin}
                         />
                     )}
-                    {tab === 'profs' && estAdmin && <ProfsTab />}
+                    {tab === 'profs' && estAdmin && <ProfsTab identite={identite} onIdentiteChange={onIdentiteChange} />}
                     {tab === 'import' && estAdmin && <ImportTab onRefresh={refreshClasses} />}
                     {tab === 'journal' && estAdmin && <JournalTab />}
                 </>
@@ -143,7 +143,7 @@ function ElevesTab({ selectedClass, classInfo, onRefresh, estAdmin }) {
         if (!selectedClass) return;
         setLoading(true);
         // On charge la liste des élèves sans connexion pour cette classe
-        const res = await elevesSansConnexion(selectedClass);
+        const res = await listeEleves(selectedClass);
         if (res.ok && res.data) {
             setEleves(res.data);
         }
@@ -153,6 +153,11 @@ function ElevesTab({ selectedClass, classInfo, onRefresh, estAdmin }) {
     useEffect(() => { charger(); }, [charger]);
 
     const handleToggleActif = async (eleve) => {
+        // Confirmation avant désactivation
+        if (eleve.actif !== false) {
+            const ok = window.confirm(`Désactiver ${eleve.prenom || ''} ${eleve.nom || ''} ? L'élève ne pourra plus se connecter.`);
+            if (!ok) return;
+        }
         setBusy(eleve.eleve_id);
         setMsg('');
         const res = eleve.actif
@@ -365,12 +370,14 @@ function AddStudentForm({ selectedClass, onDone }) {
 
 /* ===================== ENSEIGNANTS (admin) ===================== */
 
-function ProfsTab() {
+function ProfsTab({ identite, onIdentiteChange }) {
     const [profs, setProfs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAdd, setShowAdd] = useState(false);
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(null);
+
+    const monId = identite?.profil?.id || null;
 
     const charger = useCallback(async () => {
         setLoading(true);
@@ -382,26 +389,43 @@ function ProfsTab() {
     useEffect(() => { charger(); }, [charger]);
 
     const handleToggle = async (prof) => {
+        if (prof.prof_id === monId) return; // impossible de se désactiver soi-même
+        const ok = window.confirm(`Désactiver ${prof.nom} ? Ce compte enseignant ne pourra plus se connecter.`);
+        if (!ok) return;
         setBusy(prof.prof_id);
         setMsg('');
         if (prof.actif) {
             const res = await desactiverProf(prof.prof_id);
-            if (res.ok) { setMsg('✅ Enseignant désactivé'); await charger(); }
-            else setMsg(`❌ ${res.error}`);
-        } else {
-            // Pas de reactiverProf — on modifie pour remettre actif
-            // (la fonction n'existe pas, on ne montre pas le bouton pour les inactifs)
-            setMsg('ℹ️ Contactez un administrateur pour réactiver un enseignant.');
+            if (res.ok) {
+                setMsg('✅ Enseignant désactivé');
+                await charger();
+                onIdentiteChange?.();
+            } else {
+                setMsg(`❌ ${res.error}`);
+            }
         }
         setBusy(null);
     };
 
     const handleRoleChange = async (prof, newRole) => {
+        if (prof.prof_id === monId) return; // interdit de se changer soi-même
+        const action = newRole === 'admin'
+            ? `Donner les droits d'administrateur à ${prof.nom} ?`
+            : `Retirer les droits d'administrateur à ${prof.nom} ?`;
+        const ok = window.confirm(action);
+        if (!ok) return;
         setBusy(prof.prof_id);
         setMsg('');
         const res = await modifierProf(prof.prof_id, { role: newRole });
-        if (res.ok) { setMsg(`✅ ${prof.nom} → ${newRole}`); await charger(); }
-        else setMsg(`❌ ${res.error}`);
+        if (res.ok) {
+            setMsg(`✅ ${prof.nom} → ${newRole}`);
+            await charger();
+            onIdentiteChange?.();
+        } else {
+            // Messages de la base : "Impossible : c'est le dernier administrateur actif."
+            // "Réservé à l'administrateur" etc. — on les affiche tels quels
+            setMsg(`❌ ${res.error}`);
+        }
         setBusy(null);
     };
 
@@ -431,40 +455,62 @@ function ProfsTab() {
                     Aucun enseignant trouvé.
                 </p>
             ) : (
-                profs.filter(p => p.actif).map(p => (
-                    <div key={p.prof_id} style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
-                        borderBottom: '1px solid var(--border)',
-                    }}>
-                        <span style={{ fontSize: 22 }}>👤</span>
-                        <div style={{ flex: 1 }}>
-                            <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
-                                {p.nom}
-                            </p>
-                            <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                                {p.email}
-                                {p.classes?.length > 0 && ` — ${p.classes.join(', ')}`}
-                            </p>
+                profs.filter(p => p.actif).map(p => {
+                    const estMoi = p.prof_id === monId;
+                    return (
+                        <div key={p.prof_id} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
+                            borderBottom: '1px solid var(--border)',
+                        }}>
+                            <span style={{ fontSize: 22 }}>👤</span>
+                            <div style={{ flex: 1 }}>
+                                <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
+                                    {p.nom}{estMoi && <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}> (toi)</span>}
+                                </p>
+                                <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                                    {p.email}
+                                    {p.classes?.length > 0 && ` — ${p.classes.join(', ')}`}
+                                </p>
+                            </div>
+                            {estMoi ? (
+                                /* Étiquette non cliquable pour soi-même */
+                                <span
+                                    className={`chip${p.role === 'admin' ? ' chip--gold' : ''}`}
+                                    style={{ fontSize: 11, height: 28, minWidth: 60, cursor: 'default', pointerEvents: 'none' }}
+                                >
+                                    {p.role === 'admin' ? '👑 admin' : '📚 prof'}
+                                </span>
+                            ) : (
+                                /* Menu déroulant pour les autres */
+                                <select
+                                    value={p.role}
+                                    disabled={busy === p.prof_id}
+                                    onChange={(e) => handleRoleChange(p, e.target.value)}
+                                    style={{
+                                        fontSize: 13, fontWeight: 700, padding: '6px 10px',
+                                        borderRadius: 10, border: '2px solid var(--border)',
+                                        background: p.role === 'admin' ? 'var(--gold-light)' : 'var(--surface)',
+                                        color: 'var(--navy)', cursor: 'pointer',
+                                        fontFamily: 'var(--font-body)',
+                                    }}
+                                >
+                                    <option value="prof">📚 Prof</option>
+                                    <option value="admin">👑 Admin</option>
+                                </select>
+                            )}
+                            {!estMoi && (
+                                <button
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy === p.prof_id ? 0.4 : 1 }}
+                                    onClick={() => handleToggle(p)}
+                                    disabled={busy === p.prof_id}
+                                    title="Désactiver"
+                                >
+                                    ⛔
+                                </button>
+                            )}
                         </div>
-                        <button
-                            className={`chip${p.role === 'admin' ? ' chip--gold' : ''}`}
-                            style={{ fontSize: 11, height: 28, minWidth: 60, cursor: 'pointer' }}
-                            disabled={busy === p.prof_id}
-                            onClick={() => handleRoleChange(p, p.role === 'admin' ? 'prof' : 'admin')}
-                            title={`Basculer ${p.role === 'admin' ? 'prof' : 'admin'}`}
-                        >
-                            {p.role === 'admin' ? '👑 admin' : '📚 prof'}
-                        </button>
-                        <button
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy === p.prof_id ? 0.4 : 1 }}
-                            onClick={() => handleToggle(p)}
-                            disabled={busy === p.prof_id}
-                            title="Désactiver"
-                        >
-                            ⛔
-                        </button>
-                    </div>
-                ))
+                    );
+                })
             )}
         </div>
     );

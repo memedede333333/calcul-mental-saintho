@@ -56,6 +56,86 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-31 (7) — Migration 15 + accueil enseignant (Antigravity)
+
+**Migration 15 appliquée** — `liste_eleves(p_classe)` renvoie actifs ET
+désactivés, avec `deja_connecte`, `nb_sessions`, `points_semaine`. C'est
+CETTE fonction que l'écran Admin utilise — pas `eleves_sans_connexion()`.
+Lou apparaissait « 1 élève actif » dans le compteur mais disparaissait de
+la liste dès qu'elle jouait.
+
+**Accueil enseignant** — Le placeholder à la grue est remplacé par quatre
+cartes : « Lancer un défi » → challenges, « S'entraîner » → play (qui
+enregistre via `enregistrerSessionProf`), « Ma classe » → en construction
+(carte grisée, assumée), « Classements » → leaderboards (dont Salle des
+profs). Plus les boutons Profil, Administration (si admin), Déconnexion.
+
+**Trois chemins débloqués** — un prof peut maintenant jouer (et apparaître
+dans le classement Salle des profs), lancer un défi, et consulter les
+classements. Les trois existaient en code mais n'avaient aucun bouton.
+
+
+## 2026-08-31 (6) — Trois défauts admin (Antigravity)
+
+**Le problème** — Le badge admin/prof basculait le rôle au clic, sans
+confirmation, y compris sur soi-même. Aymeri s'est rétrogradé d'un clic.
+
+**Correction 1 : badge → `<select>` + confirmation** — Le rôle d'un autre
+enseignant est maintenant un menu déroulant (prof/admin) qui déclenche un
+`window.confirm` explicite : « Retirer les droits d'administrateur à X ? ».
+Pour soi-même, le badge est une étiquette non cliquable `(toi)`.
+
+**Correction 2 : identité rafraîchie** — Après tout changement de rôle ou
+désactivation, `quiSuisJe()` est rappelé (`refreshIdentite`) et `identite`
+est mis à jour dans App.jsx. Si l'utilisateur n'est plus admin, les onglets
+Enseignants / Import / Journal disparaissent immédiatement.
+
+**Correction 3 : messages lisibles** — Les messages de la base (« Impossible :
+c'est le dernier administrateur actif. », « Tu as déjà participé à ce défi. »)
+s'affichent tels quels dans le bandeau d'erreur.
+
+**Aussi** — La désactivation d'un élève et d'un enseignant demandent
+confirmation. On ne peut plus se désactiver ou se rétrograder soi-même.
+
+
+## 2026-08-31 (5) — Défis partagés (Antigravity)
+
+**Fait** — Le dernier lot est posé. C'est le seul mécanisme multijoueur du
+projet : deux élèves jouent les mêmes questions figées et se comparent.
+
+**Migration 14 appliquée** — `terminer_defi()` accepte `p_score_premier_essai`.
+Sans elle, les défis rapportaient des points gonflés au classement Progression.
+
+**Carte « Défi de classe » supprimée** — ce n'était pas un type, c'était un
+Sprint ou Countdown créé par un prof avec une classe. L'ancienne carte lançait
+un Sprint solo en silence — le bug le plus trompeur du projet.
+
+**Cinq pièges documentés, tous traités** :
+
+1. Sprint et Countdown seuls sont partageables — le sélecteur l'empêche, la
+   base le refuse aussi (`check (type in ('sprint', 'countdown'))`)
+2. Les questions sont figées : `useQuizEngine` accepte une liste `defiQuestions`
+   et la consomme dans l'ordre, sans `newQuestion()` ni `buildWeights()`
+3. `terminerDefi()` appelle `enregistrerSession()` en interne — le front ne
+   l'appelle pas une deuxième fois
+4. Trois refus de `rejoindreDefi()` gérés : `inconnu` / `ferme` / `deja_joue`
+   (ce dernier propose de voir le classement)
+5. Classement en direct via `suivreDefi()` (Realtime) — aucun `setInterval`,
+   désabonnement dans le cleanup du `useEffect`
+
+**Élèves créent aussi** — un élève peut créer un défi (24h, 5 max simultanés,
+tables plafonnées). Écran code sobre : « Donne ce code à tes copains ».
+
+**Sprint en défi** — la règle s'annonce avant la partie : « Le plus rapide
+gagne — chaque erreur ajoute 3 secondes. »
+
+**Countdown en défi** — durée du serveur (`defiDureeS`), 120 questions jouées
+jusqu'au bout du chrono (ou fin de liste si un élève les épuise toutes).
+
+**Pas de « Relancer » en défi** — le bouton est remplacé par « Voir le
+classement ». Un « Relancer » déclenche « Tu as déjà participé » — cul-de-sac.
+
+
 ## 2026-08-28 (4) — Première relecture croisée : Antigravity relit le SQL
 
 **Fait** — Sur demande d'Aymeri, Antigravity a relu la migration 13. Jusque-là

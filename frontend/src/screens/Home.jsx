@@ -37,36 +37,43 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
                     </div>
                 </div>
 
-                {/* Placeholder — en construction */}
-                <div className="card" style={{
-                    textAlign: 'center', padding: '32px 20px',
-                    marginBottom: 14,
-                }}>
-                    <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>🏗️</span>
-                    <h2 className="font-display" style={{
-                        fontSize: 20, fontWeight: 800, color: 'var(--navy)',
-                        marginBottom: 8,
-                    }}>
-                        Accueil enseignant
-                    </h2>
-                    <p style={{
-                        color: 'var(--text-soft)', fontWeight: 600,
-                        fontSize: 14, lineHeight: 1.5,
-                    }}>
-                        Le lancement de défis et le suivi de classe arrivent
-                        dans les prochaines étapes.
-                    </p>
-                </div>
+                {/* Cartes de mode */}
+                <button className="mode-card mode-card--challenge" onClick={() => onGo('challenges')}>
+                    <span className="mode-card__emoji">⚔️</span>
+                    <span>
+                        <div className="mode-card__title">Lancer un défi</div>
+                        <div className="mode-card__desc">Sprint ou Contre-la-montre pour vos classes</div>
+                    </span>
+                </button>
 
-                {/* Boutons disponibles */}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                    <button
-                        className="btn btn--ghost"
-                        style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
-                        onClick={() => onGo('leaderboards')}
-                    >
-                        🏆 Classements
-                    </button>
+                <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
+                    <span className="mode-card__emoji">🚀</span>
+                    <span>
+                        <div className="mode-card__title">S'entraîner</div>
+                        <div className="mode-card__desc">Jouez vous aussi — Salle des profs</div>
+                    </span>
+                </button>
+
+                <button className="mode-card" onClick={() => onGo('classe')} style={{
+                    opacity: 0.5, cursor: 'default', pointerEvents: 'none',
+                }}>
+                    <span className="mode-card__emoji">🗺</span>
+                    <span>
+                        <div className="mode-card__title">Ma classe</div>
+                        <div className="mode-card__desc">Maîtrise agrégée — en construction</div>
+                    </span>
+                </button>
+
+                <button className="mode-card mode-card--learn" onClick={() => onGo('leaderboards')}>
+                    <span className="mode-card__emoji">🏆</span>
+                    <span>
+                        <div className="mode-card__title">Classements</div>
+                        <div className="mode-card__desc">Progression, records, classes et Salle des profs</div>
+                    </span>
+                </button>
+
+                {/* Accès rapides */}
+                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                     <button
                         className="btn btn--ghost"
                         style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
@@ -74,27 +81,22 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
                     >
                         👤 Profil
                     </button>
+                    {estAdmin && (
+                        <button
+                            className="btn btn--ghost"
+                            style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
+                            onClick={() => onGo('admin')}
+                        >
+                            ⚙️ Administration
+                        </button>
+                    )}
                 </div>
-
-                {estAdmin && (
-                    <button
-                        className="btn btn--ghost"
-                        style={{
-                            width: '100%', marginBottom: 10,
-                            fontSize: 14, padding: '10px 16px',
-                            color: 'var(--text-soft)',
-                        }}
-                        onClick={() => onGo('admin')}
-                    >
-                        ⚙️ Administration
-                    </button>
-                )}
 
                 <button
                     className="btn btn--ghost"
                     style={{
                         width: '100%', fontSize: 13, padding: '10px 16px',
-                        color: 'var(--coral)',
+                        color: 'var(--coral)', marginTop: 8,
                     }}
                     onClick={onLogout}
                 >
