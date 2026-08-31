@@ -448,6 +448,13 @@ export type Database = {
         }
         Returns: Json
       }
+      auteur_defi: {
+        Args: { p_defi_id: string }
+        Returns: {
+          auteur_nom: string
+          origine: string
+        }[]
+      }
       avancement_defi: { Args: { p_defi_id: string }; Returns: Json }
       classement_classes: {
         Args: { p_niveau?: string; p_periode?: string }
@@ -653,13 +660,16 @@ export type Database = {
         Args: { p_limite?: number }
         Returns: {
           attendus: number
+          auteur_nom: string
           classe: string
           code: string
           cree_le: string
           defi_id: string
           encore_ouvert: boolean
           expire_le: string
+          origine: string
           participants: number
+          participants_classe: number
           tables: number[]
           type: string
         }[]

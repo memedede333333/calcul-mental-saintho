@@ -166,17 +166,43 @@ export default function MesDefis({ onBack, estProf }) {
                                     <span>· {formatDate(d.cree_le)}</span>
                                 </div>
 
+                                {/* Origine */}
+                                <div style={{ marginBottom: 6 }}>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 800,
+                                        padding: '2px 8px', borderRadius: 6,
+                                        background: d.origine === 'prof'
+                                            ? 'rgba(77,168,218,0.12)' : 'rgba(201,162,39,0.12)',
+                                        color: d.origine === 'prof'
+                                            ? 'var(--sky-dk)' : 'var(--gold-dk, #8a6d10)',
+                                    }}>
+                                        {d.origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
+                                    </span>
+                                    {d.auteur_nom && (
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginLeft: 6 }}>
+                                            Défi de {d.auteur_nom}
+                                        </span>
+                                    )}
+                                </div>
+
                                 {/* Participants + état */}
                                 <div style={{
                                     display: 'flex', justifyContent: 'space-between',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                                        {d.attendus != null
-                                            ? `${d.participants} / ${d.attendus} ont terminé`
-                                            : `${d.participants} ${d.participants === 1 ? 'a joué' : 'ont joué'}`
-                                        }
-                                    </span>
+                                    <div>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                                            {d.attendus != null
+                                                ? `${d.participants_classe ?? 0} / ${d.attendus} de la ${d.classe} ont joué`
+                                                : `${d.participants} ${d.participants === 1 ? 'a joué' : 'ont joué'}`
+                                            }
+                                        </span>
+                                        {d.attendus != null && d.participants > (d.participants_classe ?? 0) && (
+                                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>
+                                                + {d.participants - (d.participants_classe ?? 0)} d'autres classes
+                                            </div>
+                                        )}
+                                    </div>
                                     {!ouvert && (
                                         <span style={{
                                             fontSize: 11, fontWeight: 800,

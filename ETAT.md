@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **31 août 2026** — 17 migrations, 72 cas de test verts.
+> Dernière mise à jour : **31 août 2026** — 18 migrations, 77 cas de test verts.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -32,7 +32,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **17 migrations**, 72 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **18 migrations**, 77 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -52,8 +52,8 @@ d'interface se juge à cette aune.
 | ⬜ **Un défi joué à deux comptes simultanés** | Exige deux personnes en même temps — aucune relecture ne le remplace. C'est le dernier test fonctionnel du projet. |
 | ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
 | ⬜ **Écran « Ma classe »** (maîtrise agrégée) | Assumé « en construction ». `maitrise_classe()` existe en base et est testée : il ne manque que la grille. C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. |
-| ⬜ **Écran « Mes défis »** | Confié à Antigravity le 31 août. Sans lui, un professeur ne peut pas revenir au classement d'un défi qu'il a lancé. |
-| ⬜ **Origine du défi affichée** (prof / élève) | Décidé le 31 août, pas encore conçu. Demandera une migration 18. |
+| ✅ **Écran « Mes défis »** | Livré par Antigravity le 31 août, points d'entrée côté prof et côté élève. Reste à voir en usage. |
+| ⬜ **Origine du défi affichée** (prof / élève) | SQL fait (migration 18) ; l'affichage reste à coder. |
 
 ### Ce qui reste avant la rentrée — hors code
 
@@ -302,7 +302,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-72 cas, dont une dizaine de tentatives de contournement qui doivent toutes
+77 cas, dont une dizaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -345,21 +345,18 @@ existantes**, jamais de couleurs en dur.
 fondations, modes solo, défis, finitions). Ce qui reste n'est plus du montage
 mais de la correction et deux écrans manquants, par ordre de valeur :
 
-1. **« Mes défis »** — branché sur `mes_defis()` (migration 17). Confié à
-   Antigravity le 31 août. Un professeur ne peut aujourd'hui pas revenir au
-   classement d'un défi qu'il a lancé : `rejoindre_defi()` refuse les
-   professeurs, et c'est le seul point d'entrée existant.
-2. **Salle des profs** — supprimer toute normalisation ajoutée côté React :
-   `classement_profs()` renvoie désormais les mêmes sept colonnes que les
-   autres classements.
+1. ✅ **« Mes défis »** et **la salle des profs** — livrés le 31 août.
+2. **Origine du défi à l'écran** — la migration 18 fournit `origine`,
+   `auteur_nom`, `participants_classe`. Badge « 📚 Travail de classe » ou
+   « 🎮 Défi amical », et le ratio de classe corrigé : afficher
+   `participants_classe / attendus` (jamais `participants / attendus`, qui
+   donnait « 2 / 1 » dès qu'un élève d'une autre classe jouait).
 3. **« Ma classe »** — la grille de maîtrise agrégée, écran 15 de `ECRANS.md`.
    `maitrise_classe(p_classe)` existe et est testée depuis la migration 4.
    *Recommandation : avant la rentrée.* Tout le reste de l'application est
    fait pour les élèves ; c'est le seul écran qui donne une raison à un
    professeur de maths de rouvrir l'outil la semaine suivante.
-4. **Origine du défi** (prof / élève) affichée dans la liste et le classement.
-   Demandera une migration 18 — à écrire côté Claude, pas côté Antigravity.
-5. Passe visuelle, **après** le choix du nom.
+4. Passe visuelle, **après** le choix du nom.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

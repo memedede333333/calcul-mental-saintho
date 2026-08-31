@@ -56,6 +56,73 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-31 (12) — Migration 18 : « 2 / 1 ont terminé »
+
+**Constaté** — Antigravity a livré « Mes défis » et la salle des profs, et il a
+fait ce qu'on lui demandait : il a **exécuté** `mes_defis()` en base au lieu de
+raisonner dessus, et collé les deux résultats réels. C'est son rapport qui a
+révélé le défaut — dans la migration 17, donc de mon côté, pas du sien :
+
+```
+"code": "379S4", "classe": "31", "participants": 2, "attendus": 1
+```
+
+Soit, à l'écran : **« 2 / 1 ont terminé »**. `participants` comptait tous les
+joueurs ; `attendus` comptait les élèves de la classe visée. Deux populations
+différentes de part et d'autre de la barre de fraction. Le défi visait la 31
+(un élève actif) ; Lou (31) et Adeliya (32) l'ont joué.
+
+La correction ne consiste pas à interdire à Adeliya de jouer : faire jouer la
+31 contre la 32 est une demande explicite, et c'est ce qui rend les défis
+vivants. Elle consiste à compter les deux choses séparément.
+
+**Fait** — Migration 18 (`20260831210000_origine_defi.sql`) :
+
+- `auteur_defi(p_defi_id)` — une seule définition de « qui a créé ce défi »,
+  utilisée par les trois fonctions, pour qu'elles ne divergent jamais.
+- `mes_defis()` renvoie `participants` (tous), `participants_classe` (ceux de
+  la classe visée) et `attendus` (l'effectif de cette classe) — plus `origine`
+  et `auteur_nom`.
+- `avancement_defi()` : même correction, plus l'origine et l'auteur, pour
+  l'en-tête de l'écran de classement.
+- `rejoindre_defi()` annonce l'origine et l'auteur **avant** de jouer :
+  « Défi de M. Desjardins » et « Défi de Lou A. » ne s'abordent pas pareil, et
+  c'est le seul moment où on peut le dire à l'élève.
+
+Cinq cas de test ajoutés (73 → 77), dont le cas 74 qui rejoue exactement la
+situation d'Aymeri : un défi de prof visant la 6A, joué par une élève de 6A et
+une de 6B. Suite portée à **77 cas, tous verts**. `run.sh` crée un cinquième
+compte de test (David, 6B) — sans lui, le cas croisé ne peut pas exister.
+
+**Décidé** — Le nom d'un professeur s'affiche en entier ; celui d'un élève passe
+par `nom_public()`, « Alice D. », comme partout ailleurs. Les élèves connaissent
+leur professeur ; ils n'ont pas à connaître le nom de famille entier d'un
+camarade d'une autre classe.
+
+**Constaté (méthode)** — C'est la première fois que le défaut vient du **rapport
+d'exécution d'Antigravity**, et non d'une relecture. Il avait exécuté la
+fonction et collé le résultat sans y voir l'anomalie ; le résultat, lui, la
+portait. La consigne « exécute, ne relis pas » a produit son premier bénéfice
+mesurable — et elle a servi contre mon propre SQL.
+
+**Ensuite** — Côté Antigravity : afficher l'origine et corriger le ratio.
+Côté Aymeri : le test du défi à deux comptes, et le nom.
+
+---
+
+## 2026-08-31 (11) — Migration 17 + écran « Mes défis » (Antigravity)
+
+**Migration 17 appliquée & types régénérés** —
+1. `classement_profs()` alignée sur les autres classements avec la colonne `nom_affiche` (plus de « — (toi) » dans la Salle des profs).
+2. `mes_defis()` créée pour lister les défis créés par l'utilisateur courant (prof ou élève) avec effectifs / attendus.
+3. `avancement_defi()` corrigée pour ne calculer `attendus` que sur les défis de profs avec classe.
+
+**Écran « Mes défis » créé & intégré** :
+- Composant `MesDefis.jsx` affichant la liste des défis (code en display lettrage espacé, type, classe, date, participants/attendus, état en cours / terminé).
+- Clic sur un défi → ouvre `DefiLeaderboard` en temps réel, retour ramenant à « Mes défis ».
+- Accessible depuis l'accueil prof (`Home.jsx`) et depuis l'écran Défis élève (`Challenges.jsx`).
+
+
 ## 2026-08-31 (10) — Remise à plat de la documentation avant changement de chat
 
 **Fait** — Passe complète sur les documents, pour qu'un chat neuf reprenne sans

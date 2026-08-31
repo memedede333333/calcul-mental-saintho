@@ -138,7 +138,9 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         setDefiInfo(d);
         setChallengeType(type);
         setSelectedTables(d.tables || [2,3,4,5]);
-        setPhase('defi-play');
+        // On passe par un écran d'annonce — l'élève doit savoir
+        // de qui est le défi avant de jouer.
+        setPhase('defi-intro');
         return res;
     }, []);
 
@@ -198,6 +200,17 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 maitrise={maitriseProp}
                 onQuit={() => setPhase('select')}
                 onDone={handleDone}
+            />
+        );
+    }
+
+    if (phase === 'defi-intro') {
+        return (
+            <DefiIntro
+                defiInfo={defiInfo}
+                challengeType={challengeType}
+                onStart={() => setPhase('defi-play')}
+                onBack={() => setPhase('select')}
             />
         );
     }
@@ -1418,6 +1431,75 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
     );
 }
 
+/* ===================== DEFI INTRO ===================== */
+/* Écran d'annonce : qui a créé ce défi ? Un élève n'aborde pas un
+   travail prescrit comme un jeu entre copains — c'est le seul moment
+   où on peut le lui dire. */
+
+function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
+    const origine = defiInfo?.origine || null;
+    const auteurNom = defiInfo?.auteur_nom || null;
+    const classeDefi = defiInfo?.classe || null;
+    const typeLabel = challengeType?.name || defiInfo?.type || '';
+    const typeEmoji = challengeType?.emoji || '⚔️';
+
+    return (
+        <div className="screen-enter" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '70vh', textAlign: 'center',
+            padding: '0 24px',
+        }}>
+            <div style={{
+                background: origine === 'prof'
+                    ? 'linear-gradient(135deg, var(--sky), var(--sky-dk))'
+                    : 'linear-gradient(135deg, var(--gold), var(--gold-dk, #8a6d10))',
+                borderRadius: 24, padding: '40px 32px',
+                width: '100%', maxWidth: 420,
+            }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>
+                    {origine === 'prof' ? '📚' : '🎮'}
+                </div>
+                <div style={{
+                    fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.8)',
+                    textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8,
+                }}>
+                    {origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
+                </div>
+                {auteurNom && (
+                    <h2 className="font-display" style={{
+                        fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8,
+                    }}>
+                        Défi de {auteurNom}
+                    </h2>
+                )}
+                {classeDefi && origine === 'prof' && (
+                    <p style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
+                        {classeDefi}
+                    </p>
+                )}
+                <p style={{
+                    fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)',
+                    marginTop: 12,
+                }}>
+                    {typeEmoji} {typeLabel}
+                </p>
+            </div>
+
+            <button
+                className="btn btn--gold"
+                style={{ width: '100%', maxWidth: 420, fontSize: 20, padding: 16, marginTop: 24 }}
+                onClick={onStart}
+            >
+                C'est parti !
+            </button>
+
+            <button className="btn-back" style={{ marginTop: 12 }} onClick={onBack}>
+                ‹ Retour
+            </button>
+        </div>
+    );
+}
+
 /* ===================== DEFI LEADERBOARD ===================== */
 
 export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRetry, onHome, onBack }) {
@@ -1444,7 +1526,11 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
     }, [defiId, charger]);
 
     const termines = avancement?.termines || classement.length;
-    const attendus = avancement?.attendus || null;
+    const terminesClasse = avancement?.termines_classe ?? null;
+    const attendus = avancement?.attendus ?? null;
+    const origine = avancement?.origine || null;
+    const auteurNom = avancement?.auteur_nom || null;
+    const classeDefi = avancement?.classe || null;
 
     return (
         <div className="screen-enter">
@@ -1455,12 +1541,40 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
                 <h2 className="font-display" style={{ fontSize: 24, fontWeight: 800 }}>
                     Classement du défi
                 </h2>
+
+                {/* Origine + auteur */}
+                {origine && (
+                    <div style={{ marginBottom: 8 }}>
+                        <span style={{
+                            fontSize: 12, fontWeight: 800,
+                            padding: '3px 10px', borderRadius: 6,
+                            background: origine === 'prof'
+                                ? 'rgba(77,168,218,0.12)' : 'rgba(201,162,39,0.12)',
+                            color: origine === 'prof'
+                                ? 'var(--sky-dk)' : 'var(--gold-dk, #8a6d10)',
+                        }}>
+                            {origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
+                        </span>
+                        {auteurNom && (
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)', marginTop: 4 }}>
+                                Défi de {auteurNom}{classeDefi ? ` — ${classeDefi}` : ''}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Avancement */}
                 <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
-                    {attendus
-                        ? `${termines} / ${attendus} ont terminé`
+                    {attendus != null
+                        ? `${terminesClasse ?? 0} / ${attendus} de la ${classeDefi} ont terminé`
                         : `${termines} participant${termines !== 1 ? 's' : ''}`
                     }
                 </p>
+                {attendus != null && termines > (terminesClasse ?? 0) && (
+                    <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 12 }}>
+                        + {termines - (terminesClasse ?? 0)} d'autres classes
+                    </p>
+                )}
             </div>
 
             {/* Résultat personnel si vient de jouer */}

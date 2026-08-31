@@ -433,4 +433,62 @@ select case when avancement_defi((select id from defis where code = :'code_alice
             then 'OK : pas de denominateur entre copains, effectif de classe pour le prof'
             else 'ECHEC : mauvais denominateur' end as verdict;
 
+-- =====================================================================
+-- MIGRATION 18 — origine du defi et denominateur qui compte juste
+-- =====================================================================
+set role authenticated;
+
+\echo '=== 73. Defi de prof vise la 6A, joue par la 6A ET par la 6B ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint','{6,7,8}'::smallint[],20,null,'6A')->>'code' as c \gset
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select (rejoindre_defi(:'c')->>'defi_id') as did \gset
+select terminer_defi(:'did'::uuid, 18, 62.0, 2, '{}'::jsonb, '{}'::jsonb, 16)->>'ok' as alice_6a;
+-- David est en 6B. Faire jouer une classe contre une autre est voulu.
+select set_config('request.jwt.claim.sub', '55555555-5555-5555-5555-555555555555', false);
+select terminer_defi(:'did'::uuid, 15, 70.0, 5, '{}'::jsonb, '{}'::jsonb, 12)->>'ok' as david_6b;
+
+\echo '=== 74. Le ratio de classe ne peut pas depasser 100 % ==='
+-- C'est le defaut de la migration 17 : « 2 / 1 ont termine » sur la base
+-- reelle, parce que le numerateur comptait toutes les classes et le
+-- denominateur une seule.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select code, origine, auteur_nom, participants, participants_classe, attendus
+  from mes_defis() where code = :'c';
+select case when (select participants_classe from mes_defis() where code = :'c')
+             <= (select attendus from mes_defis() where code = :'c')
+            then 'OK : numerateur et denominateur comptent la meme population'
+            else 'ECHEC : numerateur > denominateur' end as verdict;
+
+\echo '=== 75. avancement_defi porte aussi l origine et les deux compteurs ==='
+select jsonb_pretty(avancement_defi(:'did'::uuid));
+select case when (avancement_defi(:'did'::uuid)->>'termines_classe')::int
+             <= (avancement_defi(:'did'::uuid)->>'attendus')::int
+            then 'OK : meme regle dans l en-tete du classement'
+            else 'ECHEC : en-tete incoherent' end as verdict;
+
+\echo '=== 76. Defi d eleve : origine eleve, nom anonymise, pas de denominateur ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select creer_defi('sprint','{2,3}'::smallint[],20)->>'code' as ca \gset
+select code, origine, auteur_nom, participants, participants_classe, attendus
+  from mes_defis() where code = :'ca';
+select case when (select auteur_nom from mes_defis() where code = :'ca') = 'Alice D.'
+             and (select attendus from mes_defis() where code = :'ca') is null
+            then 'OK : nom anonymise, aucun denominateur de classe'
+            else 'ECHEC : nom complet expose ou faux denominateur' end as verdict;
+
+\echo '=== 77. rejoindre_defi annonce de qui est le defi, avant de jouer ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when rejoindre_defi(:'ca')->>'auteur_nom' = 'Alice D.'
+             and rejoindre_defi(:'ca')->>'origine' = 'eleve'
+            then 'OK : defi d eleve annonce comme tel'
+            else 'ECHEC : origine du defi d eleve' end as verdict;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint','{9}'::smallint[],20,null,'6A')->>'code' as cp \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when rejoindre_defi(:'cp')->>'auteur_nom' = 'M. Démonstration'
+             and rejoindre_defi(:'cp')->>'origine' = 'prof'
+            then 'OK : nom complet du prof annonce a l eleve'
+            else 'ECHEC : origine du defi de prof' end as verdict;
+
 reset role;
