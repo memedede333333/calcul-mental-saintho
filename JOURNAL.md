@@ -56,6 +56,51 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-08-31 (9) — Migration 17 : le défi de prof avait une porte sans poignée
+
+**Constaté (en utilisant l'application, pas en la lisant)** — Trois défauts
+que la relecture de code n'avait pas vus :
+
+1. **Un défi de prof est un objet sans retour.** Le professeur crée le défi,
+   note le code, quitte l'écran… et n'a plus aucun moyen d'y revenir. Le seul
+   point d'entrée vers le classement d'un défi est le champ « Rejoindre un
+   défi », et `rejoindre_defi()` lève une exception si l'appelant n'est pas un
+   élève. Le prof lance le défi le lundi et ne voit jamais le résultat —
+   c'est-à-dire exactement le moment où l'outil devait servir.
+2. **« — (toi) 51 pts » dans la salle des profs.** `classement_profs()`
+   renvoyait une colonne `nom` là où les trois autres classements renvoient
+   `nom_affiche`. Le composant lit `nom_affiche` et retombe sur son tiret par
+   défaut. Même famille d'erreur que l'onglet Classes (`classe` vs
+   `nom_affiche`) — c'est la deuxième fois.
+3. **« 1 / 27 ont terminé » pour un défi entre copains.** Le dénominateur était
+   l'effectif de la classe du créateur. Trois amis sur vingt-sept ne sont pas
+   « 3 / 27 ».
+
+**Fait** — Migration 17 (`20260831090000_mes_defis.sql`) :
+`mes_defis()` (les défis que j'ai créés, prof ou élève, expirés compris, avec
+participants et effectif attendu) ; `classement_profs()` recréée avec
+`nom_affiche`, `classe` et `avatar` — quatre classements, quatre fois les
+mêmes colonnes ; `avancement_defi()` ne renvoie un dénominateur que pour un
+défi **de prof** adressé à une classe. Neuf cas de test ajoutés (64 → 72),
+scénario complet vert.
+
+**Décidé** — Le contrat des classements est uniforme. Une fonction de
+classement renvoie `rang, nom_affiche, classe, avatar, valeur, est_moi`, même
+quand deux colonnes sont toujours nulles. Le coût d'une colonne vide est nul ;
+le coût d'une exception côté React est un bug par écran.
+
+**Discuté — défi d'élève vs défi de prof** : ils ne pèsent pas pareil et la
+base le sait déjà (`cree_par_prof` XOR `cree_par_eleve`). Garde-fous en place
+côté élève : plafond de tables du créateur, 5 défis ouverts au maximum, 24 h
+de durée de vie contre 7 jours pour un prof. Reste à trancher : afficher
+l'origine du défi dans la liste et dans le classement.
+
+**Ensuite** — Côté Antigravity : écran « Mes défis » branché sur `mes_defis()`,
+et la normalisation de l'onglet Salle des profs. Côté Aymeri : le test du défi
+à deux comptes, et le nom de l'application.
+
+---
+
 ## 2026-08-31 (8) — Migration 16 + profil enseignant (Antigravity)
 
 **Migration 16 appliquée** — `mon_profil()` refuse explicitement les

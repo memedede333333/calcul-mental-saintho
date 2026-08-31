@@ -287,7 +287,7 @@ select set_config('request.jwt.claim.sub', :'PROF2', false);
 select (enregistrer_session_prof('countdown','{13,17}'::smallint[],30,28,120.0,12,12)->>'points')::int as pts_prof2;
 
 \echo '=== 54. Classement de la salle des profs (nom complet) ==='
-select rang, nom, valeur, parties, est_moi from classement_profs('points');
+select rang, nom_affiche, valeur, parties, est_moi from classement_profs('points');
 
 \echo '=== 55. Un ELEVE ne voit RIEN du classement des profs ==='
 select set_config('request.jwt.claim.sub', :'ALICE', false);
@@ -370,5 +370,67 @@ do $$ begin
           '[]'::jsonb,10,0,0,null,'{}'::jsonb,null,9);
   raise notice 'ECHEC : premier_essai > score accepte';
 exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+-- =====================================================================
+-- MIGRATION 17 — « Mes défis » et la salle des profs
+-- =====================================================================
+set role authenticated;
+
+\echo '=== 64. Le prof cree un defi pour la 6A ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{6,7,8}'::smallint[], 20, null, '6A')->>'code' as code_prof \gset
+
+\echo '=== 65. mes_defis() : le defi du prof est la, 0 participant sur 4 ==='
+select code, type, classe, encore_ouvert, participants, attendus
+  from mes_defis() where code = :'code_prof';
+
+\echo '=== 66. Alice rejoint et termine ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select (rejoindre_defi(:'code_prof')->>'defi_id') as did \gset
+select terminer_defi(:'did'::uuid, 18, 62.0, 2, '{}'::jsonb, '{}'::jsonb, 16)->>'ok' as termine;
+
+\echo '=== 67. Le prof revient sur son defi : 1/4, et le classement se lit ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select participants from mes_defis() where code = :'code_prof') = 1
+            then 'OK : le prof retrouve son defi et son compteur'
+            else 'ECHEC : le prof ne voit pas la participation' end as verdict;
+select rang, nom_affiche, classe, score, temps_s from classement_defi(:'did'::uuid);
+
+\echo '=== 68. Un defi cree par un eleve n apparait pas chez le prof ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select creer_defi('sprint', '{2,3}'::smallint[], 20)->>'code' as code_alice \gset
+select case when exists (select 1 from mes_defis() where code = :'code_alice')
+            then 'OK : Alice voit son propre defi'
+            else 'ECHEC : Alice ne voit pas son defi' end as verdict;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when not exists (select 1 from mes_defis() where code = :'code_alice')
+            then 'OK : le defi d Alice reste chez Alice'
+            else 'ECHEC : fuite entre createurs' end as verdict;
+
+\echo '=== 69. Un eleve sans defi cree ne voit rien ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when (select count(*) from mes_defis()) = 0
+            then 'OK : liste vide'
+            else 'ECHEC : Bob voit les defis des autres' end as verdict;
+
+\echo '=== 70. Salle des profs : la colonne s appelle bien nom_affiche ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select rang, nom_affiche, valeur, parties, est_moi from classement_profs('points','tout',10);
+select case when (select nom_affiche from classement_profs('points','tout',10)
+                   where est_moi limit 1) is not null
+            then 'OK : le prof a un nom dans son classement'
+            else 'ECHEC : nom_affiche vide — le tiret revient' end as verdict;
+
+\echo '=== 71. Un eleve ne voit rien de la salle des profs ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (select count(*) from classement_profs('points','tout',10)) = 0
+            then 'OK : verrou en place'
+            else 'ECHEC : un eleve lit la salle des profs' end as verdict;
+
+\echo '=== 72. Denominateur : seulement pour un defi de prof ==='
+select case when avancement_defi((select id from defis where code = :'code_alice'))->>'attendus' is null
+             and (avancement_defi((select id from defis where code = :'code_prof'))->>'attendus')::int > 0
+            then 'OK : pas de denominateur entre copains, effectif de classe pour le prof'
+            else 'ECHEC : mauvais denominateur' end as verdict;
 
 reset role;
