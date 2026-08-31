@@ -521,4 +521,42 @@ select case when (select count(*) from maitrise_classe('6A')) = 0
             then 'OK : verrou prof_voit_classe en place'
             else 'ECHEC : un eleve lit la maitrise de la classe' end as verdict;
 
+-- =====================================================================
+-- MIGRATION 20 — les tables qui existent pour cette classe
+-- =====================================================================
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+
+\echo '=== 81. Une ligne par table, travaillee ou non — l ecran n en invente plus ==='
+select table_n, travaillee, dans_le_plafond_commun, eleves_verts,
+       eleves_sans_trace, eleves_total, eleves_classe, taux_couverture
+  from maitrise_classe('6A') order by table_n;
+select case when (select bool_and(eleves_sans_trace = eleves_classe - eleves_total)
+                    from maitrise_classe('6A'))
+            then 'OK : le segment gris vient du serveur, pas d une soustraction React'
+            else 'ECHEC : eleves_sans_trace incoherent' end as verdict;
+
+\echo '=== 82. Plafonds melanges : afficher jusqu au max, ne proposer que le commun ==='
+-- Le bouton « Lancer un defi sur les tables les plus faibles » proposait
+-- les tables JAMAIS ouvertes en premier, fabriquees cote React comme
+-- « 2 a 20 moins ce que renvoie la fonction ». Dans une 6e plafonnee a
+-- 10, il proposait donc 11, 12, 13 — et un defi de prof n'a aucun
+-- plafond de tables. La classe aurait recu un defi hors de sa portee.
+reset role;
+update public.eleves set plafond_tables = 12 where email = 'clara.bernard@demo.saintho.fr';
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select table_n, travaillee, dans_le_plafond_commun
+  from maitrise_classe('6A') where table_n >= 10 order by table_n;
+select case when (select bool_and(dans_le_plafond_commun)
+                    from maitrise_classe('6A') where table_n <= 10)
+             and not (select bool_or(dans_le_plafond_commun)
+                    from maitrise_classe('6A') where table_n > 10)
+             and (select max(table_n) from maitrise_classe('6A')) = 12
+            then 'OK : affichage jusqu a 12, defi borne a 10'
+            else 'ECHEC : borne du defi incorrecte' end as verdict;
+select case when (select count(*) from maitrise_classe('6A') where table_n > 12) = 0
+            then 'OK : aucune table fantome au-dela du plafond de la classe'
+            else 'ECHEC : tables inventees' end as verdict;
+
 reset role;

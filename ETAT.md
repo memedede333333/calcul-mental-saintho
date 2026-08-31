@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **1er septembre 2026** — 19 migrations, 80 cas de test verts.
+> Dernière mise à jour : **1er septembre 2026** — 20 migrations, 82 cas de test verts.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -32,7 +32,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **19 migrations**, 80 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **20 migrations**, 82 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -305,6 +305,24 @@ chaque compteur est tiré, et une fonction qui renvoie un dénominateur renvoie
 aussi le numérateur qui lui correspond — jamais deux compteurs que l'écran
 devra apparier lui-même.
 
+**Et l'écran ne fabrique aucune population.** *(1er septembre 2026, quatrième
+occurrence.)* L'écran « Ma classe » calculait lui-même la liste des tables
+« jamais travaillées » comme « 2 à 20 moins ce que renvoie la fonction » — donc
+les tables 11 à 20 dans une 6ᵉ plafonnée à 10 — et le bouton « lancer un défi
+sur les tables les plus faibles » les proposait en premier. Un professeur
+croyait faire du rattrapage et lançait une découverte sur des tables hors de
+portée. Une liste que l'écran devine est une population inventée : elle vient
+du serveur, ou elle n'existe pas.
+
+**Une migration se numérote à l'heure où on l'écrit, jamais plus tard.**
+*(1er septembre 2026.)* La migration 19 porte l'horodatage `20260901080000`
+alors qu'elle a été appliquée à 00:00 : elle est datée dans le futur. Toute
+migration créée avant 8 h ce matin-là aurait porté un numéro inférieur — elle
+serait passée **après** la 19 sur la base de développement, et **avant** elle
+sur une base de production reconstruite depuis zéro. Deux bases qui divergent
+sans un seul message d'erreur. On ne renomme pas la 19, déjà appliquée : on
+retient que **la suivante doit dépasser `20260901080000`**.
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -314,7 +332,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-80 cas, dont une dizaine de tentatives de contournement qui doivent toutes
+82 cas, dont une dizaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**

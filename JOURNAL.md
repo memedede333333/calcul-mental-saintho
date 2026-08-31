@@ -56,6 +56,74 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (2) — Migration 20 : le bouton qui lançait un défi sur ce que la classe n'avait jamais vu
+
+**Constaté** — Un chat neuf, **sans accès au dépôt**, n'ayant que la copie de
+`ETAT.md` dans les connaissances du projet, a relu le rapport d'Antigravity et
+relevé une contradiction interne :
+
+> « Tri : table la plus faible en premier (ratio verts/effectif croissant) »
+> « Bouton pré-rempli avec les 2-3 tables les plus faibles »
+> « Tables jamais travaillées : gris plein »
+>
+> Une table jamais travaillée a un ratio de 0. Elle arrive donc en tête du tri,
+> et le bouton propose en priorité les tables que la classe n'a jamais ouvertes.
+
+Vérification dans `MaClasse.jsx` : c'est exact, et **écrit explicitement**.
+
+```js
+const candidates = [
+    ...tablesAbsentes.slice(0, 3),      // les tables JAMAIS ouvertes
+    ...tablesSorted.map(d => d.table_n),
+];
+```
+
+Et c'est pire que ce que ce chat pouvait supposer sans le code :
+`tablesAbsentes` est calculé côté React comme « 2 à 20 moins ce que renvoie la
+fonction ». Dans une 6ᵉ plafonnée à 10, les tables 11 à 20 sont donc toutes
+« jamais ouvertes ». Le bouton proposait 11, 12, 13 — et `creer_defi()`
+n'impose **aucun plafond de tables à un professeur**. La classe aurait reçu un
+défi hors de sa portée, lancé par un enseignant persuadé de faire du
+rattrapage.
+
+**La cause est la même que les trois bugs de ratio** : l'écran fabrique une
+population que le serveur ne lui a pas donnée. Quatrième fois. La règle du §3
+disait « nomme tes deux populations » ; elle ne disait pas « ne fabrique pas de
+population du tout ». Elle le dit maintenant.
+
+**Fait** — Migration 20 (`20260901090000_tables_de_la_classe.sql`) :
+`maitrise_classe()` renvoie **une ligne par table existant pour la classe**,
+travaillée ou non, jusqu'au plus haut plafond de ses élèves. Plus rien à
+inventer côté React. Nouvelles colonnes : `travaillee`,
+`dans_le_plafond_commun` (table jouable par **tous** les élèves actifs — la
+seule borne sûre pour un défi de classe) et `eleves_sans_trace` (calculé côté
+serveur, plus de soustraction dans l'écran). Deux cas de test (81, 82), dont un
+avec des plafonds mélangés. Suite portée à **82 cas, tous verts**.
+
+**Constaté (méthode)** — Ce défaut a été trouvé par un chat qui n'avait **ni le
+code, ni les migrations, ni les tests** : uniquement le rapport et la copie de
+`ETAT.md`. Il l'a trouvé parce que `ETAT.md` §3 raconte les trois bugs de ratio
+précédents et le sens dans lequel ils se trompent. La documentation n'a pas
+servi à retrouver un contexte perdu : elle a servi à **repérer un défaut
+inédit**. C'est le meilleur argument qu'on ait eu pour la tenir à jour.
+
+Ses deux autres reproches sont tombés à côté, faute d'avoir les fichiers : le
+`comment on function` de la migration 19 existe bel et bien, et les segments
+jaune et corail viennent de `eleves_jaunes` / `eleves_rouges`, renvoyés par la
+fonction. Un lecteur aveugle se trompe aussi — d'où l'intérêt de vérifier dans
+le code plutôt que dans le rapport, y compris quand le rapport vient d'un
+relecteur.
+
+**Décidé** — Une migration se numérote à l'heure où on l'écrit. La 19 porte
+`20260901080000` et a été appliquée à 00:00 : datée dans le futur. On ne la
+renomme pas — elle est déjà appliquée — mais la suivante doit dépasser cet
+horodatage, sous peine de voir dev et production s'ordonner différemment.
+
+**Ensuite** — Antigravity : brancher l'écran sur les nouvelles colonnes et
+corriger le bouton. Aymeri : le test du défi à deux comptes, et le nom.
+
+---
+
 ## 2026-09-01 — Migration 19 : « 18 élèves sur 27 », et sur 27 pour de vrai
 
 **Constaté** — Avant d'ouvrir le chantier « Ma classe », relecture de

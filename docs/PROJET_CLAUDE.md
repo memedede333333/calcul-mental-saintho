@@ -80,7 +80,7 @@ Tout ceci date d'avant la bascule vers Supabase et contredit l'état réel.
 | `code.gs` | Le backend Apps Script. ⚠️ **Le seul des onze dont le dépôt n'a pas de copie.** Ses bugs sont documentés dans `archive/ARCHIVE_gas_audit.md`, mais pas son code. Si tu veux le garder, télécharge-le depuis claude.ai avant de le supprimer ; sinon, il part avec l'architecture qu'il servait. |
 | `gas.js` | Le client de l'API Apps Script. Copie dans le dépôt : `archive/api_gas_ancien.js`. |
 | `App.jsx`, `Login.jsx`, `Profile.jsx`, `Leaderboards.jsx`, `Challenges.jsx`, `api.js` | Versions du 25 août, d'avant la réécriture complète. Les fichiers réels sont dans le dépôt et ont changé plusieurs fois par jour depuis. |
-| `claude/DEMARRAGE.md` | Guide d'installation du 26 août, exécuté depuis. Parle de « 4 migrations » et « 25 cas de test » ; il y en a 17 et 72. Copie dans le dépôt : `archive/ARCHIVE_demarrage_initial.md`. |
+| `claude/DEMARRAGE.md` | Guide d'installation du 26 août, exécuté depuis. Parle de « 4 migrations » et « 25 cas de test » ; le dépôt fait foi et le compte a beaucoup monté depuis. Copie dans le dépôt : `archive/ARCHIVE_demarrage_initial.md`. |
 | `claude/ANTIGRAVITY_BRIEF.md` | Copie figée du 26 août. La version vivante est à la racine du dépôt. |
 
 ### À garder
