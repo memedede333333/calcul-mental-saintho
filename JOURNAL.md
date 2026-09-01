@@ -56,6 +56,37 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (6) — Le code est terminé
+
+**Fait** — Les deux correctifs du lot 4 vérifiés dans le code à `be10b25`,
+dépôt propre :
+
+- `Challenges.jsx` : `useEffect(() => setConfirmInfo(null), [tables, selectedClasse])`.
+  Vérifié que `tables` est bien l'état `selectedTables` passé tel quel — donc
+  une référence stable entre deux rendus, et l'effet ne se déclenche qu'à un
+  vrai changement. Si le tableau avait été reconstruit à chaque rendu,
+  l'avertissement n'aurait jamais pu s'afficher : c'est le genre de défaut qui
+  passe tous les raisonnements et échoue à l'écran.
+- `MaClasse.jsx` : le commentaire du départage dit maintenant ce que le code
+  fait. Le code n'a pas bougé.
+
+`01_scenario.sql` toujours identique (empreinte SHA-256) : rien n'a été retiré
+de la suite. Le « 87 cas » du rapport reste un artefact de comptage — 90.
+
+**Constaté** — Rien de nouveau. Première relecture de ce projet qui ne trouve
+aucun défaut, après quatre lots consécutifs qui en trouvaient au moins un.
+
+**Décidé** — **Le code est terminé.** Plus rien n'est en attente côté
+Antigravity, hors la passe visuelle qui dépend du nom. `ETAT.md` §2 et §5 mis à
+jour en conséquence. ✅ *constaté le 01/09*
+
+**Ensuite** — Aymeri, et lui seul : le test du défi à deux comptes (le dernier
+test fonctionnel du projet, deux personnes en même temps, personne ne peut le
+faire à sa place) · le nom, qui débloque la passe visuelle · puis la base de
+production, l'import des 350 élèves, la ligne Jamf et le RGPD.
+
+---
+
 ## 2026-09-01 (5) — Lot 3 relu : la confirmation pouvait porter sur d'autres tables que celles créées
 
 **Fait** — Relecture du lot d'Antigravity dans le code, à `daf12e7`, dépôt

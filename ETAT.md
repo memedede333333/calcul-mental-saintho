@@ -5,7 +5,8 @@
 > celui-ci renvoie.
 >
 > Dernière mise à jour : **1er septembre 2026** — 21 migrations, 90 cas de test
-> verts. Migration 21 écrite et testée ; un lot complet part chez Antigravity.
+> verts, **le code est terminé** (`be10b25`). Plus rien en attente côté
+> Antigravity : la suite est du ressort d'Aymeri.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -487,32 +488,31 @@ existantes**, jamais de couleurs en dur.
 ### Pour l'agent
 
 **Les quatre lots de construction sont terminés** (`ANTIGRAVITY_BRIEF.md` §6 :
-fondations, modes solo, défis, finitions). Ce qui reste n'est plus du montage
-mais de la correction et deux écrans manquants, par ordre de valeur :
+fondations, modes solo, défis, finitions). **Et depuis le 1er septembre, les corrections
+aussi.** Il ne reste, pour l'agent, que la passe visuelle — qui attend le nom.
 
 1. ✅ **« Mes défis »** et **la salle des profs** — livrés le 31 août.
 2. ✅ **Origine du défi à l'écran** et ratio de classe corrigé — livrés le
    31 août (commit `0d3b557`). Un écran `DefiIntro` annonce désormais
    « 📚 Défi de M. Desjardins — 6A » ou « 🎮 Défi de Lou A. » avant la
    première question.
-3. ✅ **« Ma classe »** — livré le 1er septembre (`cc1e08a`), sur la
-   migration 20 : le serveur renvoie une ligne par table existant pour la
-   classe, l'écran n'en fabrique plus aucune.
-   **Deux correctifs restent à appliquer**, relevés à la relecture du code :
-   le tri se fait sur `taux_maitrise` (dénominateur = les seuls élèves ayant
-   travaillé la table) au lieu de `eleves_verts / eleves_classe` ; et le
-   bloc 2 passe `d.eleves_classe` là où le serveur donne
-   `d.eleves_sans_trace`. Voir `JOURNAL.md`, entrée du 1er septembre (3).
-4. ✅ **Migration 21 — le défi fait autorisation.** Écrite et testée
-   (`20260901100000_defi_fait_autorisation.sql`, 90 cas verts).
-   ⬜ **Reste à l'appliquer dans Supabase** et à régénérer `database.ts`.
-   Elle s'accompagne côté écran de `apercu_defi_classe()` — la question
-   « 12 élèves sur 27 n'ont pas encore débloqué la table 15, lancer quand
-   même ? » posée **avant** la création.
-5. **Le second bouton « Découvrir les tables non abordées »** sur « Ma
-   classe », borné par le serveur. À faire **après** la 21, pour qu'il n'ait
-   pas à porter la règle lui-même.
-6. Passe visuelle, **après** le choix du nom.
+3. ✅ **« Ma classe »** — livré le 1er septembre (`cc1e08a`), corrigé à
+   `daf12e7` et `be10b25` : le serveur renvoie une ligne par table, l'écran
+   n'en fabrique plus aucune, et le tri se fait sur `eleves_verts /
+   eleves_classe` — la part de la **classe** qui maîtrise, pas celle des
+   seuls élèves ayant déjà ouvert la table.
+4. ✅ **Migration 21 — le défi fait autorisation.** Appliquée, `database.ts`
+   régénéré. `apercu_defi_classe()` pose la question « 12 élèves sur 27
+   n'ont pas encore débloqué la table 15, lancer quand même ? » **avant** la
+   création, et toute modification des tables ou de la classe annule le
+   consentement précédent.
+5. ✅ **Bouton « Découvrir les tables non abordées »** — livré, non borné
+   côté écran : c'est la migration 21 et la confirmation qui tranchent.
+6. ✅ **Polices servies localement** — `frontend/public/fonts/`. Plus aucune
+   requête hors Supabase. La règle du §3 existait depuis le début et n'avait
+   jamais été appliquée.
+7. Passe visuelle, **après** le choix du nom. **Seul point encore ouvert
+   pour l'agent**, et il attend une décision d'Aymeri.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
