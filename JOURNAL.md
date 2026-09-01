@@ -109,8 +109,8 @@ Le trou **existait avant** la migration 21 — il ne vient pas d'elle. Mais elle
 en augmentait la valeur : les tables d'un défi de professeur peuvent désormais
 peser plus lourd que le plafond de l'élève. Le fermer ailleurs, plus tard,
 aurait voulu dire livrer sciemment une migration qui rend un défaut connu plus
-rentable. Cas 90 ajouté. ⏳ *à valider par Aymeri : c'est le seul changement de
-comportement de cette migration qu'il n'avait pas demandé.*
+rentable. Cas 90 ajouté. ✅ *validé par Aymeri le 01/09 — garder le garde-fou
+dans la migration 21 plutôt que d'en faire une 22.*
 
 **Constaté (méthode)** — La numérotation : `20260901100000`, soit la première
 heure disponible au-dessus de la 20, et non l'heure réelle d'écriture (il était

@@ -448,6 +448,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apercu_defi_classe: {
+        Args: { p_classe: string; p_tables: number[] }
+        Returns: Json
+      }
       auteur_defi: {
         Args: { p_defi_id: string }
         Returns: {

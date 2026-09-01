@@ -71,11 +71,21 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     // Effectif de la classe (constant sur toutes les lignes)
     const effectif = data.length > 0 ? (data[0].eleves_classe || 0) : 0;
 
-    // Bloc 1 : tables travaillées, triées par taux_maitrise croissant
+    // Bloc 1 : tables travaillées, triées par eleves_verts/eleves_classe
+    // croissant, départagé par taux_couverture décroissant.
+    // taux_maitrise (verts/total) est trompeur : une table vue par 1 élève
+    // sur 27 peut afficher 100 % si cet élève l'a réussie.
     const tablesTravaillees = useMemo(() => {
         return data
             .filter(d => d.travaillee)
-            .sort((a, b) => (a.taux_maitrise ?? 0) - (b.taux_maitrise ?? 0));
+            .sort((a, b) => {
+                const ec = a.eleves_classe || 1; // même valeur partout
+                const ratioA = a.eleves_verts / ec;
+                const ratioB = b.eleves_verts / ec;
+                if (ratioA !== ratioB) return ratioA - ratioB;
+                // À ratio égal, la moins couverte en premier
+                return (b.taux_couverture ?? 0) - (a.taux_couverture ?? 0);
+            });
     }, [data]);
 
     // Bloc 2 : tables pas encore abordées
@@ -84,15 +94,22 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     }, [data]);
 
     // Candidates pour le bouton défi : travaillee=true ET dans_le_plafond_commun=true
-    // triées par taux_maitrise croissant, les 2-3 premières
+    // même tri que tablesTravaillees (déjà trié), les 2-3 premières
     const tablesDefi = useMemo(() => {
-        const candidates = tablesTravaillees
+        return tablesTravaillees
             .filter(d => d.dans_le_plafond_commun)
             .slice(0, 3)
             .map(d => d.table_n)
             .sort((a, b) => a - b);
-        return candidates;
     }, [tablesTravaillees]);
+
+    // Tables non abordées pour le bouton découverte (pas de filtre par plafond)
+    const tablesDecouverte = useMemo(() => {
+        return tablesNonAbordees
+            .slice(0, 3)
+            .map(d => d.table_n)
+            .sort((a, b) => a - b);
+    }, [tablesNonAbordees]);
 
     if (!classes.length && !loading) {
         return (
@@ -215,7 +232,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                                     key={d.table_n}
                                     tableN={d.table_n}
                                     verts={0} jaunes={0} rouges={0}
-                                    sansTrace={d.eleves_classe}
+                                    sansTrace={d.eleves_sans_trace}
                                     effectif={d.eleves_classe}
                                     jamaisTravaillee
                                     dansPlafond={d.dans_le_plafond_commun}
@@ -248,6 +265,20 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             Pas encore assez de données pour un défi ciblé
                         </button>
                     )}
+
+                    {/* Bouton découverte — tables non abordées */}
+                    {tablesDecouverte.length > 0 && (
+                        <button
+                            className="btn btn--ghost"
+                            style={{
+                                width: '100%', fontSize: 14, padding: '14px 24px',
+                                marginTop: 8,
+                            }}
+                            onClick={() => onLancerDefi?.(tablesDecouverte, selectedClasse)}
+                        >
+                            🔍 Découvrir les tables {tablesDecouverte.join(', ')}
+                        </button>
+                    )}
                 </>
             )}
         </div>
@@ -275,7 +306,7 @@ function TableBar({ tableN, verts, jaunes, rouges, sansTrace, effectif, tauxMait
     const pVerts = effectif > 0 ? (verts / effectif) * 100 : 0;
     const pJaunes = effectif > 0 ? (jaunes / effectif) * 100 : 0;
     const pRouges = effectif > 0 ? (rouges / effectif) * 100 : 0;
-    const pGris = effectif > 0 ? (sansTrace / effectif) * 100 : 100;
+    // Le gris = le reste de la barre via background
 
     return (
         <div style={{

@@ -533,6 +533,11 @@ export async function listeClasses() {
     return rpc('liste_classes');
 }
 
+/** Avant de créer un défi : combien d'élèves n'ont pas la plus haute table choisie. */
+export async function apercuDefiClasse(classe, tables) {
+    return rpc('apercu_defi_classe', { p_classe: classe, p_tables: tables });
+}
+
 /** Mes classes habituelles — un raccourci d'affichage, aucun effet sur les droits. */
 export async function definirMesClasses(classes) {
     return rpc('definir_mes_classes', { p_classes: classes });
@@ -674,7 +679,7 @@ export const api = {
     // classements
     classementProgression, classementRecords, classementClasses, classementProfs,
     // enseignant
-    maitriseClasse, listeClasses, definirMesClasses,
+    maitriseClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
     importerEleves, ajouterEleve, modifierEleve,
     desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,

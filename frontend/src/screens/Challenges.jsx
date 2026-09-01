@@ -5,7 +5,7 @@ import {
     enregistrerSession, enregistrerSessionProf,
     creerDefi, rejoindreDefi, terminerDefi,
     classementDefi, avancementDefi, suivreDefi,
-    listeClasses,
+    listeClasses, apercuDefiClasse,
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -422,6 +422,8 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
     const [createError, setCreateError] = useState(null);
     const [classes, setClasses] = useState([]);
     const [selectedClasse, setSelectedClasse] = useState(initialClasse || null);
+    // Confirmation avant création quand des élèves sont hors plafond
+    const [confirmInfo, setConfirmInfo] = useState(null);
 
     // Load classes for prof defi creation
     useEffect(() => {
@@ -443,10 +445,31 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
     };
 
+    // Étape 1 : vérifier si des élèves sont hors plafond (prof uniquement)
     const handleCreate = async () => {
         if (tables.length === 0) return;
         setCreating(true);
         setCreateError(null);
+        setConfirmInfo(null);
+
+        // Pour un prof avec une classe, vérifier le plafond
+        if (estProf && selectedClasse) {
+            const apercu = await apercuDefiClasse(selectedClasse, tables);
+            if (apercu.ok && apercu.data?.eleves_hors_plafond > 0) {
+                setConfirmInfo(apercu.data);
+                setCreating(false);
+                return;
+            }
+        }
+
+        // Pas de problème de plafond → créer directement
+        await doCreate();
+    };
+
+    // Étape 2 : créer le défi (appelé directement ou après confirmation)
+    const doCreate = async () => {
+        setCreating(true);
+        setConfirmInfo(null);
         const res = await onCreateDefi(type, tables, estProf ? selectedClasse : null);
         if (!res.ok) {
             setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
@@ -560,14 +583,49 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
 
             {isShareable && (
                 <>
-                    <button
-                        className="btn btn--navy"
-                        style={{ width: '100%', fontSize: 18, padding: 14, marginTop: 10 }}
-                        disabled={tables.length === 0 || creating}
-                        onClick={handleCreate}
-                    >
-                        {creating ? '⏳ Création…' : '👥 Créer un défi'}
-                    </button>
+                    {/* Message de confirmation si des élèves sont hors plafond */}
+                    {confirmInfo && (
+                        <div className="card" style={{
+                            marginTop: 10, padding: '16px 20px',
+                            border: '2px solid var(--sun)',
+                            background: 'rgba(201,162,39,0.08)',
+                        }}>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', marginBottom: 8 }}>
+                                ⚠️ {confirmInfo.eleves_hors_plafond} élève{confirmInfo.eleves_hors_plafond > 1 ? 's' : ''} sur {confirmInfo.eleves_classe} n'{confirmInfo.eleves_hors_plafond > 1 ? 'ont' : 'a'} pas encore débloqué la table {confirmInfo.table_max} — lancer quand même ?
+                            </p>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginBottom: 12 }}>
+                                Le défi sera jouable par tous : le score sera enregistré même pour les élèves dont le plafond est inférieur.
+                            </p>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button
+                                    className="btn btn--gold"
+                                    style={{ flex: 1, fontSize: 14, padding: 12 }}
+                                    onClick={doCreate}
+                                    disabled={creating}
+                                >
+                                    {creating ? '⏳ Création…' : 'Lancer quand même'}
+                                </button>
+                                <button
+                                    className="btn btn--ghost"
+                                    style={{ flex: 1, fontSize: 14, padding: 12 }}
+                                    onClick={() => setConfirmInfo(null)}
+                                >
+                                    Annuler
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!confirmInfo && (
+                        <button
+                            className="btn btn--navy"
+                            style={{ width: '100%', fontSize: 18, padding: 14, marginTop: 10 }}
+                            disabled={tables.length === 0 || creating}
+                            onClick={handleCreate}
+                        >
+                            {creating ? '⏳ Création…' : '👥 Créer un défi'}
+                        </button>
+                    )}
                     {createError && (
                         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', marginTop: 8, textAlign: 'center' }}>
                             {createError}
