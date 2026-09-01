@@ -56,6 +56,73 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (5) — Lot 3 relu : la confirmation pouvait porter sur d'autres tables que celles créées
+
+**Fait** — Relecture du lot d'Antigravity dans le code, à `daf12e7`, dépôt
+propre. Les sept points de son rapport tiennent :
+
+- **Migration 21 appliquée**, types régénérés, `apercu_defi_classe` en place.
+- **Le tri corrigé** : `eleves_verts / eleves_classe` croissant, départagé par
+  `taux_couverture` décroissant. Le bouton défi partage le même ordre.
+- **Ligne 218** : `d.eleves_sans_trace`. **`pGris` supprimé.**
+- **La confirmation avant création** existe, avec ses deux nombres venus du
+  serveur ensemble.
+- **Le bouton « Découvrir »** est branché, sans filtrage par plafond, comme
+  demandé — c'est la migration 21 qui rend ce choix sûr.
+- **Les polices sont locales** : deux `.woff2` variables dans
+  `frontend/public/fonts/`, `@font-face` en tête de `index.css`, les trois
+  `<link>` retirés de `index.html`. Vérifié : plus une seule occurrence de
+  `googleapis` ou `gstatic` dans le code.
+
+`supabase/tests/01_scenario.sql` est **identique au fichier de la migration 21**
+(empreinte SHA-256 vérifiée) : aucun cas n'a été retiré. Son rapport annonce
+« 87 cas » ; c'est un artefact de comptage des lignes d'en-tête, la suite en
+contient bien 90.
+
+**Constaté — un défaut réel dans la confirmation.** L'écran garde
+`confirmInfo` en état, et rien ne l'efface quand le professeur change les tables
+ou la classe entre l'avertissement et sa validation :
+
+```
+prof coche {3}              → « Créer »  → aucun avertissement… puis il coche 15
+prof coche {15}, classe 6A  → « Créer »  → « 12 élèves sur 27… »
+prof change la classe pour 3B, ou coche la table 20
+prof clique « Lancer quand même »
+  → le défi est créé avec les NOUVELLES tables et la NOUVELLE classe,
+    sur la foi de chiffres calculés pour les anciennes.
+```
+
+C'est la même famille que tout le reste de ce projet : **deux populations qui ne
+correspondent pas de part et d'autre d'une décision.** Ici ce n'est pas un
+affichage faux mais un consentement obtenu sur autre chose que ce qui est fait.
+Correctif : vider `confirmInfo` dès que `tables` ou `selectedClasse` changent.
+
+**Constaté (2) — un commentaire qui contredit son code.** Dans `MaClasse.jsx`,
+le départage du tri est correct (`(b.taux_couverture) - (a.taux_couverture)`
+met la **plus** couverte en premier, ce qui est voulu : à égalité de
+non-maîtrise, la table que la classe a rencontrée est un rattrapage, l'autre une
+découverte). Mais le commentaire au-dessus dit *« la moins couverte en
+premier »*. Le prochain qui lira corrigera le code pour l'aligner sur le
+commentaire, et cassera le tri. Un commentaire faux est pire qu'absent.
+
+**Constaté (3) — la preuve, encore, sur une classe d'un élève.** Troisième fois
+qu'une vérification est apportée sur la classe 31 (`eleves_classe: 1,
+eleves_hors_plafond: 1`). Une classe d'un élève ne peut rien démontrer d'un
+compteur qui compare deux sous-ensembles : les deux valent 1 quoi qu'il arrive.
+La classe 32 avait servi la fois précédente ; c'est elle, ou une classe aux
+plafonds mélangés, qu'il faut prendre.
+
+**Décidé** — Les contraintes de ressources externes sont consignées dans
+`ETAT.md` §3 sous forme de check-list opposable, avec les URL à autoriser dans
+Jamf et six règles pour la passe visuelle avec Claude Design. Motif : la règle
+« aucune ressource externe » existait depuis le début et n'avait jamais été
+appliquée — elle n'était écrite nulle part sous une forme vérifiable.
+
+**Ensuite** — Antigravity : les deux correctifs ci-dessus. Aymeri : le test du
+défi à deux comptes, et le nom.
+
+---
+
 ## 2026-09-01 (4) — Migration 21 : le défi fait autorisation
 
 **Décidé (Aymeri)** — Des deux issues possibles au défaut relevé la veille —

@@ -392,8 +392,53 @@ Si une donnée n'existe pas, on l'écrit. C'est le défaut qui rendait la versio
 précédente trompeuse : faux classements, records à zéro.
 
 **Aucune ressource chargée depuis un domaine externe.**
-Les iPads sont filtrés par MDM. Polices hébergées dans le projet. La seule chose
-que l'application contacte doit être Supabase.
+Les iPads sont filtrés par MDM. La seule chose que l'application doit contacter
+est Supabase. *(1er septembre 2026 — la règle existait depuis le début et
+n'avait jamais été appliquée : `index.html` chargeait Baloo 2 et Nunito depuis
+`fonts.googleapis.com`, et aucun fichier de police n'était dans le projet. Sur
+un iPad filtré, toute l'application serait passée en police système — pas
+cassée, juste méconnaissable, et personne n'aurait su pourquoi. Corrigé au
+commit `daf12e7`.)*
+
+**Ce que Jamf doit autoriser, et rien de plus :**
+
+| URL | Pourquoi |
+|---|---|
+| `*.supabase.co` | La base. Le générique, pas l'adresse du projet — sinon la production ne marchera pas. |
+| `accounts.google.com` | La connexion. Déjà ouvert : les élèves y lisent leur Gmail. |
+| `ssl.gstatic.com` | Les ressources de la page de connexion Google elle-même. |
+| l'adresse de l'application | `calcul-mental-saintho.vercel.app`, puis `calcul-mental.saintho.fr`. |
+
+Faire répondre Supabase sur `saintho.fr` est possible (option « Custom Domain »)
+mais exige le plan Pro **plus** l'option, environ 35 $/mois, et impose de
+reconfigurer le retour Google. Une redirection `saintho.fr` sur l'application ne
+dispense **pas** d'autoriser `*.supabase.co` : le domaine de la page n'est pas
+celui des appels qu'elle fait. La panne serait la pire qui soit — page parfaite,
+connexion réussie, et plus rien ensuite.
+
+**CONTRAINTES POUR LA PASSE VISUELLE (Claude Design).**
+*(1er septembre 2026 — à lire avant la première maquette.)*
+
+1. **Aucune police, image, icône ou feuille de style venue d'un CDN.** Ni Google
+   Fonts, ni Font Awesome, ni une illustration récupérée en ligne. Tout ce qui
+   s'affiche est un fichier du dépôt.
+2. **Les polices actuelles sont dans `frontend/public/fonts/`** : `Baloo 2`
+   (titres, `--font-display`, graisses 500 à 800) et `Nunito` (texte,
+   `--font-body`, 400 à 800), deux `.woff2` variables de 33 et 39 Ko, déclarés
+   en `@font-face` en tête de `src/styles/index.css`. Changer de police veut
+   dire **télécharger le `.woff2`, le mettre là, et l'y déclarer** — jamais un
+   `<link>`.
+3. **Les couleurs passent par les variables CSS existantes** (`--navy`,
+   `--gold`, `--ivory`, `--mint`, `--sun`, `--coral`, `--border`…), jamais en
+   dur. C'est la condition pour que la refonte soit indolore, et deux cartes
+   sont déjà devenues illisibles faute de l'avoir respectée.
+4. **Les icônes sont des emojis ou du SVG écrit dans le projet.** Pas de police
+   d'icônes.
+5. **Public : 11 à 15 ans, sur écran tactile, en classe.** Cibles tactiles
+   larges, contrastes tenant sous un néon, aucune interaction au survol.
+6. **Vérification qui tranche** : après un `npm run build`, aucun `googleapis`
+   ni `gstatic` dans `frontend/dist/`, et l'onglet Réseau du navigateur ne
+   montre aucun appel hors Supabase.
 
 **Un lot, un message. Aymeri n'est pas un canal de transmission.**
 *(1er septembre 2026.)* Tout ce qui va d'un côté à l'autre passe par lui : il

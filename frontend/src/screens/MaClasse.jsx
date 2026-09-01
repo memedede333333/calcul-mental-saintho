@@ -83,7 +83,8 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                 const ratioA = a.eleves_verts / ec;
                 const ratioB = b.eleves_verts / ec;
                 if (ratioA !== ratioB) return ratioA - ratioB;
-                // À ratio égal, la moins couverte en premier
+                // À ratio égal, la plus couverte en premier :
+                // c'est un rattrapage, pas une découverte.
                 return (b.taux_couverture ?? 0) - (a.taux_couverture ?? 0);
             });
     }, [data]);

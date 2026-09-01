@@ -440,6 +440,12 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
         }
     }, [estProf, isShareable]);
 
+    // Toute modification de tables ou de classe annule le consentement
+    // précédent : le prof repasse par la vérification.
+    useEffect(() => {
+        setConfirmInfo(null);
+    }, [tables, selectedClasse]);
+
     const toggle = (t) => {
         if (t > plafond) return;
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
