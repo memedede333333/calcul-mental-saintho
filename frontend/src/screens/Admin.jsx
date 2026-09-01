@@ -4,7 +4,7 @@ import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
     definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf,
-    importerEleves, journalAdmin,
+    importerEleves, reparerRattachements, journalAdmin,
 } from '../api.js';
 
 /**
@@ -292,7 +292,8 @@ function StudentRow({ eleve, busy, onToggle }) {
     const nom = eleve.nom || '';
     const prenom = eleve.prenom || '';
     const email = eleve.email || '';
-    const connecte = eleve.connecte !== false; // true si non renseigné
+    const dejaConnecte = eleve.deja_connecte === true;
+    const nbSessions = eleve.nb_sessions ?? 0;
 
     return (
         <div style={{
@@ -307,7 +308,21 @@ function StudentRow({ eleve, busy, onToggle }) {
                 </p>
                 <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
                     {email}
-                    {!connecte && <span style={{ marginLeft: 6, color: 'var(--coral)', fontWeight: 700 }}>⏳ jamais connecté</span>}
+                    {!dejaConnecte && (
+                        <span style={{ marginLeft: 6, color: 'var(--coral)', fontWeight: 700 }}>
+                            ⏳ compte Google pas encore rattaché
+                        </span>
+                    )}
+                    {dejaConnecte && nbSessions === 0 && (
+                        <span style={{ marginLeft: 6, color: 'var(--text-soft)', fontWeight: 600 }}>
+                            ◻︎ compte rattaché — n'a pas encore joué
+                        </span>
+                    )}
+                    {dejaConnecte && nbSessions > 0 && (
+                        <span style={{ marginLeft: 6, color: 'var(--text-soft)', fontWeight: 600 }}>
+                            · {nbSessions} partie{nbSessions > 1 ? 's' : ''}
+                        </span>
+                    )}
                 </p>
             </div>
             <button
@@ -628,9 +643,18 @@ function ImportTab({ onRefresh }) {
                         <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 13 }}>❌ {result.error}</p>
                     ) : (
                         <>
-                            <p style={{ color: 'var(--mint-dk)', fontWeight: 700, fontSize: 13 }}>
-                                ✅ Import terminé — {result.crees ?? '?'} créé{(result.crees ?? 0) > 1 ? 's' : ''}, {result.mis_a_jour ?? '?'} mis à jour
-                            </p>
+                            <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: 12, border: '1px solid var(--border)' }}>
+                                <p style={{ color: 'var(--navy)', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                                    ✅ Import terminé
+                                </p>
+                                <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
+                                    {result.crees ?? 0} élève{(result.crees ?? 0) > 1 ? 's' : ''} créé{(result.crees ?? 0) > 1 ? 's' : ''}, {result.mis_a_jour ?? 0} mis à jour.
+                                    {' '}
+                                    {(result.rattaches ?? 0) > 0
+                                        ? `${result.rattaches} ${(result.rattaches ?? 0) > 1 ? 'avaient' : 'avait'} déjà un compte Google : ${(result.rattaches ?? 0) > 1 ? 'ils ont été rattachés' : 'il a été rattaché'}.`
+                                        : 'Aucun compte Google préexistant à rattacher.'}
+                                </p>
+                            </div>
                             {result.lignes_ignorees?.length > 0 && (
                                 <div style={{ background: '#FFF8F0', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid #FFE0C0' }}>
                                     <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral-dk)', marginBottom: 4 }}>
@@ -660,6 +684,17 @@ function ImportTab({ onRefresh }) {
                     )}
                 </div>
             )}
+
+            {/* Section Réparation des rattachements */}
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                <h4 className="font-display" style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
+                    🔧 Rattachement des comptes Google
+                </h4>
+                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
+                    À lancer après chaque import ou si un élève s'est connecté avant la création de sa fiche.
+                </p>
+                <RepairButton onRefresh={onRefresh} />
+            </div>
         </div>
     );
 }
@@ -720,6 +755,53 @@ function JournalTab() {
                         </div>
                     ))}
                 </div>
+            )}
+        </div>
+    );
+}
+
+function RepairButton({ onRefresh }) {
+    const [busy, setBusy] = useState(false);
+    const [msg, setMsg] = useState('');
+
+    const handleRepair = async () => {
+        setBusy(true);
+        setMsg('');
+        const res = await reparerRattachements();
+        if (res.ok) {
+            const count = res.data?.rattaches ?? 0;
+            if (count > 0) {
+                setMsg(`✅ ${count} fiche${count > 1 ? 's' : ''} rattachée${count > 1 ? 's' : ''} à leur compte Google`);
+            } else {
+                setMsg('ℹ️ Aucune fiche à rattacher');
+            }
+            if (onRefresh) await onRefresh();
+        } else {
+            setMsg(`❌ ${res.error || 'Erreur lors du rattachement.'}`);
+        }
+        setBusy(false);
+    };
+
+    return (
+        <div>
+            <button
+                className="btn btn--navy"
+                style={{ width: '100%', fontSize: 13, padding: 10 }}
+                onClick={handleRepair}
+                disabled={busy}
+            >
+                {busy ? '⏳ Recherche des comptes…' : '🔄 Réparer les rattachements'}
+            </button>
+            {msg && (
+                <p style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    marginTop: 8,
+                    textAlign: 'center',
+                    color: msg.startsWith('❌') ? 'var(--coral)' : msg.startsWith('✅') ? 'var(--mint-dk)' : 'var(--text-soft)',
+                }}>
+                    {msg}
+                </p>
             )}
         </div>
     );

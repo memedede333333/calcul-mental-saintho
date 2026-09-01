@@ -564,6 +564,11 @@ export async function importerEleves(eleves) {
     return rpc('importer_eleves', { p_eleves: eleves });
 }
 
+/** Rejoue le rattachement pour toutes les fiches orphelines. Réservé admin. */
+export async function reparerRattachements() {
+    return rpc('reparer_rattachements');
+}
+
 /** L'élève arrive en novembre. Il peut se connecter dans la minute. */
 export async function ajouterEleve({ email, nom, prenom, classe }) {
     return rpc('ajouter_eleve', {
@@ -681,7 +686,7 @@ export const api = {
     // enseignant
     maitriseClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
-    importerEleves, ajouterEleve, modifierEleve,
+    importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
 };

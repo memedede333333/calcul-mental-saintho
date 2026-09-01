@@ -732,8 +732,10 @@ export type Database = {
         }[]
       }
       qui_suis_je: { Args: never; Returns: Json }
+      rattacher_par_email: { Args: { p_email: string }; Returns: string }
       reactiver_eleve: { Args: { p_eleve_id: string }; Returns: Json }
       rejoindre_defi: { Args: { p_code: string }; Returns: Json }
+      reparer_rattachements: { Args: never; Returns: Json }
       terminer_defi: {
         Args: {
           p_defi_id: string
