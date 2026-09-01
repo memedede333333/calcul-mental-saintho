@@ -80,10 +80,12 @@ reconnu » ne dit pas QUEL compte il refuse.** Trois causes possibles, un seul
 message, et aucune information pour trancher. Un professeur devant 24 iPads ne
 peut pas deviner qu'une session d'un collègue traîne dans Safari.
 
-**Décidé** — L'écran affichera l'adresse du compte connecté, et le bouton
-deviendra « Se déconnecter et changer de compte ». L'adresse est disponible côté
-client (`supabase.auth.getSession()`) : aucune migration, aucun changement de
-contrat. ⏳ *transmis à Antigravity le 01/09*
+**Décidé** — L'écran affiche l'adresse du compte connecté, et le bouton dit
+« Se déconnecter et changer de compte ». L'adresse vient de
+`supabase.auth.getSession()` : aucune migration, aucun changement de contrat.
+✅ *livré au commit `4115871`, relu dans le code — `emailSession()` dans
+`api.js`, encart affiché dans le bloc `appState === 'inconnu'` d'`App.jsx`,
+`sessionEmail` remis à null à la déconnexion. Rien à corriger.*
 
 **Constaté (méthode)** — La migration 22 reste juste et nécessaire : le trou
 qu'elle bouche existe, il est reproduit dans les cas 91 à 95, et il aurait
