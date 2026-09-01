@@ -4,8 +4,8 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **1er septembre 2026** — 20 migrations, 82 cas de test
-> verts, écran « Ma classe » livré (`cc1e08a`) et relu : deux correctifs en attente.
+> Dernière mise à jour : **1er septembre 2026** — 21 migrations, 90 cas de test
+> verts. Migration 21 écrite et testée ; un lot complet part chez Antigravity.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -33,7 +33,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **20 migrations**, 82 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **21 migrations**, 90 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -327,14 +327,44 @@ affiche ; celle-ci sur ce qu'il classe. Un tri est un jugement, et il vaut ce
 que vaut sa population : on trie sur `eleves_verts / eleves_classe`, jamais sur
 un ratio dont le dénominateur est un échantillon.
 
-**Un défi ne propose que ce que ses destinataires ont le droit de jouer.**
-*(1er septembre 2026.)* `creer_defi` n'impose aucun plafond de tables à un
-professeur, mais `enregistrer_session` refuse à l'élève toute table au-dessus
-de son propre plafond. Vérifié en base : un défi de prof sur la table 15 est
-rejoint sans erreur par une élève plafonnée à 12, qui joue les vingt questions
-puis voit son score refusé à l'enregistrement. Refuser à la création vaut mieux
-que refuser après deux minutes de jeu — d'autant que l'élève, elle, n'a rien
-fait de mal. ⏳ *migration 21 proposée, en attente de décision.*
+**Le défi fait autorisation.** *(1er septembre 2026, migration 21 — tranché
+par Aymeri.)* `creer_defi` n'imposait aucun plafond de tables à un professeur,
+mais `enregistrer_session` en imposait un à l'élève. Vérifié en base : un défi
+de prof sur la table 15 est rejoint sans erreur par une élève plafonnée à 12,
+qui joue les vingt questions puis voit son score refusé à l'enregistrement.
+
+Deux issues étaient possibles : refuser à la création, ou laisser passer à
+l'enregistrement. **C'est la seconde qui a été retenue, et pour une raison de
+fond : le plafond est un anti-triche, pas une limite de programme.** La
+migration 10 le dit elle-même — sans lui, cocher une table haute serait « le
+moyen simple de gonfler ses points ». Il empêche un élève de **choisir** des
+tables trop hautes en solo. Un défi de professeur n'est pas un choix d'élève,
+c'est du travail prescrit, et un professeur de 3ᵉ qui veut faire travailler la
+table de 15 à sa classe a le droit d'avoir raison. Ce n'est pas à un mécanisme
+de jeu de lui opposer un veto.
+
+La levée est donc étroite et relue **en base**, jamais tirée d'un paramètre :
+le défi existe, l'élève figure déjà dans `defis_participants`, et les tables
+demandées sont **exactement** celles de la ligne `defis`. Hors de là, le refus
+est intact — l'anti-triche du jeu solo n'est pas touché. Et la migration 10
+garantit qu'une table haute jouée hors mode Montée ne débloque rien : un défi
+sur la 15 ne fait monter le plafond de personne.
+
+**Mais le professeur ne l'apprend pas après coup** : `creer_defi` renvoie
+`eleves_hors_plafond` **et** `eleves_classe` — les deux populations, jamais
+l'une sans l'autre — et `apercu_defi_classe()` permet de poser la question
+avant de créer : « 12 élèves sur 27 n'ont pas encore débloqué la table 15,
+lancer quand même ? ». Il décide en connaissance de cause, ce qui est
+exactement ce qu'on attend de lui.
+
+**Une partie de défi ne s'enregistre qu'une fois.** *(1er septembre 2026,
+migration 21, trouvé en écrivant les tests.)* `terminer_defi` était protégé par
+la clé primaire de `defis_participants` ; l'appel direct à
+`enregistrer_session` avec le même `p_defi_id` ne l'était pas — vérifié en
+base, la session comptait une seconde fois. Le trou existait avant la
+migration 21, mais elle en augmentait la valeur, les tables d'un défi de prof
+pouvant désormais peser plus lourd que le plafond. Fermé dans la même
+migration : c'était le moment, pas plus tard.
 
 **Une migration se numérote à l'heure où on l'écrit, jamais plus tard.**
 *(1er septembre 2026.)* La migration 19 porte l'horodatage `20260901080000`
@@ -354,7 +384,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-82 cas, dont une dizaine de tentatives de contournement qui doivent toutes
+90 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -428,11 +458,16 @@ mais de la correction et deux écrans manquants, par ordre de valeur :
    travaillé la table) au lieu de `eleves_verts / eleves_classe` ; et le
    bloc 2 passe `d.eleves_classe` là où le serveur donne
    `d.eleves_sans_trace`. Voir `JOURNAL.md`, entrée du 1er septembre (3).
-4. **Migration 21 — borner un défi de prof au plafond commun de la classe.**
-   ⏳ *proposée, en attente de décision.* Aujourd'hui `creer_defi` ne plafonne
-   pas un professeur alors que `enregistrer_session` plafonne l'élève :
-   l'élève joue tout le défi puis voit son score refusé.
-5. Passe visuelle, **après** le choix du nom.
+4. ✅ **Migration 21 — le défi fait autorisation.** Écrite et testée
+   (`20260901100000_defi_fait_autorisation.sql`, 90 cas verts).
+   ⬜ **Reste à l'appliquer dans Supabase** et à régénérer `database.ts`.
+   Elle s'accompagne côté écran de `apercu_defi_classe()` — la question
+   « 12 élèves sur 27 n'ont pas encore débloqué la table 15, lancer quand
+   même ? » posée **avant** la création.
+5. **Le second bouton « Découvrir les tables non abordées »** sur « Ma
+   classe », borné par le serveur. À faire **après** la 21, pour qu'il n'ait
+   pas à porter la règle lui-même.
+6. Passe visuelle, **après** le choix du nom.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

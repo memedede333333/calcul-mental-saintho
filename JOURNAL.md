@@ -56,6 +56,74 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (4) — Migration 21 : le défi fait autorisation
+
+**Décidé (Aymeri)** — Des deux issues possibles au défaut relevé la veille —
+refuser à la création, ou laisser passer à l'enregistrement — c'est la seconde,
+mais formulée autrement que je ne l'avais posée. Non pas « `enregistrer_session`
+tolère les tables d'un défi » (ce serait rouvrir l'anti-triche du solo), mais
+**le défi fait autorisation** : la session est acceptée pour les tables de la
+ligne `defis` correspondante, et strictement rien d'autre.
+
+La raison est la bonne, et elle vaut d'être notée telle quelle : *le plafond est
+un anti-triche, pas une limite de programme.* La migration 10 le dit elle-même —
+sans lui, cocher une table haute serait « le moyen simple de gonfler ses
+points ». Il empêche un élève de **choisir** des tables trop hautes en solo. Un
+défi de professeur n'est pas un choix d'élève. Un professeur de 3ᵉ qui veut
+faire travailler la table de 15 à sa classe a le droit d'avoir raison, et ce
+n'est pas à un mécanisme de jeu de lui opposer un veto. ✅ *tranché par Aymeri
+le 01/09*
+
+**Fait** — Migration 21 (`20260901100000_defi_fait_autorisation.sql`) :
+
+- `enregistrer_session` lève le plafond si, et seulement si, **trois conditions
+  relues en base** tiennent : le défi existe, l'élève figure déjà dans
+  `defis_participants`, et `p_tables` est **exactement** l'ensemble des tables
+  du défi. Aucune ne vient d'un paramètre que le client contrôle seul. Hors de
+  là, le refus est intact.
+- `creer_defi` ne refuse toujours pas, mais renvoie `eleves_hors_plafond`,
+  `eleves_classe`, `classe` et `table_max` — les deux populations, jamais l'une
+  sans l'autre, conformément à la règle du §3.
+- `apercu_defi_classe(p_classe, p_tables)` : la même question posée **avant** la
+  création, pour que l'écran affiche « 12 élèves sur 27 n'ont pas encore
+  débloqué la table 15 — lancer quand même ? » au bon moment. Réservée aux
+  enseignants (`prof_voit_classe`) : un élève obtient 0 partout.
+
+Huit cas de test ajoutés (83 → 90). Suite portée à **90 cas, tous verts**,
+`run.sh` rejoué de bout en bout sur un PostgreSQL neuf.
+
+**Constaté — un trou trouvé en écrivant les tests, et fermé dans la même
+migration.** `terminer_defi` est protégé contre le rejeu par la clé primaire de
+`defis_participants`. L'appel **direct** à `enregistrer_session` avec le même
+`p_defi_id` ne l'était pas : vérifié en base, la session comptait une seconde
+fois, et les points avec.
+
+```
+avant  : 1 session sur ce défi
+appel direct à enregistrer_session(p_defi_id = celui du défi)
+après  : 2 sessions  ← acceptée
+terminer_defi rejoué → « Tu as déjà participé à ce défi. »  ← lui, protégé
+```
+
+Le trou **existait avant** la migration 21 — il ne vient pas d'elle. Mais elle
+en augmentait la valeur : les tables d'un défi de professeur peuvent désormais
+peser plus lourd que le plafond de l'élève. Le fermer ailleurs, plus tard,
+aurait voulu dire livrer sciemment une migration qui rend un défaut connu plus
+rentable. Cas 90 ajouté. ⏳ *à valider par Aymeri : c'est le seul changement de
+comportement de cette migration qu'il n'avait pas demandé.*
+
+**Constaté (méthode)** — La numérotation : `20260901100000`, soit la première
+heure disponible au-dessus de la 20, et non l'heure réelle d'écriture (il était
+1 h du matin). La dette vient de la 19, datée dans le futur ; elle se résorbe
+d'elle-même dès que l'horloge passe 10 h.
+
+**Ensuite** — Aymeri : appliquer la migration 21 dans Supabase, régénérer
+`database.ts`, puis transmettre à Antigravity le lot unique (migration 21 +
+tri + ligne 218 + `pGris` + bouton « Découvrir »). Puis le test du défi à deux
+comptes, et le nom.
+
+---
+
 ## 2026-09-01 (3) — Relecture de `cc1e08a` : le dénominateur est revenu par la porte du tri
 
 **Fait** — Vérification du lot « Ma classe » d'Antigravity **dans le code**, à

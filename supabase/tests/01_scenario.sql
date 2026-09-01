@@ -559,4 +559,114 @@ select case when (select count(*) from maitrise_classe('6A') where table_n > 12)
             then 'OK : aucune table fantome au-dela du plafond de la classe'
             else 'ECHEC : tables inventees' end as verdict;
 
+
+-- =====================================================================
+-- MIGRATION 21 — le defi fait autorisation
+-- Un defi de prof sur la table 15 etait JOUABLE par une 6e plafonnee a
+-- 12, mais son score etait refuse a l'enregistrement : elle jouait deux
+-- minutes pour rien. Le plafond est un anti-triche (migration 10), pas
+-- une limite de programme. Il cede donc devant un defi — et devant lui
+-- SEUL : tout le reste garde son refus.
+-- =====================================================================
+reset role;
+update public.eleves set plafond_tables = 12
+ where email in ('alice.dupont@demo.saintho.fr', 'bob.martin@demo.saintho.fr');
+set role authenticated;
+
+\echo '=== 83. creer_defi ne refuse pas, mais dit combien d eleves sont concernes ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (creer_defi('sprint','{15}'::smallint[],10,null,'6A')) as d \gset
+select (:'d'::jsonb)->>'code' as code_defi_15 \gset
+select set_config('test.code15', :'code_defi_15', false);
+select (:'d'::jsonb)->'eleves_classe'       as eleves_classe,
+       (:'d'::jsonb)->'eleves_hors_plafond' as hors_plafond,
+       (:'d'::jsonb)->'table_max'           as table_max;
+select case when ((:'d'::jsonb)->>'eleves_hors_plafond')::int
+              = (select count(*) from public.eleves
+                  where classe = '6A' and actif and plafond_tables < 15)
+             and ((:'d'::jsonb)->>'eleves_classe')::int
+              = (select count(*) from public.eleves where classe = '6A' and actif)
+            then 'OK : les deux populations sont celles de la classe visee'
+            else 'ECHEC : compteur hors plafond incoherent' end as verdict;
+
+\echo '=== 84. Alice (plafond 12) joue le defi sur la table 15 : le score PASSE ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select (rejoindre_defi(:'code_defi_15')->>'defi_id') as did15 \gset
+select terminer_defi(:'did15'::uuid, 8, 45, 2)->>'ok' as alice_a_pu_enregistrer;
+select case when count(*) = 1
+            then 'OK : la session du defi est enregistree'
+            else 'ECHEC : le score du defi a ete perdu' end as verdict
+  from sessions_jeu where eleve_id = eleve_courant() and defi_id = :'did15'::uuid;
+
+\echo '=== 85. Le defi sur la table 15 ne debloque RIEN (migration 10) ==='
+select case when (select plafond_tables from eleves where id = eleve_courant()) = 12
+            then 'OK : plafond inchange apres un defi hors plafond'
+            else 'ECHEC : le defi a fait monter le plafond' end as verdict;
+
+\echo '=== 86. Hors defi, le plafond refuse toujours : l anti-triche est intact ==='
+do $$ begin
+  perform enregistrer_session('libre','{15}'::smallint[],5,5);
+  raise notice 'ECHEC : partie libre acceptee sur une table verrouillee';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 87. Le defi n est pas un passe-partout : d autres tables que les siennes ==='
+do $$
+declare v_did uuid;
+begin
+  select id into v_did from defis where code = current_setting('test.code15', true);
+  perform enregistrer_session('sprint','{15,16}'::smallint[],5,5,'[]'::jsonb,30,0,0,
+                              null,'{}'::jsonb,v_did);
+  raise notice 'ECHEC : le defi a autorise une table qui n est pas la sienne';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 88. Un eleve qui n a pas participe n obtient rien du defi ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$
+declare v_did uuid;
+begin
+  select id into v_did from defis where code = current_setting('test.code15', true);
+  perform enregistrer_session('sprint','{15}'::smallint[],5,5,'[]'::jsonb,30,0,0,
+                              null,'{}'::jsonb,v_did);
+  raise notice 'ECHEC : un non-participant a profite du defi';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 90. Une partie de defi ne s enregistre qu une fois ==='
+-- `terminer_defi` etait protege par la cle primaire de
+-- `defis_participants` ; l appel direct a `enregistrer_session` avec le
+-- meme p_defi_id ne l etait pas, et la session comptait deux fois.
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+do $$
+declare v_did uuid; v_avant integer; v_apres integer;
+begin
+  select id into v_did from defis where code = current_setting('test.code15', true);
+  select count(*) into v_avant from sessions_jeu
+   where eleve_id = eleve_courant() and defi_id = v_did;
+  begin
+    perform enregistrer_session('sprint','{15}'::smallint[],10,10,'[]'::jsonb,5,0,0,
+                                null,'{}'::jsonb,v_did);
+  exception when others then raise notice 'OK : refuse (%)', sqlerrm; end;
+  select count(*) into v_apres from sessions_jeu
+   where eleve_id = eleve_courant() and defi_id = v_did;
+  if v_apres = v_avant then
+    raise notice 'OK : aucune session supplementaire (% avant, % apres)', v_avant, v_apres;
+  else
+    raise notice 'ECHEC : le defi a ete enregistre deux fois';
+  end if;
+end $$;
+
+\echo '=== 89. apercu_defi_classe : la question posee AVANT de creer ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select apercu_defi_classe('6A','{15}'::smallint[]) as apercu;
+select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_hors_plafond')::int
+              = (select count(*) from public.eleves
+                  where classe = '6A' and actif and plafond_tables < 15)
+             and (apercu_defi_classe('6A','{9}'::smallint[])->>'eleves_hors_plafond')::int = 0
+            then 'OK : apercu juste, et nul quand la table est a la portee de tous'
+            else 'ECHEC : apercu incoherent' end as verdict;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')::int = 0
+            then 'OK : un eleve n apprend rien des plafonds de sa classe'
+            else 'ECHEC : apercu_defi_classe ouvert aux eleves' end as verdict;
+
+
 reset role;
