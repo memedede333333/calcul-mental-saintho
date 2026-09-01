@@ -475,6 +475,7 @@ existantes**, jamais de couleurs en dur.
 | `ECRANS.md` | Les 19 écrans, un par un : appels, contenus, états |
 | `SUPABASE_PAS_A_PAS.md` | Mise en route Supabase, MCP, Google OAuth, comptes |
 | `NOM_ET_MARQUE.md` | Check-list de bascule du nom — les 14 endroits à changer, dont 6 hors du code |
+| `TESTS_RECETTE.md` | **La recette** : les tests que le code ne peut pas faire — deux comptes, un vrai iPad. À dérouler avant toute livraison à des élèves |
 | `JOURNAL.md` | L'historique : ce qui a été fait, décidé, constaté, étape par étape |
 | `PROMPT_ANTIGRAVITY.md` | Le message de démarrage à coller dans **Antigravity** |
 | `docs/PROJET_CLAUDE.md` | Les instructions à coller dans le projet Claude — voir §6 |
