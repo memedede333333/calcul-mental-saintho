@@ -56,6 +56,55 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (9) — Le compte refuse n'etait pas celui qu'on croyait
+
+**Constaté** — Diagnostic de la fiche d'Agathe, en base :
+
+```
+email   agathe.cheurlin@saintho.fr   actif  true   classe 31
+user_id 1e07db30-…  =  le compte Google portant exactement cette adresse
+```
+
+Fiche active, adresse correcte, rattachement correct. **Aucune des trois
+causes envisagées ne tient**, et la passe de réparation de la migration 22
+n'avait effectivement rien à rattacher — elle a rendu 0.
+
+Un seul compte orphelin en base : `claude49@saintho.fr`, créé le 28 août, sans
+fiche. Explication la plus probable : **l'iPad était connecté avec un autre
+compte Google.** Safari sur iPad garde sa propre session, distincte de celle du
+Mac. L'application a alors fait exactement ce qu'on lui demande — refuser un
+compte absent des listes. Ce n'était pas un défaut.
+
+**Le vrai défaut, et il a coûté une demi-journée : l'écran « Compte non
+reconnu » ne dit pas QUEL compte il refuse.** Trois causes possibles, un seul
+message, et aucune information pour trancher. Un professeur devant 24 iPads ne
+peut pas deviner qu'une session d'un collègue traîne dans Safari.
+
+**Décidé** — L'écran affichera l'adresse du compte connecté, et le bouton
+deviendra « Se déconnecter et changer de compte ». L'adresse est disponible côté
+client (`supabase.auth.getSession()`) : aucune migration, aucun changement de
+contrat. ⏳ *transmis à Antigravity le 01/09*
+
+**Constaté (méthode)** — La migration 22 reste juste et nécessaire : le trou
+qu'elle bouche existe, il est reproduit dans les cas 91 à 95, et il aurait
+frappé à la rentrée échelonnée. Mais **elle ne corrigeait pas le symptôme qui
+l'a fait écrire.** Diagnostic et correctif ne coïncident pas toujours ; on ne
+clôt pas un symptôme parce qu'on a livré un correctif plausible. C'est le
+`rattaches: 0` qui a évité de le croire.
+
+**Constaté (2) — un défaut trouvé par Antigravity, en relisant l'écran.**
+`StudentRow` lisait `eleve.connecte`, propriété que `liste_eleves` ne renvoie
+pas : elle s'appelle `deja_connecte`. `undefined !== false` valant `true`, le
+badge « jamais connecté » **ne s'est jamais affiché pour personne**. Corrigé
+dans le même lot, avec trois états au lieu de deux et le mot « connecté »
+retiré des libellés : l'écran sait qu'un compte est rattaché, pas que
+quelqu'un s'est connecté.
+
+**Ensuite** — Antigravity : l'adresse sur l'écran de refus. Aymeri : reprendre
+la recette, en notant d'abord quel compte Google Safari utilise sur l'iPad.
+
+---
+
 ## 2026-09-01 (8) — Migration 22 : une eleve ajoutee, et pourtant refusee
 
 **Constaté (Aymeri, en testant)** — Agathe Cheurlin est ajoutée depuis l'écran
