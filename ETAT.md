@@ -4,9 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **1er septembre 2026** — 21 migrations, 90 cas de test
-> verts, **le code est terminé** (`be10b25`). Plus rien en attente côté
-> Antigravity : la suite est du ressort d'Aymeri.
+> Dernière mise à jour : **1er septembre 2026, 17 h** — 22 migrations, 95 cas de
+> test verts. La recette a trouvé son premier défaut : une fiche créée après la
+> première connexion Google restait orpheline. Migration 22 écrite et testée.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -34,7 +34,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **21 migrations**, 90 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **22 migrations**, 95 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -316,6 +316,29 @@ croyait faire du rattrapage et lançait une découverte sur des tables hors de
 portée. Une liste que l'écran devine est une population inventée : elle vient
 du serveur, ou elle n'existe pas.
 
+**Le rattachement d'un compte ne peut pas dépendre d'un événement unique.**
+*(1er septembre 2026, migration 22 — trouvé par Aymeri en recette.)*
+`eleves.user_id` n'était renseigné que par le trigger `on_auth_user_created`,
+au moment de la **création** du compte Supabase Auth. Un élève qui avait ouvert
+l'application avant que sa fiche existe restait orphelin **pour toujours** :
+créer la fiche ensuite ne rattachait rien, et l'écran ne montrait aucune
+anomalie. À la rentrée échelonnée, ce cas n'a rien d'exceptionnel.
+
+La leçon dépasse ce bug : **une liaison qui ne se fait qu'à un instant précis
+finit par manquer son instant.** On la rend rejouable, et on la rejoue à chaque
+fois qu'une adresse entre dans le système — création, import, correction — plus
+un `reparer_rattachements()` que l'administrateur peut lancer à volonté.
+Garde-fou : on ne rattache jamais un compte Auth qui appartient déjà à
+quelqu'un, sinon une fiche portant l'adresse d'un administrateur lui prendrait
+son compte.
+
+**On ne réécrit jamais une fonction existante de mémoire.** *(1er septembre
+2026, rattrapé à temps.)* La première version de la migration 22 recréait
+`ajouter_eleve` avec un corps reconstitué : mauvais helper de droits, mauvais
+format de retour, et la branche de réactivation d'une fiche désactivée
+disparue. On reprend le texte d'origine et on y insère la modification — jamais
+l'inverse.
+
 **Un tri se fait sur la population que le bouton concerne.** *(1er septembre
 2026, cinquième occurrence.)* L'écran « Ma classe » corrigé ne fabriquait plus
 aucune liste — mais il **ordonnait** les tables sur `taux_maitrise`, dont le
@@ -385,7 +408,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-90 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
+95 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**

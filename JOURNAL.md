@@ -56,6 +56,67 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (8) — Migration 22 : une eleve ajoutee, et pourtant refusee
+
+**Constaté (Aymeri, en testant)** — Agathe Cheurlin est ajoutée depuis l'écran
+Administration, apparaît bien dans la liste, et son iPad lui répond
+« Ce compte n'est pas reconnu. Demande à ton professeur. »
+
+**La cause, reproduite sur base neuve avant d'écrire une ligne :**
+
+```
+fiche créée AVANT le compte Google  →  qui_suis_je() = 'eleve'
+compte Google créé AVANT la fiche   →  qui_suis_je() = 'inconnu'
+                                       eleves.user_id = null
+```
+
+`eleves.user_id` n'est renseigné que par le trigger `on_auth_user_created`, qui
+se déclenche à la **création** du compte Supabase Auth — la toute première
+connexion Google. Si la personne s'est connectée avant que sa fiche existe, le
+trigger n'a rien trouvé et **plus rien ne le rattrape** : créer la fiche ensuite
+ne renseigne pas `user_id`. Or `eleve_courant()` et toutes les politiques RLS
+reposent dessus. L'élève est bloquée définitivement, et rien ne le signale : sa
+fiche est parfaitement normale à l'écran.
+
+**Pourquoi c'était grave maintenant.** À la rentrée, 350 élèves sont importés.
+Il suffit qu'un élève ait ouvert l'application une fois avant l'import de sa
+classe — curiosité, un camarade qui montre, une classe testée avant les autres —
+pour qu'il soit écarté sans recours. Et l'échelonnement classe par classe, qui
+est la bonne décision par ailleurs, rend ce cas probable plutôt qu'exceptionnel.
+
+**Fait** — Migration 22 (`20260901170000_rattachement_tardif.sql`). Le principe :
+**on cesse de dépendre d'un événement unique.** Le rattachement devient une
+opération rejouable, et on la rejoue chaque fois qu'une adresse entre dans le
+système.
+
+- `rattacher_par_email()` — helper interne, **non accordé à `authenticated`**
+  (il lit `auth.users`). Il ne rattache que si le compte Auth n'appartient
+  encore à personne : sans cette condition, une fiche élève créée avec
+  l'adresse d'un administrateur lui prendrait son compte.
+- `ajouter_eleve` et `importer_eleves` l'appellent — reprises **telles quelles**
+  de la migration 7, seul l'appel est ajouté. `importer_eleves` renvoie en plus
+  `rattaches`.
+- `reparer_rattachements()` — réservé à l'administrateur, rejouable sans effet
+  de bord. C'est le geste à faire après chaque import de rentrée.
+- Une passe de réparation immédiate dans la migration, qui débloque les fiches
+  déjà orphelines — dont celle d'Agathe.
+
+Cinq cas de test (91 → 95). Suite portée à **95 cas, tous verts**.
+
+**Constaté (méthode)** — La première version de cette migration, écrite trop
+vite, recréait `ajouter_eleve` avec un corps **reconstitué de mémoire** :
+mauvais helper de droits, mauvais format de retour, et surtout la branche de
+réactivation d'une fiche désactivée purement disparue. Rattrapé avant tout test
+en reprenant le corps d'origine caractère par caractère et en n'y insérant que
+l'appel. La règle vaut d'être écrite : **on ne réécrit jamais une fonction
+existante de mémoire ; on reprend son texte et on l'amende.**
+
+**Ensuite** — Aymeri : appliquer la 22, puis reprendre la recette avec Agathe.
+Antigravity : le bouton de réparation dans Administration et les trois nombres
+de l'import.
+
+---
+
 ## 2026-09-01 (7) — L'application en ligne ne démarrait pas
 
 **Constaté** — Avant de donner l'adresse pour la recette, ouverture de

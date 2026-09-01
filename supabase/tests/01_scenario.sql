@@ -669,4 +669,104 @@ select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')
             else 'ECHEC : apercu_defi_classe ouvert aux eleves' end as verdict;
 
 
+
+-- =====================================================================
+-- MIGRATION 22 — le rattachement ne peut plus arriver trop tard
+-- Une fiche creee APRES la premiere connexion Google restait orpheline
+-- pour toujours : le trigger `on_auth_user_created` ne se declenche
+-- qu'a la creation du compte, et rien ne le rejouait.
+-- =====================================================================
+reset role;
+
+\echo '=== 91. Fiche creee APRES le compte Google : ajouter_eleve rattache ==='
+-- Le compte existe d'abord (l'eleve a ouvert l'application par curiosite),
+-- la fiche vient ensuite. C'est le cas remonte le 1er septembre.
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000091', 'tardive@demo.saintho.fr');
+select case when (select user_id from public.eleves
+                   where email = 'tardive@demo.saintho.fr') is null
+            then 'OK : aucune fiche, le trigger n a rien trouve'
+            else 'ECHEC : fiche fantome' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select ajouter_eleve('tardive@demo.saintho.fr','Tardive','Tina','6A')->>'ok' as ajout;
+reset role;
+select case when (select user_id from public.eleves
+                   where email = 'tardive@demo.saintho.fr')
+             = 'cccccccc-0000-0000-0000-000000000091'
+            then 'OK : rattachee a son compte existant'
+            else 'ECHEC : fiche orpheline, eleve bloquee pour toujours' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'cccccccc-0000-0000-0000-000000000091', false);
+select case when qui_suis_je()->>'type' = 'eleve'
+            then 'OK : elle entre dans l application'
+            else 'ECHEC : ' || (qui_suis_je()->>'message') end as verdict;
+
+\echo '=== 92. Import de rentree : meme rattrapage, et il est compte ==='
+reset role;
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000092', 'importee@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select importer_eleves('[{"email":"importee@demo.saintho.fr","nom":"Importee",
+                          "prenom":"Iris","classe":"6B"}]'::jsonb)->>'rattaches'
+       as rattaches_doit_valoir_1;
+reset role;
+select case when (select user_id from public.eleves
+                   where email = 'importee@demo.saintho.fr') is not null
+            then 'OK : rattachee des l import'
+            else 'ECHEC : import qui laisse un eleve dehors' end as verdict;
+
+\echo '=== 93. reparer_rattachements : le bouton de l administrateur ==='
+-- Une fiche laissee orpheline a la main, comme si elle datait d avant la
+-- migration 22.
+reset role;
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000093', 'orpheline@demo.saintho.fr');
+insert into public.eleves (email, nom, prenom, classe)
+values ('orpheline@demo.saintho.fr','Orpheline','Olga','6B');
+update public.eleves set user_id = null where email = 'orpheline@demo.saintho.fr';
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select reparer_rattachements()->>'rattaches' as reparees;
+reset role;
+select case when (select user_id from public.eleves
+                   where email = 'orpheline@demo.saintho.fr') is not null
+            then 'OK : fiche debloquee'
+            else 'ECHEC : la reparation ne repare pas' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+do $$ begin
+  perform reparer_rattachements();
+  raise notice 'ECHEC : un eleve peut lancer la reparation';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 94. On ne vole pas le compte de quelqu un d autre ==='
+-- Une fiche creee avec l adresse d un compte DEJA rattache ne doit pas
+-- le reprendre : sinon une fiche eleve portant l adresse d un
+-- administrateur lui prendrait son compte.
+reset role;
+select case when (select count(*) from public.profs
+                   where email = 'prof.demo@demo.saintho.fr'
+                     and user_id is not null) = 1
+            then 'OK : le prof de demo a bien un compte rattache'
+            else 'ECHEC : preparation du cas 94 invalide' end as verdict;
+select rattacher_par_email('prof.demo@demo.saintho.fr') is null
+       as doit_etre_true_rien_a_rattacher;
+select case when (select user_id from public.profs
+                   where email = 'prof.demo@demo.saintho.fr') = :'PROF'::uuid
+            then 'OK : son compte ne lui a pas ete pris'
+            else 'ECHEC : compte vole' end as verdict;
+
+\echo '=== 95. La barriere d entree tient toujours ==='
+reset role;
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000095', 'inconnue@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'cccccccc-0000-0000-0000-000000000095', false);
+select case when qui_suis_je()->>'type' = 'inconnu'
+            then 'OK : un compte Google sans fiche n obtient rien'
+            else 'ECHEC : la barriere d entree a saute' end as verdict;
+
+
 reset role;
