@@ -10,7 +10,7 @@ import Profile from './screens/Profile';
 import Admin from './screens/Admin';
 import MesDefis from './screens/MesDefis';
 import MaClasse from './screens/MaClasse';
-import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil } from './api';
+import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil, emailSession } from './api';
 import branding from './branding';
 
 /**
@@ -40,6 +40,8 @@ export default function App() {
     // Pré-remplissage depuis "Ma classe" : { tables: [7,8], classe: '6A' }
     const [defiPreConfig, setDefiPreConfig] = useState(null);
     const [maitrise, setMaitrise] = useState({});
+    // Adresse e-mail du compte connecté si non reconnu
+    const [sessionEmail, setSessionEmail] = useState(null);
 
     const estProf = identite?.type === 'prof';
     const estAdmin = identite?.admin === true;
@@ -104,6 +106,7 @@ export default function App() {
             }
         } else {
             // type === 'inconnu' ou inattendu
+            emailSession().then(em => setSessionEmail(em)).catch(() => {});
             setAppState('inconnu');
         }
     }
@@ -142,6 +145,7 @@ export default function App() {
     const handleDeconnexion = useCallback(async () => {
         await seDeconnecter();
         setIdentite(null);
+        setSessionEmail(null);
         setScreen('home');
         setAppState('login');
     }, []);
@@ -275,14 +279,40 @@ export default function App() {
                         color: 'var(--text-soft)', fontWeight: 600,
                         fontSize: 15, lineHeight: 1.5, maxWidth: 340,
                     }}>
-                        {identite?.message || 'Ce compte n\'est pas reconnu. Demande à ton professeur.'}
+                        {identite?.message || "Ce compte n'est pas reconnu. Demande à ton professeur."}
                     </p>
+
+                    {sessionEmail && (
+                        <div className="card" style={{
+                            padding: '14px 18px',
+                            background: 'var(--surface-alt)',
+                            border: '2px solid var(--border)',
+                            borderRadius: 14,
+                            maxWidth: 360,
+                            width: '100%',
+                            textAlign: 'center',
+                        }}>
+                            <p style={{
+                                fontSize: 13, fontWeight: 800, color: 'var(--navy)',
+                                wordBreak: 'break-all',
+                            }}>
+                                Connecté avec : {sessionEmail}
+                            </p>
+                            <p style={{
+                                fontSize: 11, fontStyle: 'italic', color: 'var(--text-soft)',
+                                marginTop: 6, lineHeight: 1.4,
+                            }}>
+                                Ce n'est pas ton adresse ? Déconnecte-toi et reconnecte-toi avec ton compte du collège.
+                            </p>
+                        </div>
+                    )}
+
                     <button
                         className="btn btn--coral"
-                        style={{ marginTop: 12, fontSize: 16, padding: '14px 32px' }}
+                        style={{ marginTop: 8, fontSize: 15, padding: '14px 28px' }}
                         onClick={handleDeconnexion}
                     >
-                        Se déconnecter
+                        Se déconnecter et changer de compte
                     </button>
                 </div>
             </Layout>

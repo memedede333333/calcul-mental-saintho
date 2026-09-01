@@ -206,6 +206,12 @@ export async function sessionActive() {
     return !!data?.session;
 }
 
+/** Adresse e-mail du compte connecté (s'il y en a un). */
+export async function emailSession() {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.email || null;
+}
+
 /**
  * Qui est connecté : un élève, un prof, ou personne de reconnu.
  *
@@ -672,7 +678,7 @@ export async function journalAdmin(limite = 100) {
 export const api = {
     // connexion
     connexionGoogle, demanderCode, verifierCode,
-    seDeconnecter, sessionActive, quiSuisJe,
+    seDeconnecter, sessionActive, quiSuisJe, emailSession,
     // élève
     monProfil, monProfilProf, mesTablesFaibles, changerAvatar,
     enregistrerSession, enregistrerSessionProf,
