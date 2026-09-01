@@ -56,6 +56,48 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-01 (7) — L'application en ligne ne démarrait pas
+
+**Constaté** — Avant de donner l'adresse pour la recette, ouverture de
+`calcul-mental-saintho.vercel.app` : **écran ivoire, rien d'autre.** Console :
+
+```
+Error: Configuration Supabase manquante.
+Crée `frontend/.env.local` avec VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.
+```
+
+`.env.local` est dans le `.gitignore` — à juste titre. Vercel ne l'a donc
+jamais eu et construisait l'application sans savoir où était la base. Le défaut
+était **invisible depuis la machine de développement**, où le fichier existe :
+tout marchait en local, et rien en ligne. Il aurait été découvert devant un
+collègue et deux iPads.
+
+**Fait** — Les deux variables déclarées dans Vercel sur les trois
+environnements (clé `anon` uniquement, jamais `service_role` : elle part dans
+le bundle que chaque navigateur télécharge, et c'est le RLS qui protège les
+données). Redéploiement — nécessaire, Vite inscrit ces valeurs **dans le
+fichier construit**, au moment de la construction.
+
+**Fait (2) — le test D de la recette est passé par la même occasion.** Neuf
+requêtes au chargement complet : l'application, ses deux fichiers construits,
+le manifeste, **les deux polices servies localement**, le logo (404 attendu) et
+**un seul appel externe, vers Supabase**. Zéro requête vers
+`fonts.googleapis.com` ou `fonts.gstatic.com`. La règle « aucune ressource
+externe » du §3 est tenue pour de bon, et la seule ligne à ajouter dans Jamf
+reste `*.supabase.co`. `TESTS_RECETTE.md` est annoté en conséquence : test D à
+ne pas refaire, sauf après la passe visuelle.
+
+**Constaté (méthode)** — Ce défaut n'était dans aucun code relu. Il était dans
+la configuration d'un service tiers, c'est-à-dire exactement là où personne ne
+regarde. La leçon vaut d'être notée : **avant de convoquer quelqu'un pour un
+test, ouvrir soi-même l'adresse qu'on va lui donner.** Trente secondes contre
+une demi-heure à deux, perdue.
+
+**Ensuite** — La recette peut commencer : tests A, B, C et E de
+`TESTS_RECETTE.md`. Puis le nom.
+
+---
+
 ## 2026-09-01 (6) — Le code est terminé
 
 **Fait** — Les deux correctifs du lot 4 vérifiés dans le code à `be10b25`,

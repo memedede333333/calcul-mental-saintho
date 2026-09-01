@@ -155,10 +155,29 @@ création.
 
 ---
 
-## TEST D — Aucune ressource extérieure *(à faire sur un Mac)*
+## TEST D — Aucune ressource extérieure — ✅ **DÉJÀ PASSÉ, ne le refais pas**
 
-*Les iPads sont filtrés par MDM. Une seule requête vers un domaine non autorisé
-et l'application se dégrade sans prévenir.*
+*Vérifié le 1er septembre 2026 sur le déploiement de production, inspecteur
+réseau à l'appui. Neuf requêtes au chargement complet, pas une de plus :*
+
+```
+calcul-mental-saintho.vercel.app/                        200
+  /assets/index-Ge7ft16g.js                              200
+  /assets/index-DhzFsLsQ.css                             200
+  /manifest.json                                         200
+  /fonts/baloo2-latin.woff2                              200   ← police locale
+  /fonts/nunito-latin.woff2                              200   ← police locale
+  /logo-saintho.png                                      404   ← attendu, le logo n'existe pas
+lkukdlspcgqtiimvwlsd.supabase.co/rest/v1/rpc/qui_suis_je 200
+```
+
+*Zéro appel vers `fonts.googleapis.com` ou `fonts.gstatic.com`. La règle du §3
+d'`ETAT.md` est tenue, et la seule ligne à ajouter dans Jamf reste
+`*.supabase.co`. Les deux 404 sur le logo sont connus : le fichier n'existe pas
+tant que le nom n'est pas choisi — l'icône de l'écran d'accueil sera générique.*
+
+*À refaire uniquement après la passe visuelle, qui touchera aux polices et aux
+images.* Le protocole ci-dessous est conservé pour cette occasion :
 
 **D1.** Sur un Mac, ouvre l'application dans Safari. Menu **Développement →
 Afficher l'inspecteur web** → onglet **Réseau**. Recharge la page.
