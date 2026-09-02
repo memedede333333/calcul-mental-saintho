@@ -1,5 +1,5 @@
 /**
- * Calcul Mental Saintho — Client API
+ * matHo — Client API
  * ===================================================================
  *
  * POINT DE PASSAGE UNIQUE entre l'application et Supabase.

@@ -4,10 +4,11 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **2 septembre 2026** — 23 migrations, 99 cas de test
-> verts. La recette sur iPad a commencé : tests A et B passés pour l'essentiel,
-> deux défauts de formulation trouvés, un diagnostic en cours sur les compteurs
-> de « Mes défis ».
+> Dernière mise à jour : **2 septembre 2026, soir** — 23 migrations, 99 cas de
+> test verts. **L'application s'appelle `matHo`** (contraction de
+> *mathématiques* et de *Saintho*), le logo existe, la bascule de marque est
+> faite dans le code. Le chemin critique n'est plus le code : il est dans la
+> base de production, l'import et Jamf.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -62,8 +63,8 @@ d'interface se juge à cette aune.
 
 | | Qui |
 |---|---|
-| ⬜ **Choisir le nom** — 3 formes, voir `NOM_ET_MARQUE.md` | Aymeri. **Bloque la passe visuelle.** |
-| ⬜ Logo, dans ses trois tailles | Aymeri |
+| ✅ **Le nom : `matHo`** — casse exacte, m minuscule, H majuscule, o minuscule | tranché par Aymeri le 02/09 |
+| ✅ Logo et icônes (180, 192, 512, favicon) dans `frontend/public/` | fait le 02/09 |
 | ⬜ Passe visuelle avec Claude Design | après le nom |
 | ⬜ Base de **production** (projet Supabase séparé, région EU) | migrations seules, **aucun seed** |
 | ⬜ Import de rentrée des 350 élèves | onglet Import, format `email, nom, prénom, classe` |
@@ -611,9 +612,12 @@ aussi.** Il ne reste, pour l'agent, que la passe visuelle — qui attend le nom.
       aux données de maîtrise de tout le collège.
 - [ ] **Échelonner la rentrée** : une ou deux classes par jour, jamais 300
       élèves le même matin.
-- [ ] **Trancher le nom** de l'application — il apparaît dans `branding.js`, le
-      manifeste et le modèle d'e-mail. Autant le faire avant que les écrans ne
-      soient codés.
+- [x] **Trancher le nom** — `matHo`, le 2 septembre 2026. Contraction de
+      *mathématiques* et de *Saintho*. Casse exacte : **m** minuscule, **H**
+      majuscule, **o** minuscule. Jamais « Matho », « MATHO » ni « matHO ».
+      Reste à répercuter hors du code : Web Clip Jamf, écran de consentement
+      Google, Vercel, Supabase, dépôt GitHub — la liste est dans
+      `NOM_ET_MARQUE.md`.
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * Calcul Mental Saintho — Fichier de branding centralisé
+ * matHo — Fichier de branding centralisé
  * 
  * MODIFIER CE FICHIER POUR CHANGER LE NOM, LA BASELINE,
  * LE LOGO OU LES COULEURS DE L'APPLICATION.
@@ -8,11 +8,11 @@
 
 const branding = {
     // — Identité —
-    appName: 'Calcul Mental Saintho',
+    appName: 'matHo',
     baseline: 'Le défi des tables — Collège Saint-Honoré d\'Eylau',
-    shortName: 'Saintho Maths',
-    logoPath: '/logo-saintho.png',
-    monogram: 'SHE',   // Fallback si logo absent
+    shortName: 'matHo',
+    logoPath: '/matho-logo.png',
+    monogram: 'mH',   // Fallback si logo absent
 
     // — Palette Saintho —
     colors: {
@@ -49,8 +49,6 @@ const branding = {
         body: "'Nunito', system-ui, sans-serif",    // Texte courant
     },
 
-    // — Auth mode (google | pin) —
-    authMode: 'pin',
 };
 
 export default branding;

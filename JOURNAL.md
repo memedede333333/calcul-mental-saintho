@@ -56,6 +56,47 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (5) — L'application s'appelle matHo
+
+**Décidé** — **`matHo`**, contraction de *mathematiques* et de *Saintho*. Casse
+exacte : m minuscule, H majuscule, o minuscule. ✅ *tranche par Aymeri le
+02/09.* Le « matHO » de son premier message etait une faute de frappe — la
+question a ete posee avant la bascule, ce qui a evite quatorze remplacements a
+refaire.
+
+**Fait** — Bascule de marque relue dans le code : `branding.js` (`appName`,
+`shortName`, `monogram: 'mH'`, `logoPath`), le manifeste (`name`, `short_name`,
+deux entrees d'icones en `purpose: "any"`), `index.html` (titre, description,
+favicon, apple-touch-icon et **`apple-mobile-web-app-title`**), `package.json`,
+et les deux en-tetes de commentaire. Plus aucune trace de l'ancien nom, et
+surtout **plus aucun 404 sur `logo-saintho.png`** — un fichier qui n'avait
+jamais existe et que trois balises reclamaient a chaque chargement depuis le
+debut du projet.
+
+**Fait (2) — les icones.** Le logo livre est une composition complete de
+1024 px : « 7 × 8 », le « 56 », les mains, les carres, et le mot en bas. A
+60 px sur un ecran d'accueil, le mot devient une tache et retrecit tout le
+reste. J'ai donc decoupe **la marque seule** — sans le mot — et produit 180,
+192, 512 et 32 px, plus le logo complet pour l'ecran de connexion et l'en-tete.
+Aucun redessin : du decoupage et du redimensionnement.
+
+**Constaté (méthode)** — Aymeri a demande pourquoi le nom disparaissait de
+l'icone. La reponse tient a une convention que personne n'enonce jamais : **sur
+un ecran d'accueil, une icone ne porte pas son nom** — le systeme l'ecrit
+dessous, et c'est `apple-mobile-web-app-title` qui le fournit. Le mot n'est donc
+pas perdu, il est ailleurs. Note ici parce que la question etait bonne et
+reviendra a la passe visuelle.
+
+**Constaté (3) — `authMode: 'pin'`** dormait dans `branding.js`, lu nulle part,
+et affirmait le contraire de ce que fait l'application. Supprime. Une valeur
+morte qui ment est pire qu'une valeur absente.
+
+**Ensuite** — Le code n'est plus le chemin critique. Aymeri : finir la recette,
+puis **la base de production, l'import et la ligne Jamf**. La passe visuelle
+avec Claude Design vient apres, et elle a deja ses contraintes ecrites au §3.
+
+---
+
 ## 2026-09-02 (4) — Le critere est bon, et il est temps de lever la tete
 
 **Fait** — Correctif relu dans le code : `tablesQuiCoincent` filtre sur

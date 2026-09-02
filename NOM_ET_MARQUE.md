@@ -25,7 +25,7 @@ au-delà d'une douzaine de caractères — « Calcul Mental Saintho » deviendra
 « Calcul Ment… ». Choisis-le en le regardant sur un vrai iPad, pas sur un écran
 d'ordinateur.
 
-Valeurs actuelles : `Calcul Mental Saintho` · `Saintho Maths` · `SHE`
+Valeurs actuelles : `matHo` · `matHo` · `mH`
 
 ---
 
@@ -33,16 +33,16 @@ Valeurs actuelles : `Calcul Mental Saintho` · `Saintho Maths` · `SHE`
 
 Un seul commit, fait par Antigravity.
 
-| # | Fichier | Ce qu'on change |
-|---|---|---|
-| 1 | `frontend/src/branding.js` | `appName`, `shortName`, `monogram`, `logoPath`, et l'en-tête du fichier |
-| 2 | `frontend/public/manifest.json` | `name`, `short_name`, `description`, `icons[].src` |
-| 3 | `frontend/index.html` | `<title>`, `meta description`, `rel="icon"`, `rel="apple-touch-icon"` |
-| 4 | `frontend/index.html` | **ajouter** `<meta name="apple-mobile-web-app-title" content="…">` — voir §5 |
-| 5 | `frontend/package.json` | `"name"` (en minuscules, avec des tirets) |
-| 6 | `frontend/src/api.js` | l'en-tête de commentaire, ligne 2 |
-| 7 | `frontend/src/styles/index.css` | l'en-tête de commentaire, ligne 2 |
-| 8 | `frontend/public/logo-saintho.png` | le fichier lui-même : nouveau logo, et **renommer** si le nom change |
+| # | Fait | Fichier | Ce qu'on change |
+|---|:---:|---|---|
+| 1 | [x] | `frontend/src/branding.js` | `appName`, `shortName`, `monogram`, `logoPath`, et l'en-tête du fichier |
+| 2 | [x] | `frontend/public/manifest.json` | `name`, `short_name`, `description`, `icons[].src` |
+| 3 | [x] | `frontend/index.html` | `<title>`, `meta description`, `rel="icon"`, `rel="apple-touch-icon"` |
+| 4 | [x] | `frontend/index.html` | **ajouter** `<meta name="apple-mobile-web-app-title" content="matHo">` |
+| 5 | [x] | `frontend/package.json` | `"name"` (`"matho"`) |
+| 6 | [x] | `frontend/src/api.js` | l'en-tête de commentaire, ligne 2 |
+| 7 | [x] | `frontend/src/styles/index.css` | l'en-tête de commentaire, ligne 2 |
+| 8 | [x] | `frontend/public/logo-saintho.png` | remplacé par `matho-logo.png`, `matho-icone-*.png`, `matho-favicon-32.png` |
 
 **Vérification après coup :**
 
@@ -88,35 +88,25 @@ rééditer le profil de configuration et le repousser sur les appareils.
 
 ## 5. Deux corrections à faire pendant la bascule
 
-**a) Il manque `apple-mobile-web-app-title`.**
-Sans cette balise, iOS prend le contenu de `<title>` comme libellé sous l'icône
-— donc le nom **long**, tronqué. La balise permet de donner le nom **court**.
-À ajouter dans `frontend/index.html` :
+**a) [x] Il manque `apple-mobile-web-app-title`.**
+Fait : `<meta name="apple-mobile-web-app-title" content="matHo" />` posé dans `frontend/index.html`.
 
-```html
-<meta name="apple-mobile-web-app-title" content="[nom court]" />
-```
-
-**b) `branding.js` contient encore `authMode: 'pin'`.**
-Vestige du système de code PIN supprimé. Plus rien ne le lit, mais il contredit
-l'authentification Google et induira en erreur le prochain qui ouvrira le
-fichier. À supprimer.
+**b) [x] `branding.js` contient encore `authMode: 'pin'`.**
+Fait : ligne supprimée.
 
 ---
 
 ## 6. La procédure, le jour J
 
-1. Trancher les **trois formes** du nom (§1), le nom court sur un vrai iPad
-2. Produire le **logo** dans ses trois tailles : 512 px fond transparent,
-   192 px, et une version monochrome
-3. Antigravity fait les **8 changements de code** (§2) en un commit, puis
-   la commande de vérification
-4. `npm run build`, déploiement Vercel, et on ouvre l'app pour vérifier :
+1. [x] Trancher les **trois formes** du nom (§1) : `matHo` · `matHo` · `mH`
+2. [x] Fichiers logo et icônes créés et placés dans `frontend/public/`
+3. [x] Antigravity fait les **8 changements de code** (§2)
+4. [ ] `npm run build`, déploiement Vercel, et on ouvre l'app pour vérifier :
    onglet du navigateur, écran de connexion, écran Google
-5. **Ajouter à l'écran d'accueil sur un iPad de test** et regarder le libellé
+5. [ ] **Ajouter à l'écran d'accueil sur un iPad de test** et regarder le libellé
    sous l'icône — c'est le seul test qui compte pour le nom court
-6. Aymeri fait les **6 changements hors code** (§3), Jamf en dernier
-7. Repousser le Web Clip et vérifier sur un iPad d'élève
+6. [ ] Aymeri fait les **6 changements hors code** (§3), Jamf en dernier
+7. [ ] Repousser le Web Clip et vérifier sur un iPad d'élève
 
 ---
 
