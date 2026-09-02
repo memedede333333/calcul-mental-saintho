@@ -597,10 +597,10 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
                             background: 'rgba(201,162,39,0.08)',
                         }}>
                             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', marginBottom: 8 }}>
-                                ⚠️ {confirmInfo.eleves_hors_plafond} élève{confirmInfo.eleves_hors_plafond > 1 ? 's' : ''} sur {confirmInfo.eleves_classe} n'{confirmInfo.eleves_hors_plafond > 1 ? 'ont' : 'a'} pas encore débloqué la table {confirmInfo.table_max} — lancer quand même ?
+                                ⚠️ La table {confirmInfo.table_max} dépasse le niveau atteint par {confirmInfo.eleves_hors_plafond} élève{confirmInfo.eleves_hors_plafond > 1 ? 's' : ''} sur {confirmInfo.eleves_classe}.
                             </p>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginBottom: 12 }}>
-                                Le défi sera jouable par tous : le score sera enregistré même pour les élèves dont le plafond est inférieur.
+                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginBottom: 12, lineHeight: 1.5 }}>
+                                {confirmInfo.plafond_commun ? `Le plus faible de la classe s'arrête à la table ${confirmInfo.plafond_commun}. ` : ''}Le défi reste jouable par tous et leur score sera enregistré — ils découvriront simplement une table qu'ils n'ont pas encore débloquée par la Montée des tables.
                             </p>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <button

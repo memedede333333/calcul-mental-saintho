@@ -94,14 +94,24 @@ export default function MaClasse({ onBack, onLancerDefi }) {
         return data.filter(d => !d.travaillee);
     }, [data]);
 
-    // Candidates pour le bouton défi : travaillee=true ET dans_le_plafond_commun=true
-    // même tri que tablesTravaillees (déjà trié), les 2-3 premières
-    const tablesDefi = useMemo(() => {
+    // Tables qui coincent : travaillee=true ET dans_le_plafond_commun=true ET eleves_verts < eleves_classe
+    // Le tri est déjà le bon (les plus faibles en premier).
+    const tablesQuiCoincent = useMemo(() => {
         return tablesTravaillees
-            .filter(d => d.dans_le_plafond_commun)
+            .filter(d => d.dans_le_plafond_commun && d.eleves_verts < d.eleves_classe);
+    }, [tablesTravaillees]);
+
+    // Candidates pour le bouton défi de rattrapage (2 ou 3 premières)
+    const tablesDefi = useMemo(() => {
+        return tablesQuiCoincent
             .slice(0, 3)
             .map(d => d.table_n)
             .sort((a, b) => a - b);
+    }, [tablesQuiCoincent]);
+
+    // Est-ce que toutes les tables travaillées sont maîtrisées à 100 % ?
+    const toutMaitrise = useMemo(() => {
+        return tablesTravaillees.length > 0 && tablesTravaillees.every(d => d.eleves_verts === d.eleves_classe);
     }, [tablesTravaillees]);
 
     // Tables non abordées pour le bouton découverte (pas de filtre par plafond)
@@ -242,7 +252,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         </div>
                     )}
 
-                    {/* Bouton défi — uniquement tables travaillées dans le plafond commun */}
+                    {/* Bouton défi de rattrapage ou message si tout est maîtrisé */}
                     {tablesDefi.length > 0 ? (
                         <button
                             className="btn btn--gold"
@@ -254,6 +264,20 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         >
                             ⚔️ Lancer un défi sur les tables {tablesDefi.join(', ')}
                         </button>
+                    ) : toutMaitrise ? (
+                        <div className="card" style={{
+                            padding: '14px 18px', marginTop: 8,
+                            background: 'rgba(0, 201, 167, 0.08)',
+                            border: '2px solid var(--mint)',
+                            borderRadius: 14, textAlign: 'center',
+                        }}>
+                            <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--navy)', marginBottom: 4 }}>
+                                ✅ Rien ne coince dans cette classe.
+                            </p>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', lineHeight: 1.4 }}>
+                                Toutes les tables travaillées sont maîtrisées par tout le monde. Le bouton « Découvrir » ci-dessous ouvre les tables suivantes.
+                            </p>
+                        </div>
                     ) : (
                         <button
                             className="btn btn--ghost"
