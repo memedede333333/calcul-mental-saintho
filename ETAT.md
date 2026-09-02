@@ -5,10 +5,10 @@
 > celui-ci renvoie.
 >
 > Dernière mise à jour : **2 septembre 2026, soir** — 23 migrations, 99 cas de
-> test verts. **L'application s'appelle `matHo`** (contraction de
-> *mathématiques* et de *Saintho*), le logo existe, la bascule de marque est
-> faite dans le code. Le chemin critique n'est plus le code : il est dans la
-> base de production, l'import et Jamf.
+> test verts. **L'application s'appelle `matHo`**, le logo et les icônes sont en
+> place, et **le code est terminé** : plus rien en attente côté Antigravity avant
+> la passe visuelle. Le chemin critique est désormais entièrement chez Aymeri —
+> base de production, import, Jamf, RGPD — et chez Claude Design.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat

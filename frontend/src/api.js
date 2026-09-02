@@ -64,7 +64,7 @@ async function rpc(nom, params = {}) {
     }
     // Retour souple : la fonction a répondu, mais avec un refus motivé
     if (data && typeof data === 'object' && data.ok === false) {
-        return { ok: false, error: data.message, raison: data.raison, data };
+        return { ok: false, error: data.message, message: data.message, raison: data.raison, data };
     }
     return { ok: true, data };
 }

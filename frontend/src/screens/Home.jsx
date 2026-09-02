@@ -1,17 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { rejoindreDefi } from '../api';
+import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 
 /**
  * Home — Écran d'accueil
  *
  * Reçoit `identite` (réponse brute de quiSuisJe), pas un objet aplati.
  * Deux rendus :
- *   - élève : les 5 destinations + accès rapides
+ *   - élève : les 5 destinations + accès rapides + bandeau reprise défi
  *   - prof  : placeholder « en construction » + boutons utiles
  *
  * Le bouton Administration n'apparaît QUE si estAdmin === true.
  */
-export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
+export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onReprendreDefi }) {
     const profil = identite?.profil;
+    const idUtilisateur = profil?.id;
+
+    const [defiEnCours, setDefiEnCours] = useState(() => {
+        return (!estProf && idUtilisateur) ? lireDefiEnCours(idUtilisateur) : null;
+    });
+    const [loadingReprise, setLoadingReprise] = useState(false);
+    const [erreurReprise, setErreurReprise] = useState(null);
+
+    useEffect(() => {
+        if (!estProf && idUtilisateur) {
+            setDefiEnCours(lireDefiEnCours(idUtilisateur));
+        } else {
+            setDefiEnCours(null);
+        }
+        setErreurReprise(null);
+    }, [idUtilisateur, estProf]);
+
+    const handleReprendre = async () => {
+        if (!defiEnCours?.code) return;
+        setLoadingReprise(true);
+        setErreurReprise(null);
+        const res = await rejoindreDefi(defiEnCours.code);
+        setLoadingReprise(false);
+
+        if (res.ok) {
+            // Mettre à jour avec les informations fraîches du serveur
+            sauvegarderDefiEnCours(idUtilisateur, {
+                code: defiEnCours.code,
+                defi_id: res.data.defi_id,
+                type: res.data.type,
+                classe: res.data.classe,
+                auteur_nom: res.data.auteur_nom,
+                rejoint_le: Date.now(),
+            });
+            onReprendreDefi?.(res.data);
+        } else {
+            // Échec (expiré, fermé, déjà joué...) : effacer l'entrée et afficher le message tel quel
+            effacerDefiEnCours(idUtilisateur);
+            setDefiEnCours(null);
+            setErreurReprise(res.message || res.error || 'Ce défi n\'est plus disponible.');
+        }
+    };
 
     // ==================== ACCUEIL PROFESSEUR ====================
     if (estProf) {
@@ -138,6 +182,61 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout }) {
                             {profil.classe || ''} — Prêt pour les tables ?
                         </p>
                     </div>
+                </div>
+            )}
+
+            {/* Erreur serveur si reprise impossible */}
+            {erreurReprise && (
+                <div className="card" style={{
+                    marginBottom: 14, padding: '12px 16px',
+                    background: 'rgba(255, 90, 95, 0.08)',
+                    border: '1.5px solid var(--coral)',
+                    borderRadius: 14, display: 'flex',
+                    alignItems: 'center', justifyContent: 'space-between',
+                    gap: 12,
+                }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral-dk)', margin: 0 }}>
+                        {erreurReprise}
+                    </p>
+                    <button
+                        className="btn btn--ghost"
+                        style={{ fontSize: 12, padding: '4px 8px', color: 'var(--text-soft)' }}
+                        onClick={() => setErreurReprise(null)}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            {/* Bandeau discret de reprise de défi */}
+            {!erreurReprise && defiEnCours && (
+                <div className="card" style={{
+                    marginBottom: 14, padding: '12px 16px',
+                    background: 'rgba(201, 162, 39, 0.08)',
+                    border: '1.5px solid var(--gold)',
+                    borderRadius: 14, display: 'flex',
+                    alignItems: 'center', justifyContent: 'space-between',
+                    gap: 12,
+                }}>
+                    <div>
+                        <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--navy)', marginBottom: 2 }}>
+                            ⚔️ Tu as un défi en cours
+                        </p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)', margin: 0 }}>
+                            {defiEnCours.auteur_nom ? `Défi de ${defiEnCours.auteur_nom}` : 'Défi'} — code {defiEnCours.code}
+                        </p>
+                    </div>
+                    <button
+                        className="btn btn--gold"
+                        style={{
+                            fontSize: 13, padding: '8px 16px',
+                            fontWeight: 800, flexShrink: 0,
+                        }}
+                        disabled={loadingReprise}
+                        onClick={handleReprendre}
+                    >
+                        {loadingReprise ? '…' : 'Reprendre'}
+                    </button>
                 </div>
             )}
 

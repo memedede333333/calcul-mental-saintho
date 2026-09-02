@@ -11,6 +11,7 @@ import Admin from './screens/Admin';
 import MesDefis from './screens/MesDefis';
 import MaClasse from './screens/MaClasse';
 import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil, emailSession } from './api';
+import { effacerDefiEnCours } from './logic/defiStorage';
 import branding from './branding';
 
 /**
@@ -143,12 +144,15 @@ export default function App() {
 
     // --- Déconnexion ---
     const handleDeconnexion = useCallback(async () => {
+        if (identite?.profil?.id) {
+            effacerDefiEnCours(identite.profil.id);
+        }
         await seDeconnecter();
         setIdentite(null);
         setSessionEmail(null);
         setScreen('home');
         setAppState('login');
-    }, []);
+    }, [identite]);
 
     // --- Callback pour Login ---
     // Reçoit la réponse brute de quiSuisJe() après connexion réussie
@@ -329,6 +333,10 @@ export default function App() {
                     estProf={estProf}
                     estAdmin={estAdmin}
                     onLogout={handleDeconnexion}
+                    onReprendreDefi={(rejointDefi) => {
+                        setDefiPreConfig({ rejointDefi });
+                        setScreen('challenges');
+                    }}
                 />
             )}
             {screen === 'learn' && <Learn onBack={goHome} />}

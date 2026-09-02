@@ -56,6 +56,38 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (7) — Reprendre un defi ferme : le dernier lot de code
+
+**Fait** — Relu dans le code, rien a corriger. Quatre points verifies parce que
+chacun pouvait mordre :
+
+- **L'ordre a la deconnexion.** `effacerDefiEnCours` est appele **avant**
+  `setIdentite(null)` : apres, l'identifiant serait perdu et l'entree resterait
+  en place pour le compte suivant sur le meme iPad.
+- **Le refus « souple » du serveur.** Un defi ferme ou expire ne leve pas
+  d'erreur : `rejoindre_defi` renvoie `{ok: false, message}`. Le wrapper `rpc()`
+  le normalise deja en `res.ok = false` — donc le `if (res.ok)` de l'ecran est
+  juste, et le message affiche est bien celui du serveur.
+- **Le piege de la pre-configuration.** `defiPreConfig` servait jusqu'ici a
+  arriver sur l'ecran de **configuration** depuis « Ma classe ». Reutilise tel
+  quel, « Reprendre » aurait envoye l'eleve configurer un Sprint au lieu de
+  rejoindre son defi. Antigravity a distingue les deux cas : `rejointDefi` mene
+  a `defi-intro`.
+- **Les questions.** Elles sont stockees dans la ligne `defis` a la creation :
+  une seconde reprise renvoie exactement les memes. C'est ce qui rend la reprise
+  legitime — l'eleve rejoue le meme defi, pas un autre.
+
+**Quatrieme lot consecutif sans defaut.**
+
+**Décidé** — **Le code est termine, pour de bon cette fois.** Plus rien n'est en
+attente cote Antigravity avant la passe visuelle.
+
+**Ensuite** — Claude Design, sur le brief `PROMPT_CLAUDE_DESIGN.md`. Puis un lot
+d'implementation pour Antigravity, puis une relecture. Et en parallele, cote
+Aymeri : base de production, import, Jamf, RGPD.
+
+---
+
 ## 2026-09-02 (6) — Tests E sur iPad : deux constats, dont un a traiter
 
 **Fait** — E1 (plein ecran depuis l'ecran d'accueil), E2 (le pave de

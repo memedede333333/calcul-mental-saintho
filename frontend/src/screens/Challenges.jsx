@@ -9,6 +9,7 @@ import {
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
+import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 
 /**
  * Challenges — Mode Défis
@@ -61,9 +62,17 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
     const plafond = identite?.profil?.plafond_tables || (estProf ? 20 : 10);
 
-    // Pré-remplissage depuis MaClasse : sauter directement en config
+    // Pré-remplissage depuis MaClasse (config) ou reprise de défi (intro)
     useEffect(() => {
-        if (defiPreConfig) {
+        if (defiPreConfig?.rejointDefi) {
+            const d = defiPreConfig.rejointDefi;
+            const type = CHALLENGE_TYPES.find(t => t.id === d.type) || CHALLENGE_TYPES[0];
+            setDefiInfo(d);
+            setChallengeType(type);
+            setSelectedTables(d.tables || [2, 3, 4, 5]);
+            setPhase('defi-intro');
+            clearPreConfig?.();
+        } else if (defiPreConfig) {
             const sprintType = CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0];
             setChallengeType(sprintType);
             setSelectedTables(defiPreConfig.tables || [2, 3, 4, 5]);
@@ -120,11 +129,14 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     const envoyerDefi = useCallback(async (payload) => {
         setEnvoiDefi({ etat: 'en_cours' });
         const res = await terminerDefi(payload);
+        if (res.ok) {
+            effacerDefiEnCours(identite?.profil?.id);
+        }
         setEnvoiDefi(res.ok
             ? { etat: 'ok' }
             : { etat: 'echec', message: res.error, payload }
         );
-    }, []);
+    }, [identite]);
 
     const handleDoneDefi = useCallback((r) => {
         setResult(r);
@@ -152,11 +164,20 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         setDefiInfo(d);
         setChallengeType(type);
         setSelectedTables(d.tables || [2,3,4,5]);
+        // Sauvegarder dans localStorage pour reprise en cas de rechargement/fermeture
+        sauvegarderDefiEnCours(identite?.profil?.id, {
+            code: code.trim().toUpperCase(),
+            defi_id: d.defi_id,
+            type: d.type,
+            classe: d.classe,
+            auteur_nom: d.auteur_nom,
+            rejoint_le: Date.now(),
+        });
         // On passe par un écran d'annonce — l'élève doit savoir
         // de qui est le défi avant de jouer.
         setPhase('defi-intro');
         return res;
-    }, []);
+    }, [identite]);
 
     // --- Créer un défi ---
     const handleCreateDefi = useCallback(async (type, tables, classe) => {
