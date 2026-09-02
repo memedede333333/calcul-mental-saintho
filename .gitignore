@@ -10,3 +10,6 @@ dist-ssr/
 
 # Jeton d acces MCP — ne jamais commiter
 .agents/mcp_config.json
+
+# Export brut de Claude Design (23 Mo) — on ne versionne que le .dc.html
+docs/design/*.zip

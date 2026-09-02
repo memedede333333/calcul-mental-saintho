@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="74209eba-aeef-43a6-abea-1bf84b518b9c"></script>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+:root{
+  --navy:#1B2A4A; --ink:#16233C; --navy-soft:#2E4370;
+  --ivory:#FAF6EE; --surface:#FFFFFF; --border:#E8E2D8; --muted:#6B7A90;
+  --gold:#C9A227; --mint:#00C9A7; --coral:#FF5A5F; --sky:#4DA8DA; --violet:#8B6FC0; --sun:#F5A524;
+  --mint-soft:#DFF7F1; --coral-soft:#FFE7E7; --sky-soft:#E4F1FA; --gold-soft:#F7EFD3;
+  --display:"Baloo 2","Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  --sans:"Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+}
+body{margin:0;background:#EFEAE0;font-family:var(--sans);color:var(--ink);text-wrap:pretty}
+a{color:var(--sky);text-decoration:none}
+a:hover{color:var(--navy)}
+</style>
+</helmet>
+
+<section style="padding:72px 80px 120px;display:flex;flex-direction:column;gap:44px">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:44px">
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:1000px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="background:var(--navy);color:#fff;font:700 15px var(--sans);padding:5px 12px;border-radius:999px;letter-spacing:.06em">1a</span>
+        <span style="color:var(--muted);font:600 15px var(--sans);letter-spacing:.16em;text-transform:uppercase">matHo — refonte visuelle et ergonomique</span>
+      </div>
+      <h1 style="margin:0;font:700 54px var(--display);color:var(--navy);letter-spacing:-.01em">Sobre au repos, éclatant à la réussite</h1>
+      <p style="margin:0;font:400 21px/1.5 var(--sans);color:var(--navy-soft);max-width:940px">Je reste dans l'univers du logo : encre marine, fond ivoire, un accent par contexte, et la mosaïque de carrés colorés du « 56 » comme unique motif — elle sert de série, de grille de maîtrise et de confettis. Aucune ressource extérieure, couleurs en variables CSS, cibles ≥ 96 px, portrait 834 × 1194.</p>
+    </div>
+
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:stretch">
+      <div style="flex:1 1 460px;background:var(--surface);border-radius:28px;padding:32px;box-shadow:0 2px 0 var(--border);display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font:700 26px var(--display);color:var(--navy)">Le pavé — pourquoi là</h2>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">iPad posé à plat, tenu d'aucune main : le doigt part du bord bas de la tablette. Je pousse donc le pavé <b>en bas, plein cadre</b> (touches de 241 × 132 px, gouttière 16 px) et je réduis la question à ce qu'elle doit être : grande, mais compacte, dans le tiers haut.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Ordre <b>1‑2‑3 en haut</b> : c'est le pavé du téléphone et celui d'iOS, déjà automatisé chez un collégien. Le 0 occupe deux colonnes au centre-bas — c'est le chiffre le plus tapé après un multiple de 10, il n'a pas à être visé.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Le <b>⌫ est isolé en bas à droite</b>, séparé par une gouttière doublée (32 px) et posé en creux, pas en rouge : il ne doit ni attirer l'œil ni se prendre à la place du 0. La correction automatique après erreur fait le reste du travail.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:var(--muted)"><b>Hypothèse à vérifier</b> : la latéralité. Un droitier masque la colonne 3‑6‑9 avec sa main ; si l'observation le confirme, une bascule gauche/droite du ⌫ dans le profil coûte trois lignes.</p>
+      </div>
+      <div style="flex:1 1 460px;background:var(--surface);border-radius:28px;padding:32px;box-shadow:0 2px 0 var(--border);display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font:700 26px var(--display);color:var(--navy)">La fête, sans casser le rythme</h2>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Trois intensités, jamais bloquantes :</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>1 · Bonne réponse (180 ms)</b> — les cases passent menthe, le nombre grossit d'un cran, six carrés du logo jaillissent derrière la carte. La question suivante arrive pendant l'animation : rien n'attend.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>2 · Série (à 5, 10, 15)</b> — la barre de série se remplit d'un carré coloré de plus ; au palier, la mosaïque pulse une fois et le compteur claque. Aucune modale.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>3 · Fin de partie réussie, badge, table débloquée</b> — c'est là que ça pète : pluie de carrés, score qui compte de 0 à sa valeur, badge qui se retourne. Un seul écran, une seule fois, uniquement en cas de réussite.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:var(--muted)">L'erreur, elle, reste sobre : rouge + tremblement 200 ms, puis les cases se vident. Pas de son, pas de croix géante — l'erreur d'un collégien est une quasi‑réussite, on ne la punit pas.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+      <!-- ÉCRAN 1 — partie en cours, saisie -->
+      <div data-screen-label="Partie · saisie" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie en cours <span style="color:var(--muted);font:600 16px var(--sans)">— saisie</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px">⚡ Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">7<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:35%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--coral)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sun)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--mint)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sky)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+              </div>
+              <span style="font:700 22px var(--display);color:var(--navy)">4</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 2px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:22px">
+            <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">8 <span style="color:var(--muted)">×</span> 6</div>
+            <div style="width:100%;height:8px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:62%;height:100%;background:var(--gold);border-radius:999px"></div></div>
+            <div style="display:flex;gap:16px">
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--surface);border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--navy)">4</div>
+              <div style="width:104px;height:126px;border-radius:24px;background:#F6F2EA;border:4px solid var(--border);display:flex;align-items:center;justify-content:center"><div style="width:4px;height:56px;background:var(--navy-soft);border-radius:2px"></div></div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;font:600 40px var(--sans);color:var(--navy-soft)">⌫</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 1b — bonne réponse -->
+      <div data-screen-label="Partie · juste" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie <span style="color:var(--mint);font:700 16px var(--sans)">— bonne réponse, 180 ms</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px">⚡ Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">8<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:40%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--coral)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sun)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--mint)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sky)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--violet)"></div>
+              </div>
+              <span style="font:700 26px var(--display);color:var(--mint)">5</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;position:relative">
+            <div style="position:absolute;top:-10px;left:40px;width:22px;height:22px;border-radius:5px;background:var(--coral);transform:rotate(18deg)"></div>
+            <div style="position:absolute;top:30px;left:-14px;width:18px;height:18px;border-radius:4px;background:var(--sun);transform:rotate(-12deg)"></div>
+            <div style="position:absolute;top:-18px;right:96px;width:20px;height:20px;border-radius:5px;background:var(--sky);transform:rotate(24deg)"></div>
+            <div style="position:absolute;top:44px;right:-16px;width:24px;height:24px;border-radius:6px;background:var(--mint);transform:rotate(-20deg)"></div>
+            <div style="position:absolute;bottom:24px;left:-18px;width:16px;height:16px;border-radius:4px;background:var(--violet);transform:rotate(30deg)"></div>
+            <div style="position:absolute;bottom:-8px;right:56px;width:18px;height:18px;border-radius:4px;background:var(--gold);transform:rotate(-8deg)"></div>
+            <div style="background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 0 0 4px var(--mint-soft), 0 2px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:22px;position:relative">
+              <div style="position:absolute;top:26px;right:32px;background:var(--mint);color:#fff;font:700 30px var(--display);padding:6px 20px;border-radius:999px">+1</div>
+              <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">8 <span style="color:var(--muted)">×</span> 6</div>
+              <div style="width:100%;height:8px;border-radius:999px;background:var(--mint-soft);overflow:hidden"><div style="width:100%;height:100%;background:var(--mint);border-radius:999px"></div></div>
+              <div style="display:flex;gap:16px">
+                <div style="width:112px;height:134px;border-radius:24px;background:var(--mint);display:flex;align-items:center;justify-content:center;font:700 84px var(--display);color:#fff">4</div>
+                <div style="width:112px;height:134px;border-radius:24px;background:var(--mint);display:flex;align-items:center;justify-content:center;font:700 84px var(--display);color:#fff">8</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px;opacity:.55">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;font:600 40px var(--sans);color:var(--navy-soft)">⌫</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 1c — mauvaise réponse -->
+      <div data-screen-label="Partie · faux" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie <span style="color:var(--coral);font:700 16px var(--sans)">— mauvaise réponse, 200 ms puis vidage</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px">⚡ Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">9<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:45%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+              </div>
+              <span style="font:700 22px var(--display);color:var(--muted)">0</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 0 0 4px var(--coral-soft), 0 2px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:22px">
+            <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">7 <span style="color:var(--muted)">×</span> 7</div>
+            <div style="width:100%;height:8px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:28%;height:100%;background:var(--gold);border-radius:999px"></div></div>
+            <div style="display:flex;gap:16px;transform:translateX(-10px)">
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--coral-soft);border:4px solid var(--coral);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--coral)">4</div>
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--coral-soft);border:4px solid var(--coral);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--coral)">8</div>
+            </div>
+            <div style="font:700 22px var(--sans);color:var(--coral)">Presque — il te reste 1,4 s</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;font:600 40px var(--sans);color:var(--navy-soft)">⌫</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 2 — accueil élève -->
+      <div data-screen-label="Accueil élève" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">2 · Accueil élève <span style="color:var(--muted);font:600 16px var(--sans)">— avec défi interrompu</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:14px 36px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:78px;height:78px;border-radius:24px;background:var(--sky-soft);display:flex;align-items:center;justify-content:center;font-size:44px">🦊</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font:700 34px var(--display);color:var(--navy)">Lou</div>
+                <div style="font:600 19px var(--sans);color:var(--muted)">6ᵉA · Confirmé</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:12px 22px;box-shadow:0 2px 0 var(--border)">
+              <span style="font:700 26px var(--display);color:var(--navy)">1 240</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">pts</span>
+            </div>
+          </div>
+
+          <div style="margin:22px 36px 0;background:var(--navy);border-radius:26px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:700 24px var(--display);color:#fff">Défi UEWTR en cours</div>
+              <div style="font:600 17px var(--sans);color:#B9C6DD">Contre-la-montre · 6ᵉA · tu t'es arrêté à la question 6</div>
+            </div>
+            <div style="background:var(--mint);color:#04382F;font:700 21px var(--sans);padding:16px 26px;border-radius:999px;white-space:nowrap">Reprendre</div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="font:700 17px var(--sans);color:var(--muted);letter-spacing:.14em;text-transform:uppercase">Jouer</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:8px;border-left:0">
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:34px">⚡</span><span style="font:700 27px var(--display);color:var(--navy)">Sprint</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">20 questions, 3 s chacune</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:34px">🎯</span><span style="font:700 27px var(--display);color:var(--navy)">Sans faute</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">Zéro erreur, pas de chrono</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:34px">⏱️</span><span style="font:700 27px var(--display);color:var(--navy)">Contre-la-montre</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">2 min, un max de bonnes</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:34px">🧗</span><span style="font:700 27px var(--display);color:var(--navy)">Montée</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">Palier 12 · débloque la 13</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="font:700 17px var(--sans);color:var(--muted);letter-spacing:.14em;text-transform:uppercase">Défi de classe</div>
+            <div style="background:var(--surface);border-radius:26px;padding:22px 24px;box-shadow:0 3px 0 var(--border);display:flex;align-items:center;gap:16px">
+              <div style="flex:1;height:86px;border-radius:20px;border:3px dashed var(--border);display:flex;align-items:center;justify-content:center;font:700 30px var(--sans);color:#B9B0A0;letter-spacing:.34em">CODE</div>
+              <div style="height:86px;padding:0 34px;border-radius:20px;background:var(--gold);color:#fff;font:700 25px var(--sans);display:flex;align-items:center">Rejoindre</div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;gap:16px">
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font-size:28px">📚</span><span style="font:700 19px var(--sans);color:var(--navy)">Apprendre</span></div>
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font-size:28px">🏆</span><span style="font:700 19px var(--sans);color:var(--navy)">Classements</span></div>
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font-size:28px">🗺️</span><span style="font:700 19px var(--sans);color:var(--navy)">Ma grille</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 3 — fin de partie -->
+      <div data-screen-label="Fin de partie" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">3 · Fin de partie <span style="color:var(--mint);font:700 16px var(--sans)">— réussie, badge décroché</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:120px;left:70px;width:26px;height:26px;border-radius:6px;background:var(--coral);transform:rotate(16deg)"></div>
+          <div style="position:absolute;top:190px;right:90px;width:22px;height:22px;border-radius:5px;background:var(--sky);transform:rotate(-22deg)"></div>
+          <div style="position:absolute;top:300px;left:120px;width:18px;height:18px;border-radius:4px;background:var(--sun);transform:rotate(34deg)"></div>
+          <div style="position:absolute;top:96px;right:180px;width:16px;height:16px;border-radius:4px;background:var(--mint);transform:rotate(-10deg)"></div>
+          <div style="position:absolute;top:360px;right:56px;width:24px;height:24px;border-radius:6px;background:var(--violet);transform:rotate(12deg)"></div>
+          <div style="position:absolute;top:250px;left:32px;width:20px;height:20px;border-radius:5px;background:var(--gold);transform:rotate(-28deg)"></div>
+
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:40px 40px 0;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div style="font:700 26px var(--sans);color:var(--mint);letter-spacing:.1em;text-transform:uppercase">Sprint terminé</div>
+            <div style="display:flex;align-items:baseline;gap:12px">
+              <span style="font:700 156px/1 var(--display);color:var(--navy)">18</span>
+              <span style="font:700 56px var(--display);color:var(--muted)">/ 20</span>
+            </div>
+            <div style="font:700 25px var(--sans);color:var(--navy-soft)">du premier coup</div>
+            <div style="margin-top:6px;background:var(--gold-soft);color:#7A6114;font:700 21px var(--sans);padding:10px 22px;border-radius:999px">2 rattrapées au 2ᵉ essai · ½ pt chacune</div>
+          </div>
+
+          <div style="margin:32px 36px 0;display:flex;gap:16px">
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--mint)">+19</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">points</span>
+            </div>
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--navy)">11</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">meilleure série</span>
+            </div>
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--navy)">2,1 s</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">par question</span>
+            </div>
+          </div>
+
+          <div style="margin:20px 36px 0;background:var(--navy);border-radius:28px;padding:26px;display:flex;align-items:center;gap:22px">
+            <div style="width:92px;height:92px;border-radius:24px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:48px">🏅</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:700 17px var(--sans);color:var(--gold);letter-spacing:.14em;text-transform:uppercase">Nouveau badge</div>
+              <div style="font:700 30px var(--display);color:#fff">Foudre — 10 bonnes de suite</div>
+            </div>
+          </div>
+
+          <div style="margin:20px 36px 0;background:var(--surface);border-radius:28px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font:700 24px var(--display);color:var(--navy)">Ta grille a bougé</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">4 cases passent au vert</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">8×6</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">7×8</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">9×4</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">6×6</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--sun);color:#4A3706;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">7×7</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--coral);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">8×9</div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;flex-direction:column;gap:14px">
+            <div style="height:104px;border-radius:26px;background:var(--mint);color:#04382F;font:700 28px var(--sans);display:flex;align-items:center;justify-content:center">Rejouer un Sprint</div>
+            <div style="display:flex;gap:14px">
+              <div style="flex:2;height:88px;border-radius:24px;background:var(--coral-soft);color:#8E2C30;font:700 22px var(--sans);display:flex;align-items:center;justify-content:center">Réviser mes 2 cases rouges</div>
+              <div style="flex:1;height:88px;border-radius:24px;background:#F1ECE2;color:var(--navy-soft);font:700 22px var(--sans);display:flex;align-items:center;justify-content:center">Accueil</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 4 — classement du défi -->
+      <div data-screen-label="Classement défi" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">4 · Classement d'un défi <span style="color:var(--muted);font:600 16px var(--sans)">— se remplit en direct</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="background:var(--navy);padding:26px 36px 30px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font:700 20px var(--sans);color:#B9C6DD">‹ Accueil</div>
+              <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);padding:8px 18px;border-radius:999px">
+                <div style="width:10px;height:10px;border-radius:3px;background:var(--mint)"></div>
+                <span style="font:700 17px var(--sans);color:#fff">En direct</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font:700 44px var(--display);color:#fff;letter-spacing:.22em">UEWTR</div>
+                <div style="font:600 19px var(--sans);color:#B9C6DD">⚡ Sprint · tables 6 à 9 · 6ᵉA</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font:700 32px var(--display);color:var(--gold)">18 / 27</div>
+                <div style="font:600 16px var(--sans);color:#B9C6DD">ont terminé</div>
+              </div>
+            </div>
+            <div style="height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden"><div style="width:66%;height:100%;background:var(--gold);border-radius:999px"></div></div>
+          </div>
+
+          <div style="padding:34px 36px 0;display:flex;align-items:flex-end;gap:14px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:72px;height:72px;border-radius:22px;background:var(--sky-soft);display:flex;align-items:center;justify-content:center;font-size:38px">🐼</div>
+              <div style="font:700 21px var(--sans);color:var(--navy)">Inès M.</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">1:12</div>
+              <div style="width:100%;height:120px;border-radius:22px 22px 0 0;background:#DCD4C6;display:flex;align-items:flex-start;justify-content:center;padding-top:14px;font:700 36px var(--display);color:#fff">2</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="font-size:30px">👑</div>
+              <div style="width:88px;height:88px;border-radius:26px;background:var(--gold-soft);display:flex;align-items:center;justify-content:center;font-size:46px">🦊</div>
+              <div style="font:700 23px var(--sans);color:var(--navy)">Lou A. <span style="color:var(--gold)">(toi)</span></div>
+              <div style="font:700 19px var(--sans);color:var(--gold)">1:04</div>
+              <div style="width:100%;height:168px;border-radius:22px 22px 0 0;background:var(--gold);display:flex;align-items:flex-start;justify-content:center;padding-top:16px;font:700 44px var(--display);color:#fff">1</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:72px;height:72px;border-radius:22px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;font-size:38px">🐢</div>
+              <div style="font:700 21px var(--sans);color:var(--navy)">Malo T.</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">1:19</div>
+              <div style="width:100%;height:92px;border-radius:22px 22px 0 0;background:#E3D8C0;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;font:700 34px var(--display);color:#fff">3</div>
+            </div>
+          </div>
+
+          <div style="margin:26px 36px 0;background:var(--surface);border-radius:28px;padding:12px 26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:2px solid var(--ivory)">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">4</span>
+              <span style="font-size:30px">🐙</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)">Agathe C.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">17 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:26</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:2px solid var(--ivory)">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">5</span>
+              <span style="font-size:30px">🦉</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)">Sacha B.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">16 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:31</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">6</span>
+              <span style="font-size:30px">🐝</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)" data-last="1">Nour K.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">16 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:38</span>
+            </div>
+          </div>
+
+          <div style="margin:18px 36px 0;display:flex;align-items:center;gap:14px;background:var(--sky-soft);border-radius:22px;padding:20px 24px">
+            <div style="width:12px;height:12px;border-radius:4px;background:var(--sky)"></div>
+            <div style="font:600 19px var(--sans);color:var(--navy-soft)">9 camarades jouent encore — la liste se complète toute seule.</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;gap:14px">
+            <div style="flex:1;height:96px;border-radius:26px;background:var(--surface);box-shadow:0 3px 0 var(--border);color:var(--navy);font:700 23px var(--sans);display:flex;align-items:center;justify-content:center">Ma grille</div>
+            <div style="flex:1;height:96px;border-radius:26px;background:var(--navy);color:#fff;font:700 23px var(--sans);display:flex;align-items:center;justify-content:center">Accueil</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 5 — ma classe (prof) -->
+      <div data-screen-label="Ma classe" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">5 · Ma classe <span style="color:var(--muted);font:600 16px var(--sans)">— professeur, trié par ce qui coince</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #12203A;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:14px 36px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="font:700 20px var(--sans);color:var(--navy-soft)">‹ Accueil</div>
+            <div style="display:flex;gap:10px">
+              <div style="background:var(--navy);color:#fff;font:700 20px var(--sans);padding:12px 24px;border-radius:999px">6ᵉA</div>
+              <div style="background:var(--surface);color:var(--navy-soft);font:700 20px var(--sans);padding:12px 24px;border-radius:999px;box-shadow:0 2px 0 var(--border)">6ᵉB</div>
+              <div style="background:var(--surface);color:var(--navy-soft);font:700 20px var(--sans);padding:12px 24px;border-radius:999px;box-shadow:0 2px 0 var(--border)">5ᵉC</div>
+            </div>
+          </div>
+
+          <div style="padding:24px 36px 0;display:flex;flex-direction:column;gap:6px">
+            <h2 style="margin:0;font:700 40px var(--display);color:var(--navy)">6ᵉA — 27 élèves</h2>
+            <div style="font:600 19px var(--sans);color:var(--muted)">24 ont joué cette semaine · 12 tables travaillées</div>
+          </div>
+
+          <div style="margin:22px 36px 0;background:var(--coral-soft);border-radius:26px;padding:24px 26px;display:flex;flex-direction:column;gap:6px">
+            <div style="font:700 26px var(--display);color:#8E2C30">18 élèves sur 27 bloquent sur la table de 7</div>
+            <div style="font:600 18px var(--sans);color:#A2504F">La table de 8 suit de près. Un défi ciblé maintenant vaut mieux qu'une révision dans trois semaines.</div>
+          </div>
+
+          <div style="padding:22px 36px 0;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--coral)"></span>À revoir</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--sun)"></span>En cours</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--mint)"></span>Maîtrisé</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--border)"></span>Pas travaillé</div>
+          </div>
+
+          <div style="margin:18px 36px 0;background:var(--surface);border-radius:28px;padding:26px;box-shadow:0 3px 0 var(--border);display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 7</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:67%;background:var(--coral)"></div>
+                <div style="width:22%;background:var(--sun)"></div>
+                <div style="width:11%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--coral)">18 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 8</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:52%;background:var(--coral)"></div>
+                <div style="width:26%;background:var(--sun)"></div>
+                <div style="width:22%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--coral)">14 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 9</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:30%;background:var(--coral)"></div>
+                <div style="width:33%;background:var(--sun)"></div>
+                <div style="width:37%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">8 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 6</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:15%;background:var(--coral)"></div>
+                <div style="width:26%;background:var(--sun)"></div>
+                <div style="width:59%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">4 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 4</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:7%;background:var(--coral)"></div>
+                <div style="width:15%;background:var(--sun)"></div>
+                <div style="width:78%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:600 19px var(--sans);color:var(--muted)">78 % maîtrisé</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 3</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:4%;background:var(--coral)"></div>
+                <div style="width:11%;background:var(--sun)"></div>
+                <div style="width:85%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:600 19px var(--sans);color:var(--muted)">85 % maîtrisé</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;opacity:.55">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 13</div>
+              <div style="flex:1;height:34px;border-radius:12px;background:var(--border)"></div>
+              <div style="width:150px;text-align:right;font:600 18px var(--sans);color:var(--muted)">🔒 pas ouverte</div>
+            </div>
+            <div style="font:600 18px var(--sans);color:var(--sky)">Voir les 6 autres tables ›</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;flex-direction:column;gap:14px">
+            <div style="height:110px;border-radius:28px;background:var(--gold);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+              <div style="font:700 28px var(--sans)">⚡ Lancer un défi sur les tables 7 et 8</div>
+              <div style="font:600 17px var(--sans);color:#FFF4D6">Sprint · 6ᵉA · code projeté à l'écran</div>
+            </div>
+            <div style="display:flex;gap:14px">
+              <div style="flex:1;height:88px;border-radius:24px;background:var(--surface);box-shadow:0 3px 0 var(--border);color:var(--navy);font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">🔓 Découvrir la 13</div>
+              <div style="flex:1;height:88px;border-radius:24px;background:var(--surface);box-shadow:0 3px 0 var(--border);color:var(--navy);font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">Élève par élève</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+
+
+</body></html>
