@@ -94,28 +94,34 @@ export default function MaClasse({ onBack, onLancerDefi }) {
         return data.filter(d => !d.travaillee);
     }, [data]);
 
-    // Tables qui coincent : travaillee=true ET eleves_verts < eleves_classe.
-    // Le plafond commun n'interdit plus rien depuis la migration 21 :
-    // un défi au-dessus est jouable, et l'écran de confirmation dit au
-    // professeur combien d'élèves sont concernés. Le filtrer ici cacherait
-    // la seule table qui coince.
+    // Tables qui coincent : au moins un élève en jaune ou en rouge sur une table travaillée.
     const tablesQuiCoincent = useMemo(() => {
         return tablesTravaillees
-            .filter(d => d.eleves_verts < d.eleves_classe);
+            .filter(d => (d.eleves_jaunes + d.eleves_rouges) > 0);
     }, [tablesTravaillees]);
 
-    // Candidates pour le bouton défi de rattrapage (2 ou 3 premières)
+    // Candidates pour le bouton défi de rattrapage :
+    // Triées par la part de la CLASSE en difficulté décroissante ((jaunes + rouges) / eleves_classe).
+    // On retient les 2 ou 3 premières, ordonnées pour l'affichage (a - b).
     const tablesDefi = useMemo(() => {
-        return tablesQuiCoincent
+        return [...tablesQuiCoincent]
+            .sort((a, b) => {
+                const ecA = a.eleves_classe || 1;
+                const ecB = b.eleves_classe || 1;
+                const diffA = (a.eleves_jaunes + a.eleves_rouges) / ecA;
+                const diffB = (b.eleves_jaunes + b.eleves_rouges) / ecB;
+                if (diffA !== diffB) return diffB - diffA;
+                return a.table_n - b.table_n;
+            })
             .slice(0, 3)
             .map(d => d.table_n)
             .sort((a, b) => a - b);
     }, [tablesQuiCoincent]);
 
-    // Est-ce que toutes les tables travaillées sont maîtrisées à 100 % ?
-    const toutMaitrise = useMemo(() => {
-        return tablesTravaillees.length > 0 && tablesTravaillees.every(d => d.eleves_verts === d.eleves_classe);
-    }, [tablesTravaillees]);
+    // Rien ne coince : au moins une table travaillée, et aucun élève en jaune ou en rouge.
+    const rienNeCoince = useMemo(() => {
+        return tablesTravaillees.length > 0 && tablesQuiCoincent.length === 0;
+    }, [tablesTravaillees, tablesQuiCoincent]);
 
     // Tables non abordées pour le bouton découverte (pas de filtre par plafond)
     const tablesDecouverte = useMemo(() => {
@@ -255,7 +261,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         </div>
                     )}
 
-                    {/* Bouton défi de rattrapage ou message si tout est maîtrisé */}
+                    {/* Bouton défi de rattrapage ou message si rien ne coince */}
                     {tablesDefi.length > 0 ? (
                         <button
                             className="btn btn--gold"
@@ -265,9 +271,9 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             }}
                             onClick={() => onLancerDefi?.(tablesDefi, selectedClasse)}
                         >
-                            ⚔️ Lancer un défi sur les tables {tablesDefi.join(', ')}
+                            ⚔️ Lancer un défi sur {tablesDefi.length === 1 ? 'la table' : 'les tables'} {tablesDefi.join(', ')}
                         </button>
-                    ) : toutMaitrise ? (
+                    ) : rienNeCoince ? (
                         <div className="card" style={{
                             padding: '14px 18px', marginTop: 8,
                             background: 'rgba(0, 201, 167, 0.08)',
@@ -278,7 +284,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                                 ✅ Rien ne coince dans cette classe.
                             </p>
                             <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', lineHeight: 1.4 }}>
-                                Toutes les tables travaillées sont maîtrisées par tout le monde. Le bouton « Découvrir » ci-dessous ouvre les tables suivantes.
+                                Aucun élève n'est en difficulté sur les tables travaillées. Le bouton « Découvrir » ci-dessous ouvre les tables suivantes.
                             </p>
                         </div>
                     ) : (

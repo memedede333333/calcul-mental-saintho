@@ -56,6 +56,37 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (4) — Le critere est bon, et il est temps de lever la tete
+
+**Fait** — Correctif relu dans le code : `tablesQuiCoincent` filtre sur
+`jaunes + rouges > 0`, le tri du bouton se fait sur `(jaunes + rouges) /
+eleves_classe` decroissant, departage par le numero de table. Point important
+verifie : le tri opere sur **une copie** (`[...tablesQuiCoincent]`), donc
+l'ordre des barres a l'ecran n'est pas touche — `Array.sort` mutant en place,
+c'etait le piege de ce correctif. `rienNeCoince` exige au moins une table
+travaillee. Singulier et pluriel geres sur le bouton. **Rien a corriger.**
+
+Troisieme lot consecutif d'Antigravity sans defaut.
+
+**Constaté (méthode) — deux jours sur un seul ecran.** Depuis le 1er septembre,
+l'essentiel de l'effort porte sur « Ma classe » et le bouton de defi : quatre
+lots, trois migrations, un tri repris trois fois. Le travail est bon et chaque
+correction etait justifiee — mais **le chemin critique n'a pas bouge d'un
+metre**. Le nom n'est pas choisi, donc la passe visuelle, le logo, le Web Clip
+et le modele d'e-mail sont bloques ; la base de production n'existe pas ;
+l'import n'est pas prepare ; la ligne Jamf n'est pas testee ; le DPO n'est pas
+prevenu.
+
+Un ecran parfait dans une application que personne ne peut ouvrir ne sert a
+rien. Note ici pour que la prochaine reprise commence par la : **le nom
+d'abord.**
+
+**Ensuite** — Aymeri : commiter, puis finir la recette (A5 a A9, B3 a B7, C, E,
+F), puis **le nom**. `NOM_ET_MARQUE.md` a deja les trois formes et la liste des
+14 endroits a changer.
+
+---
+
 ## 2026-09-02 (3) — Mon critere etait mauvais, pas son code
 
 **Fait** — Les trois points du lot 9 verifies dans la copie de travail : filtre
