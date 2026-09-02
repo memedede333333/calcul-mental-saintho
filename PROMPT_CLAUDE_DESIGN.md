@@ -63,6 +63,32 @@ Polices : **Baloo 2** pour les titres et les nombres, **Nunito** pour le texte.
    néon, **aucune interaction au survol**.
 5. **11 à 15 ans.** Ni bébé, ni corporate.
 
+## Les 19 écrans — `ECRANS.md`
+
+Le document `ECRANS.md` est joint. Il décrit **l'intention** de chaque écran :
+ce qu'il doit permettre, ce qu'il affiche, et surtout **les états qu'il ne doit
+pas oublier** — chargement, erreur, liste vide, refus. C'est là que tu trouveras
+ce qu'une capture ne montre pas.
+
+Deux avertissements sur ce document :
+
+- Il a été écrit **avant** que l'application ne soit construite. Là où il
+  diverge des captures d'écran, **ce sont les captures qui disent vrai.**
+- Il ne décrit pas les écrans ajoutés depuis. Les voici, en une ligne chacun :
+
+| Écran | Ce qu'il fait |
+|---|---|
+| **Annonce du défi** | avant la première question : « 📚 Travail de classe — Défi de M. Desjardins — 6A », ou « 🎮 Défi de Lou A. ». L'élève doit savoir de qui vient le défi avant de jouer |
+| **Mes défis** (professeur) | la liste de ses défis, avec pour chacun « 2 / 27 de la 6A ont joué » |
+| **Ma classe** (professeur) | une barre par table, quatre couleurs, le bouton de défi ciblé, le bouton « Découvrir », et l'état « Rien ne coince dans cette classe » |
+| **Confirmation avant un défi** | « La table 15 dépasse le niveau atteint par 12 élèves sur 27 — lancer quand même ? » |
+| **Compte non reconnu** | affiche l'adresse Google avec laquelle on est connecté, et un bouton pour changer de compte |
+| **Reprendre un défi** | un bandeau sur l'accueil élève quand un défi a été rejoint puis interrompu |
+
+Tu n'as **pas** le code, et c'est volontaire : je veux que tu conçoives ce que
+ces écrans devraient être, pas que tu redessines ce qu'ils sont. Si une
+information te manque pour décider, demande-la.
+
 ## Ce qu'on a observé sur un vrai iPad
 
 - Le pavé de l'application s'affiche bien, le clavier iOS n'apparaît pas, la
