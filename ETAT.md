@@ -341,6 +341,17 @@ format de retour, et la branche de réactivation d'une fiche désactivée
 disparue. On reprend le texte d'origine et on y insère la modification — jamais
 l'inverse.
 
+**Un risque accepté qui n'est pas écrit redevient un bug six mois plus tard.**
+*(2 septembre 2026, test E4.)* Le chronomètre se suspend quand l'iPad se
+verrouille : au retour, il reprend où il en était. Un élève peut donc basculer
+vers une autre application pendant un Sprint sans que la pause compte dans son
+temps. **C'est assumé** : le gain de la triche est faible — les défis ne
+comptent dans aucune évaluation, une seule participation par défi, score borné
+par le nombre de questions — tandis qu'une interruption en classe est une
+certitude quotidienne. Punir le certain pour empêcher le possible serait un
+mauvais échange. Écrit ici pour que personne ne le « corrige » sans savoir ce
+qu'il casse.
+
 **Un chiffre juste que personne ne sait lire ne vaut pas mieux qu'un chiffre
 faux.** *(2 septembre 2026, recette — migration 23.)* L'avertissement disait
 « 1 élève sur 2 n'a pas encore **débloqué** la table 15 ». Le compteur était

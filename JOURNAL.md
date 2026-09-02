@@ -56,6 +56,61 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (6) — Tests E sur iPad : deux constats, dont un a traiter
+
+**Fait** — E1 (plein ecran depuis l'ecran d'accueil), E2 (le pave de
+l'application, pas le clavier iOS, pas de zoom) et E3 (rotation) sont **au
+vert**. Le socle tactile est sain.
+
+**Constaté (E4) — le chronometre se suspend avec l'iPad.** iPad verrouille
+30 secondes en pleine partie : au deverrouillage, le chronometre reprend ou il
+en etait, avec une ou deux secondes de perdues, pas trente. Test fait deux fois.
+
+C'est le comportement de `setInterval`, qu'iOS gele quand l'application passe a
+l'arriere-plan. **Deux lectures opposees :**
+
+- *Pour l'eleve* : une interruption en classe — le professeur qui parle, un
+  iPad qui se verrouille tout seul — ne lui coute pas trente secondes de
+  classement. C'est juste.
+- *Contre l'eleve honnete* : en Sprint, le classement se fait au temps. Un eleve
+  peut basculer vers une autre application, reflechir ou demander, et revenir :
+  la pause ne compte pas dans son temps.
+
+**Décidé — on garde le comportement actuel, et on l'ecrit.** Le gain de la
+triche est faible (les defis ne comptent dans aucune evaluation, une seule
+participation par defi, score borne par le nombre de questions, points ponderes
+par la difficulte des tables), tandis que l'interruption en classe est une
+certitude quotidienne. Punir le certain pour empecher le possible serait un
+mauvais echange. ✅ *tranche le 02/09.* Consigne au §3 : **un risque accepte qui
+n'est pas ecrit redevient un bug six mois plus tard.**
+
+**Constaté (E5) — un defi ferme est un defi perdu.** L'eleve reste connecte
+apres fermeture de l'application, mais **le defi en cours disparait**. L'etat
+vit en memoire React ; au rechargement, il n'y a aucun chemin de retour. Et
+`mes_defis()` ne liste que les defis qu'on a **crees**, pas ceux qu'on a
+rejoints : un eleve qui a rejoint le defi de son professeur n'a plus que le code
+a cinq lettres pour y revenir. S'il ne l'a pas note, c'est fini.
+
+En classe, un iPad qui redemarre ou un eleve qui bascule d'application, cela
+arrivera tous les jours. **Sa partie n'est pas enregistree** (`terminer_defi`
+n'a pas ete appele), donc il peut rejouer — a condition de retrouver le code.
+
+**Décidé — retenir le dernier defi rejoint cote navigateur** et proposer
+« Reprendre le defi » sur l'accueil eleve. Front seul, aucune migration, et cela
+couvre le cas reel : l'iPad qui a lache il y a deux minutes. ⏳ *a transmettre*
+
+*Ecarte pour l'instant :* une liste serveur « les defis en cours de ta classe ».
+Plus robuste, et probablement la bonne conception a terme — un defi de classe ne
+devrait pas dependre d'un code ecrit au tableau — mais c'est une fonctionnalite
+nouvelle, pas un correctif, et on est a quelques jours de la rentree. **Note
+comme candidat d'apres-rentree.**
+
+**Non fait — E6**, regarder quelqu'un s'en servir sans explication. C'est le
+seul test qui ne se coche pas, et le seul qui ne peut etre remplace par rien.
+Signale a Claude Design comme angle mort assume.
+
+---
+
 ## 2026-09-02 (5) — L'application s'appelle matHo
 
 **Décidé** — **`matHo`**, contraction de *mathematiques* et de *Saintho*. Casse
