@@ -417,7 +417,7 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
 function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi, initialClasse }) {
     const isClimb = type.id === 'climb';
     const isShareable = type.shareable === true;
-    const availableTables = ALL_TABLES.filter(t => t <= Math.max(10, plafond));
+    const availableTables = ALL_TABLES.filter(t => t >= 2 && t <= Math.max(10, plafond));
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState(null);
     const [classes, setClasses] = useState([]);

@@ -94,11 +94,14 @@ export default function MaClasse({ onBack, onLancerDefi }) {
         return data.filter(d => !d.travaillee);
     }, [data]);
 
-    // Tables qui coincent : travaillee=true ET dans_le_plafond_commun=true ET eleves_verts < eleves_classe
-    // Le tri est déjà le bon (les plus faibles en premier).
+    // Tables qui coincent : travaillee=true ET eleves_verts < eleves_classe.
+    // Le plafond commun n'interdit plus rien depuis la migration 21 :
+    // un défi au-dessus est jouable, et l'écran de confirmation dit au
+    // professeur combien d'élèves sont concernés. Le filtrer ici cacherait
+    // la seule table qui coince.
     const tablesQuiCoincent = useMemo(() => {
         return tablesTravaillees
-            .filter(d => d.dans_le_plafond_commun && d.eleves_verts < d.eleves_classe);
+            .filter(d => d.eleves_verts < d.eleves_classe);
     }, [tablesTravaillees]);
 
     // Candidates pour le bouton défi de rattrapage (2 ou 3 premières)

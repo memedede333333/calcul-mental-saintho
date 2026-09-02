@@ -4,7 +4,7 @@
     "description": "Maîtrise les tables de multiplication avec la méthode Singapour — Collège Saint-Honoré d'Eylau",
     "start_url": "/",
     "display": "standalone",
-    "orientation": "any",
+    "orientation": "portrait",
     "background_color": "#FAF6EE",
     "theme_color": "#1B2A4A",
     "icons": [

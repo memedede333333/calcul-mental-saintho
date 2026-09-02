@@ -56,6 +56,40 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (3) — Mon critere etait mauvais, pas son code
+
+**Fait** — Les trois points du lot 9 verifies dans la copie de travail : filtre
+`dans_le_plafond_commun` retire, `"orientation": "portrait"` pose,
+`availableTables` part de 2. Corrects tous les trois. **Non commites** : les
+fichiers etaient encore modifies dans la copie de travail, donc rien n'etait
+deploye.
+
+**Constaté — le critere que j'avais donne est faux.** `eleves_verts <
+eleves_classe` ne dit pas qu'une table est difficile : il dit qu'elle **n'est
+pas terminee**. Il melange les eleves qui **echouent** et ceux qui ne l'ont
+**pas encore rencontree** — une population de plus, la sixieme fois sur ce
+projet. Dans la classe 31, il designait la table 11, ou le seul eleve l'ayant
+travaillee la maitrise et l'autre ne l'a jamais ouverte : un « rattrapage » sur
+une table ou personne ne bloque.
+
+**Décidé** — Une table coince si `eleves_jaunes + eleves_rouges > 0`, triee sur
+`(jaunes + rouges) / eleves_classe` decroissant. Le denominateur reste la
+classe. ⏳ *transmis*
+
+**Constaté (méthode) — troisieme correction du meme tri, et c'est moi qui l'ai
+mal pose les trois fois.** La cause est identifiee : **l'ordre des barres et le
+choix du bouton repondent a deux questions differentes** — l'un montre
+l'avancement, l'autre designe une difficulte. J'ai voulu un seul critere pour
+les deux. Regle ajoutee au §3.
+
+Le retrait du filtre de plafond, lui, reste juste : il cachait la seule table
+susceptible de coincer. C'est le critere qui suivait qui etait mauvais.
+
+**Ensuite** — Antigravity : le critere. Aymeri : commiter les trois fichiers du
+lot 9, puis finir la recette.
+
+---
+
 ## 2026-09-02 (2) — Les compteurs disaient vrai, et le filtre du bouton est perime
 
 **Constaté — fausse alerte, etablie par les faits.** Le doute sur « Mes defis »

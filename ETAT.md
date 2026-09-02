@@ -362,6 +362,24 @@ et le point de repère qui le rendent lisible** — « la table 15 dépasse le
 niveau atteint par 1 élève sur 2, le plus faible de la classe s'arrête à la
 table 10 » plutôt qu'un « débloqué » sans référence.
 
+**« Pas fini » n'est pas « difficile ».** *(2 septembre 2026, troisième
+correction du même tri — celle-ci vient de moi, pas d'Antigravity.)* Le bouton
+de rattrapage retenait les tables où `eleves_verts < eleves_classe`. Ce critère
+ne dit pas qu'une table est dure : il dit qu'elle n'est **pas terminée**, et il
+confond deux populations de plus — les élèves qui **échouent** et ceux qui ne
+l'ont **pas encore rencontrée**. Dans la classe 31, il désignait une table où le
+seul élève l'ayant travaillée la maîtrise.
+
+Le bon critère est celui qui nomme la difficulté : **`eleves_jaunes +
+eleves_rouges > 0`**, trié sur la part de la CLASSE en difficulté,
+`(jaunes + rouges) / eleves_classe` décroissant. Une table qu'un élève sur
+vingt-sept peine à faire ne passe pas devant une table où neuf bloquent.
+
+Et la leçon de méthode : **l'ordre des barres et le choix du bouton répondent à
+deux questions différentes** — l'un montre l'avancement, l'autre désigne une
+difficulté. Vouloir un seul critère pour les deux est ce qui a fait rater le tri
+trois fois de suite.
+
 **Un écran ne recommande que ce que les données soutiennent.** *(2 septembre
 2026, recette.)* Dans une classe où les tables 2 à 10 sont maîtrisées par tout
 le monde, le bouton proposait quand même « Lancer un défi sur les tables 2, 3,
