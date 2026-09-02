@@ -56,6 +56,79 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 — Premiere recette sur iPad : le chiffre etait juste, le mot etait faux
+
+**Fait** — Aymeri deroule la recette a deux comptes sur iPad, classe 31
+(2 eleves). Ce qui est passe : le defi a deux comptes joue en simultane, le
+classement a deux noms dans le bon ordre (« 2 / 2 de la 31 ont termine »,
+Lou A. 53 s, Agathe C. 107 s), l'ecran `DefiIntro` qui annonce « Travail de
+classe — Defi de Aymeri Desjardins — 31 », l'avertissement hors plafond avec
+ses deux boutons, et **le test B5, le plus important** : le defi sur la table 15
+joue par une eleve plafonnee a 10 s'enregistre sans un mot de refus. C'est
+exactement l'objet de la migration 21, et c'est la premiere fois qu'on le voit
+a l'ecran.
+
+**Constaté (1) — l'avertissement dit un chiffre juste avec un mot faux.**
+« 1 eleve sur 2 n'a pas encore **debloque** la table 15 ». Aymeri le croit faux :
+sur « Ma classe », la table 15 est marquee « Pas travaillee » pour **les deux**
+eleves. Verification : le compteur est **exact** — un eleve a un plafond de 10,
+l'autre de 15 (visible indirectement sur la capture : la table 11 porte un
+cadenas, donc le plafond commun est 10, et l'affichage monte jusqu'a 15, donc le
+plus haut plafond est 15).
+
+Ce qui est faux, c'est le mot. `plafond_tables` est un **droit** gagne par la
+Montee des tables ; la maitrise est une **trace de travail**. « Debloque »
+designe le premier, et se lit comme le second. Le professeur ne voit ce mot
+defini nulle part.
+
+**Un chiffre juste que personne ne sait lire ne vaut pas mieux qu'un chiffre
+faux** : dans les deux cas la decision se prend sur une representation erronee.
+C'est la famille des bugs de population, transposee au vocabulaire. Regle
+ajoutee au §3.
+
+**Fait** — Migration 23 (`20260902100000_plafond_lisible.sql`) :
+`apercu_defi_classe` renvoie en plus `plafond_commun` et `plafond_max`, de quoi
+ecrire une phrase qui se suffit a elle-meme — « la table 15 depasse le niveau
+atteint par 1 eleve sur 2 ; le plus faible de la classe s'arrete a la table 10 ».
+Quatre cas de test (96 → 99), dont un qui verifie que les quatre compteurs
+portent sur la meme population. Suite portee a **99 cas, tous verts**.
+
+**Constaté (2) — un bouton qui recommande ce que les donnees ne disent pas.**
+Classe 31 : tables 2 a 10 toutes a « 2 / 2 maitrisent ». Et le bouton propose
+« Lancer un defi sur les tables 2, 3, 4 ». Le tri n'y est pour rien — a egalite
+parfaite, trois tables sortent forcement. C'est l'affirmation qui est fausse :
+il n'y a rien a rattraper. Correctif transmis a Antigravity : quand aucune table
+travaillee n'a d'eleve en difficulte, l'ecran le dit au lieu d'inventer une
+cible. Regle ajoutee au §3.
+
+**Constaté (3) — l'orientation.** L'application tient dans les deux sens, mais
+en paysage le contenu occupe le tiers haut de l'ecran et laisse une grande zone
+vide. **Le portrait devient l'orientation de reference** pour la passe visuelle.
+Question ouverte pour Aymeri : verrouiller `"orientation": "portrait"` dans
+`manifest.json` — cela cadre l'usage en classe, mais empeche une demonstration
+au videoprojecteur en paysage. *Recommandation : le faire, et le defaire si un
+professeur le demande. Un eleve qui tourne son iPad par reflexe ne doit pas
+changer la mise en page au milieu d'un chronometre.*
+
+**En attente** — Les compteurs de « Mes defis » : sur sept defis crees pour la
+classe 31, cinq affichent moins de participants qu'Aymeri croit en avoir eus. Le
+SQL separe pourtant correctement les populations depuis la migration 18, et rien
+dans les captures ne se contredit. Requete de diagnostic transmise plutot qu'une
+hypothese. ⏳
+
+**Constaté (méthode)** — La recette a ete rendue avec les plafonds des deux
+eleves non notes (« non »), alors que la fiche les demandait. C'est precisement
+ce qui a rendu l'avertissement du test B illisible et a coute une demi-heure et
+une requete en base. `TESTS_RECETTE.md` porte desormais un encadre a cet
+endroit, et un test A9 qui compare le compteur de « Mes defis » au classement
+juste apres la partie — le controle qui aurait leve le doute sur-le-champ.
+
+**Ensuite** — Antigravity : migration 23, les deux formulations, le diagnostic.
+Aymeri : finir la recette (A5 a A8, B3 a B7, C, E, et le nouveau test F), puis
+le nom.
+
+---
+
 ## 2026-09-01 (9) — Le compte refuse n'etait pas celui qu'on croyait
 
 **Constaté** — Diagnostic de la fiche d'Agathe, en base :

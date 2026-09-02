@@ -4,9 +4,10 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **1er septembre 2026, 17 h** — 22 migrations, 95 cas de
-> test verts. La recette a trouvé son premier défaut : une fiche créée après la
-> première connexion Google restait orpheline. Migration 22 écrite et testée.
+> Dernière mise à jour : **2 septembre 2026** — 23 migrations, 99 cas de test
+> verts. La recette sur iPad a commencé : tests A et B passés pour l'essentiel,
+> deux défauts de formulation trouvés, un diagnostic en cours sur les compteurs
+> de « Mes défis ».
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -34,7 +35,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **22 migrations**, 95 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **23 migrations**, 99 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -339,6 +340,36 @@ format de retour, et la branche de réactivation d'une fiche désactivée
 disparue. On reprend le texte d'origine et on y insère la modification — jamais
 l'inverse.
 
+**Un chiffre juste que personne ne sait lire ne vaut pas mieux qu'un chiffre
+faux.** *(2 septembre 2026, recette — migration 23.)* L'avertissement disait
+« 1 élève sur 2 n'a pas encore **débloqué** la table 15 ». Le compteur était
+exact. Mais « débloqué » désigne `plafond_tables`, un mécanisme que le
+professeur ne voit nommé nulle part — il a lu « n'a pas **travaillé** », a
+vérifié sur « Ma classe » que la table était marquée « Pas travaillée » pour
+les deux élèves, et a conclu à un bug.
+
+Deux notions qu'il faut cesser de confondre à l'écran :
+
+| | |
+|---|---|
+| `plafond_tables` | jusqu'où l'élève a le **droit** d'aller, gagné par la Montée des tables |
+| `maitrise` | ce qu'il a effectivement **travaillé** |
+
+Dans les deux cas — chiffre faux ou chiffre incompris — le professeur décide
+sur une représentation erronée. C'est la famille des bugs de population,
+transposée au vocabulaire. Donc : **on n'écrit jamais un compteur sans le mot
+et le point de repère qui le rendent lisible** — « la table 15 dépasse le
+niveau atteint par 1 élève sur 2, le plus faible de la classe s'arrête à la
+table 10 » plutôt qu'un « débloqué » sans référence.
+
+**Un écran ne recommande que ce que les données soutiennent.** *(2 septembre
+2026, recette.)* Dans une classe où les tables 2 à 10 sont maîtrisées par tout
+le monde, le bouton proposait quand même « Lancer un défi sur les tables 2, 3,
+4 ». Le tri n'y est pour rien : à égalité parfaite, trois tables sortent
+forcément. C'est l'affirmation qui est fausse — il n'y a rien à rattraper. Quand
+aucune donnée ne soutient une recommandation, l'écran le dit au lieu d'en
+fabriquer une.
+
 **Un tri se fait sur la population que le bouton concerne.** *(1er septembre
 2026, cinquième occurrence.)* L'écran « Ma classe » corrigé ne fabriquait plus
 aucune liste — mais il **ordonnait** les tables sur `taux_maitrise`, dont le
@@ -408,7 +439,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-95 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
+99 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -458,9 +489,14 @@ connexion réussie, et plus rien ensuite.
    sont déjà devenues illisibles faute de l'avoir respectée.
 4. **Les icônes sont des emojis ou du SVG écrit dans le projet.** Pas de police
    d'icônes.
-5. **Public : 11 à 15 ans, sur écran tactile, en classe.** Cibles tactiles
+5. **L'orientation de référence est le PORTRAIT.** *(constaté en recette le
+   2 septembre.)* L'application fonctionne dans les deux sens, mais en paysage
+   le contenu occupe le tiers haut de l'écran et laisse une grande zone vide.
+   Les maquettes se composent en portrait ; le paysage doit rester lisible,
+   pas être la cible.
+6. **Public : 11 à 15 ans, sur écran tactile, en classe.** Cibles tactiles
    larges, contrastes tenant sous un néon, aucune interaction au survol.
-6. **Vérification qui tranche** : après un `npm run build`, aucun `googleapis`
+7. **Vérification qui tranche** : après un `npm run build`, aucun `googleapis`
    ni `gstatic` dans `frontend/dist/`, et l'onglet Réseau du navigateur ne
    montre aucun appel hors Supabase.
 

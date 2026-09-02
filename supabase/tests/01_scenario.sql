@@ -769,4 +769,49 @@ select case when qui_suis_je()->>'type' = 'inconnu'
             else 'ECHEC : la barriere d entree a saute' end as verdict;
 
 
+
+-- =====================================================================
+-- MIGRATION 23 — dire le plafond avec les mots du professeur
+-- Le compteur etait juste, le mot etait faux : « debloque » designe
+-- `plafond_tables` (un droit), lu comme « travaille » (une trace).
+-- On ajoute le point de repere qui rend la phrase lisible.
+-- =====================================================================
+reset role;
+update public.eleves set plafond_tables = 10 where email = 'alice.dupont@demo.saintho.fr';
+update public.eleves set plafond_tables = 15 where email = 'bob.martin@demo.saintho.fr';
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+
+\echo '=== 96. apercu_defi_classe donne le point de repere, pas seulement le compte ==='
+select apercu_defi_classe('6A','{15}'::smallint[]) as apercu;
+select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'plafond_commun')::int = 10
+             and (apercu_defi_classe('6A','{15}'::smallint[])->>'plafond_max')::int    = 15
+            then 'OK : le plus bas et le plus haut plafond de la classe sont dits'
+            else 'ECHEC : point de repere absent ou faux' end as verdict;
+
+\echo '=== 97. Les quatre compteurs portent sur la MEME population ==='
+-- eleves_classe = effectif actif ; hors_plafond en est un sous-ensemble ;
+-- les deux plafonds sont pris sur ce meme ensemble. Jamais sur ceux qui
+-- ont travaille la table.
+select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')::int
+              = (select count(*) from public.eleves where classe='6A' and actif)
+             and (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_hors_plafond')::int
+              <= (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')::int
+             and (apercu_defi_classe('6A','{15}'::smallint[])->>'plafond_commun')::int
+              <= (apercu_defi_classe('6A','{15}'::smallint[])->>'plafond_max')::int
+            then 'OK : une seule population pour les quatre compteurs'
+            else 'ECHEC : populations melangees' end as verdict;
+
+\echo '=== 98. Une table a la portee de tous : aucun eleve hors plafond ==='
+select case when (apercu_defi_classe('6A','{9}'::smallint[])->>'eleves_hors_plafond')::int = 0
+            then 'OK : rien a signaler pour une table sous le plafond commun'
+            else 'ECHEC : avertissement injustifie' end as verdict;
+
+\echo '=== 99. Un eleve n apprend toujours rien des plafonds de sa classe ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')::int = 0
+            then 'OK : reserve aux enseignants'
+            else 'ECHEC : apercu ouvert aux eleves' end as verdict;
+
+
 reset role;

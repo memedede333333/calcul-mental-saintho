@@ -26,6 +26,17 @@
 - [ ] Plafond de tables de l'élève 1 : `______`  · de l'élève 2 : `______`
       *(visible sur son profil, ou dans Administration)*
 
+> ⚠️ **Ces deux plafonds ne sont pas optionnels.** Sans eux, l'avertissement du
+> test B (« 1 élève sur 2 n'a pas atteint la table 15 ») est illisible : on ne
+> peut pas savoir s'il dit vrai. C'est exactement ce qui s'est passé le
+> 2 septembre — le chiffre était juste, et il a fallu une demi-heure et une
+> requête en base pour l'établir.
+>
+> **Et retiens la distinction, tout le test B en dépend :**
+> *plafond* = jusqu'où l'élève a le **droit** d'aller, gagné par la Montée des
+> tables · *maîtrise* = ce qu'il a effectivement **travaillé**. Un élève peut
+> avoir le droit d'aller à la table 15 sans l'avoir jamais ouverte.
+
 Si les deux élèves ne sont pas dans la même classe, arrête-toi ici : le
 compteur « 3 sur 27 ont terminé » n'aura aucun sens et le test B non plus.
 Corrige la classe dans Administration d'abord.
@@ -71,6 +82,15 @@ quatre fois dans ce projet** — note les deux nombres tels quels.
 **A8.** Chaque élève va sur son profil.
 → ✅ *Attendu :* ses points ont augmenté, et le nombre affiché sur le profil est
 **le même** que celui du classement.
+
+**A9.** Reste sur ton compte enseignant, va dans **Mes défis** et retrouve la
+ligne de ce défi.
+→ ✅ *Attendu :* le compteur y affiche **le même nombre** que le classement que
+tu viens de regarder, et les mêmes personnes. « 2 / 2 » ici et deux noms
+là-bas.
+→ ❌ *À signaler :* le moindre écart — **avec le code du défi**, sinon on ne
+peut pas retrouver la ligne. Sept défis créés en dix minutes se ressemblent
+tous.
 
 ---
 
@@ -207,6 +227,10 @@ La page ne se déplace pas, ne zoome pas.
 
 **E3.** Tourne l'iPad en portrait puis en paysage pendant une partie.
 → ✅ *Attendu :* rien ne se coupe, le chronomètre continue.
+→ *Constaté le 2 septembre :* les deux fonctionnent, mais **le portrait est
+nettement mieux proportionné**. En paysage, le contenu occupe le tiers haut de
+l'écran et laisse une grande zone vide. Retenu comme contrainte pour la passe
+visuelle.
 
 **E4.** Verrouille l'iPad 30 secondes en pleine partie, puis déverrouille.
 → ✅ *Attendu :* dis-moi simplement **ce qui se passe** — ce cas n'a jamais été
@@ -219,6 +243,23 @@ traité, et il arrivera en classe tous les jours.
 collègue s'en servir sans rien lui expliquer.** Note chaque fois qu'il hésite,
 cherche un bouton, ou fait autre chose que ce que tu attendais. Ces
 hésitations valent plus que toute la liste ci-dessus.
+
+---
+
+## TEST F — Le compte refusé *(nouveau, 1er septembre)*
+
+*Trois causes différentes produisent le même refus. L'écran doit maintenant
+dire laquelle.*
+
+**F1.** Sur un iPad, déconnecte-toi, puis reconnecte-toi avec **un compte Google
+qui n'est ni élève ni professeur** — ton compte de test fait l'affaire.
+→ ✅ *Attendu :* l'écran « Compte non reconnu » affiche **l'adresse du compte
+connecté**, en clair, dans un encadré.
+→ ❌ *À signaler :* si l'adresse n'apparaît pas.
+
+**F2.** Clique **« Se déconnecter et changer de compte »**.
+→ ✅ *Attendu :* retour propre à l'écran de connexion, et la reconnexion avec le
+bon compte fonctionne.
 
 ---
 
