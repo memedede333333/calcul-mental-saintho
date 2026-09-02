@@ -56,6 +56,62 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-02 (2) — Les compteurs disaient vrai, et le filtre du bouton est perime
+
+**Constaté — fausse alerte, etablie par les faits.** Le doute sur « Mes defis »
+ne tenait pas : sur les huit defis de la classe 31, `participants_tous` egale
+`sessions_enregistrees` partout, et le detail des joueurs correspond ligne pour
+ligne a ce que l'ecran affichait.
+
+```
+UFQVU  2/2  Lou A. (31), Agathe C. (31)
+J3YSM  2/2  Lou A. (31), Agathe C. (31)
+UEWTR  1/2  Agathe C. (31)
+379S4  2 joueurs dont 1 de la classe  Adeliya B. (32), Lou A. (31)
+E36MD, 73BKN, 9XGXX, HTHW3  : 0
+```
+
+Huit defis crees, quatre joues. Le « 1 / 2 de la 31 ont joue + 1 d'autres
+classes » du 379S4 est exactement la correction de la migration 18, vue en
+usage pour la premiere fois. **Premiere suspicion de ce projet qui ne cache
+aucun defaut** — et elle aura coute une requete. Le rapport de force est le bon :
+on verifie, on ne discute pas.
+
+**Constaté (2) — le nouveau branchement de « Ma classe » rate le cas qui a servi
+au test.** `tablesQuiCoincent` exige `dans_le_plafond_commun && verts < classe`.
+Dans la classe 31 : la table 11 coince (1/2) mais porte le cadenas, les tables 2
+a 10 sont maitrisees. Liste vide, et `toutMaitrise` faux puisque la 11 ne l'est
+pas — on tombe donc sur **« Pas encore assez de donnees pour un defi cible »**
+dans une classe qui a travaille dix tables.
+
+**Décidé — le filtre `dans_le_plafond_commun` sort du bouton defi.** Depuis la
+migration 21, le plafond commun n'interdit plus rien : un defi au-dessus est
+jouable, le score s'enregistre, et l'ecran de confirmation dit au professeur
+combien d'eleves sont concernes et ou s'arrete le plus faible. Ce filtre etait
+la precaution d'avant la 21 ; le garder revient a **cacher au professeur la
+seule table qui coince**, c'est-a-dire l'inverse de la raison d'etre de cet
+ecran. Il reste ce qu'il fait bien : le cadenas sur la barre. ⏳ *transmis*
+
+**Constaté (3) — la table 1 est proposee mais invisible.** Un defi joue hier
+portait sur `[2,3,6,7,8,9,10,1,4,5]`. `ALL_TABLES` commence a 1, tandis que
+`maitrise_classe()` genere a partir de 2 : le travail sur la table 1
+n'apparait nulle part cote professeur. Pas une faille — la table 1 pese 0,15 en
+difficulte, elle rapporte structurellement moins — mais deux ecrans qui ne
+comptent pas les memes tables. On aligne l'ecran sur la base. ⏳ *transmis*
+
+**Décidé — l'application s'ouvre en portrait.** `"orientation": "portrait"`
+dans le manifeste. ✅ *tranche par Aymeri le 02/09.* **Sans promesse de
+verrouillage** : ce champ est respecte par Chrome et Android, Safari sur iPad
+l'a longtemps ignore et aucune source a jour ne dit le contraire. Le test dure
+dix secondes et l'iPad est sur le bureau — c'est lui qui tranchera. Ce qui
+compte davantage est deja au §3 : le portrait devient la cible de conception de
+la passe visuelle.
+
+**Ensuite** — Antigravity : les trois points. Aymeri : finir la recette
+(A5 a A9, B3 a B7, C, E, F), puis le nom.
+
+---
+
 ## 2026-09-02 — Premiere recette sur iPad : le chiffre etait juste, le mot etait faux
 
 **Fait** — Aymeri deroule la recette a deux comptes sur iPad, classe 31
