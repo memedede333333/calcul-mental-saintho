@@ -369,7 +369,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
             [key]: Math.min((w[key] || 1) + (result === 'jamais' ? 4 : result === 'rattrape' ? 2 : 0), 8)
         }));
 
-        const delay = result === 'premier' ? 400 : result === 'rattrape' ? 600 : 800;
+        const delay = (result === 'premier' || result === 'rattrape') ? 180 : 800;
 
         setTimeout(() => {
             if (timedOut.current) return;
@@ -431,7 +431,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
                 setFb('idle');
                 setWord('');
                 setDigits(Array(numDigits).fill(''));
-            }, 300);
+            }, 200);
         }
     }, [q, attempts, premierEssai, hasTimer, responseStart, numDigits, recordAndAdvance]);
 
@@ -441,10 +441,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
         setDigits(prev => {
             const idx = prev.findIndex(x => x === '');
             if (idx === -1) return prev;
-            // First key → record start time
-            if (idx === 0 && prev.every(x => x === '')) {
-                setResponseStart(Date.now());
-            }
+            if (!responseStart) setResponseStart(Date.now());
             const next = [...prev];
             next[idx] = d;
             // Last digit filled → trigger completion
@@ -453,7 +450,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
             }
             return next;
         });
-    }, [fb, numDigits, handleComplete]);
+    }, [fb, numDigits, responseStart, handleComplete]);
 
     const del = useCallback(() => {
         if (lockRef.current || fb !== 'idle') return;
@@ -484,7 +481,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
     const pct = endless ? 0 : (answered / length) * 100;
     const timerPct = hasTimer ? remaining / timer : 1;
     const timerWarn = hasTimer && remaining <= 10;
-    const streakMilestone = [10, 20, 30, 50, 100].includes(streak) && fb === 'correct';
+    const streakMilestone = [5, 10, 15, 20, 30, 50, 100].includes(streak) && fb === 'correct';
 
     const activeIndex = digits.findIndex(d => d === '');
 
@@ -523,11 +520,11 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
             )}
 
             {/* Question + Cases */}
-            <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
+            <div className={`card card--question${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
 
                 {/* Digit boxes */}
-                <div className="digit-boxes" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <div className="digit-boxes">
                     {digits.map((d, i) => (
                         <div
                             key={i}
@@ -607,6 +604,20 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
     const badges = serverResult?.nouveaux_badges || [];
     const enAttente = serverResult?.enAttente;
 
+    const targetScore = scorePremierEssai ?? score;
+    const [countScore, setCountScore] = useState(0);
+    useEffect(() => {
+        if (targetScore <= 0) return;
+        let cur = 0;
+        const step = Math.max(16, Math.floor(600 / targetScore));
+        const id = setInterval(() => {
+            cur += 1;
+            setCountScore(cur);
+            if (cur >= targetScore) clearInterval(id);
+        }, step);
+        return () => clearInterval(id);
+    }, [targetScore]);
+
     useEffect(() => {
         if (pct >= 70) {
             import('canvas-confetti').then(mod => {
@@ -638,7 +649,7 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
                     padding: '16px 12px', margin: '14px 0',
                 }}>
                     <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--mint-dk)' }}>
-                        {scorePremierEssai ?? score} / {answered}
+                        {countScore} / {answered}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-soft)' }}>
                         du premier coup

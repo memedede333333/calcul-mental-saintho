@@ -144,6 +144,7 @@
   --pave-gouttiere-effacement: 32px;
   --touche-h-min:     88px;
   --touche-l-min:     96px;
+  --touche-del-bg:    #F1ECE2; /* le ⌫ posé en creux, jamais en rouge */
 
   /* -------------------------------------------------------------------
      8. Les durees — la fete ne doit jamais faire attendre

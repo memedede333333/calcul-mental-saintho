@@ -849,7 +849,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
 function renderDigitBoxes(digits, fb, numDigits) {
     const activeIndex = digits.findIndex(d => d === '');
     return (
-        <div className="digit-boxes" style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+        <div className="digit-boxes">
             {digits.map((d, i) => (
                 <div
                     key={i}
@@ -947,14 +947,14 @@ function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
             recordResult(premierEssai ? 'premier' : 'rattrape');
-            setTimeout(advanceOrDone, 400);
+            setTimeout(advanceOrDone, 180);
         } else {
             setPremierEssai(false);
             setFb('wrong');
             setTimeout(() => {
                 setFb('idle'); setWord('');
                 setDigits(Array(numDigits).fill(''));
-            }, 300);
+            }, 200);
         }
     }, [digits]);
 
@@ -971,7 +971,7 @@ function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
             <div className="progress-bar" style={{ marginBottom: 16 }}>
                 <i className="progress-bar__fill" style={{ width: `${(answered / total) * 100}%` }} />
             </div>
-            <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
+            <div className={`card card--question${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
                 {renderDigitBoxes(digits, fb, numDigits)}
                 {renderQuestionTimer(qTimerActive, qTimerExpired)}
@@ -1010,7 +1010,7 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
             recordResult('premier');
             setTimeout(() => {
                 resetQuestion(newQuestion(tables, q, weights));
-            }, 400);
+            }, 180);
         } else {
             // Game over
             lockRef.current = true;
@@ -1042,7 +1042,7 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
                     🔥 {streak}
                 </span>
             </div>
-            <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
+            <div className={`card card--question${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
                 {renderDigitBoxes(digits, fb, numDigits)}
                 <div className="feedback-word" style={{ marginTop: 10, color: fb === 'wrong' ? 'var(--coral-dk)' : 'var(--mint-dk)' }}>
@@ -1131,14 +1131,14 @@ function CountdownPlay({ tables, maitrise, defiQuestions, defiDureeS, onQuit, on
             setFb('correct');
             setWord(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
             recordResult(premierEssai ? 'premier' : 'rattrape');
-            setTimeout(advanceQuestion, 250);
+            setTimeout(advanceQuestion, 180);
         } else {
             setPremierEssai(false);
             setFb('wrong');
             setTimeout(() => {
                 setFb('idle'); setWord('');
                 setDigits(Array(numDigits).fill(''));
-            }, 300);
+            }, 200);
         }
     }, [digits]);
 
@@ -1157,7 +1157,7 @@ function CountdownPlay({ tables, maitrise, defiQuestions, defiDureeS, onQuit, on
                     style={{ width: `${(remaining / duration) * 100}%`, transition: 'width 1s linear' }}
                 />
             </div>
-            <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
+            <div className={`card card--question${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
                 {renderDigitBoxes(digits, fb, numDigits)}
                 {renderQuestionTimer(qTimerActive, qTimerExpired)}
@@ -1229,7 +1229,7 @@ function ClimbPlay({ onQuit, onDone }) {
         setQuestionsInLevel(nextQ);
         setCorrectInLevel(nextCorrect);
 
-        const delay = result === 'premier' ? 400 : 800;
+        const delay = result === 'premier' ? 180 : 800;
         setTimeout(() => {
             if (!handleLevelEnd(nextQ, nextCorrect)) {
                 resetQuestion(newQuestion([currentTable], q, null));
@@ -1267,7 +1267,7 @@ function ClimbPlay({ onQuit, onDone }) {
             setTimeout(() => {
                 setFb('idle'); setWord('');
                 setDigits(Array(numDigits).fill(''));
-            }, 300);
+            }, 200);
         }
     }, [digits]);
 
@@ -1301,7 +1301,7 @@ function ClimbPlay({ onQuit, onDone }) {
                 </div>
             )}
 
-            <div className={`card${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
+            <div className={`card card--question${fb === 'wrong' ? ' anim-shake' : fb === 'correct' ? ' anim-pop' : ''}`}>
                 <div className="question-text">{q.a} × {q.b}</div>
                 {renderDigitBoxes(digits, fb, numDigits)}
                 {renderQuestionTimer(qTimerActive, qTimerExpired)}
@@ -1345,6 +1345,20 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
         }
     }, [isSuccess]);
 
+    const targetScore = result ? (result.scorePremierEssai ?? result.score ?? 0) : 0;
+    const [countScore, setCountScore] = useState(0);
+    useEffect(() => {
+        if (targetScore <= 0) return;
+        let cur = 0;
+        const step = Math.max(16, Math.floor(600 / targetScore));
+        const id = setInterval(() => {
+            cur += 1;
+            setCountScore(cur);
+            if (cur >= targetScore) clearInterval(id);
+        }, step);
+        return () => clearInterval(id);
+    }, [targetScore]);
+
     if (!result) return null;
 
     const rattrapees = (result.score || 0) - (result.scorePremierEssai || 0);
@@ -1369,7 +1383,7 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                     padding: '16px 12px', margin: '14px 0',
                 }}>
                     <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--mint-dk)' }}>
-                        {result.scorePremierEssai ?? result.score} / {result.answered}
+                        {countScore} / {result.answered}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-soft)' }}>
                         du premier coup

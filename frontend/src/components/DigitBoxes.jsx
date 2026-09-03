@@ -34,7 +34,7 @@ export default function DigitBoxes({ numDigits, onComplete, onFirstKey, disabled
             const id = setTimeout(() => {
                 setDigits(Array(numDigits).fill(''));
                 completeCalled.current = false;
-            }, 250);
+            }, 200);
             return () => clearTimeout(id);
         }
     }, [fb, numDigits]);
@@ -131,7 +131,7 @@ export function useDigitBoxes(numDigits, onComplete, onFirstKey, fb, disabled) {
             const id = setTimeout(() => {
                 setDigits(Array(numDigits).fill(''));
                 completeCalled.current = false;
-            }, 250);
+            }, 200);
             return () => clearTimeout(id);
         }
     }, [fb, numDigits]);

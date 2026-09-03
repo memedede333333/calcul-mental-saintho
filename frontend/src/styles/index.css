@@ -364,54 +364,97 @@ input, textarea, select, button { touch-action: manipulation; }
 }
 
 /* ── Keypad ────────────────────────────────────────────────────────────── */
+/* ── Keypad (Section 4 : Pavé tactile optimisé iPad) ──────────────────── */
 .keypad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pave-gouttiere);
+  width: 100%;
+  height: var(--pave-part);
+  min-height: calc(4 * var(--touche-h-min) + 3 * var(--pave-gouttiere));
+  margin-top: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.keypad__row {
+  display: flex;
+  gap: var(--pave-gouttiere);
+  flex: 1;
+}
+
+.keypad__row--bottom {
+  gap: var(--pave-gouttiere-effacement); /* 32 px incompressible */
 }
 
 .key {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--titre);
-  font-weight: 800;
-  font-size: 28px;
-  border: none;
-  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--t-touche);
+  min-height: var(--touche-h-min); /* 88px */
+  min-width: var(--touche-l-min); /* 96px */
   border-radius: var(--r-touche);
-  padding: 20px 0;
   background: var(--surface);
   color: var(--indigo-encre);
-  box-shadow: 0 4px 0 var(--bordure);
-  transition: transform 0.06s ease, box-shadow 0.06s ease;
-  min-height: 64px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(32, 34, 107, 0.08);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.06s ease, background-color 0.06s ease;
 }
 
-.key:active { transform: translateY(4px); box-shadow: 0 0px 0 var(--bordure); }
+.key:active {
+  transform: scale(0.96);
+  background: var(--ciel-pale);
+}
 
-.key--go {
-  background: var(--succes);
-  color: var(--action-texte);
-  box-shadow: 0 4px 0 var(--succes);
+.key--zero {
+  flex: 2; /* Deux colonnes au centre-bas */
 }
 
 .key--del {
-  background: var(--rouge-pale);
-  color: var(--erreur-eleve);
-  box-shadow: 0 4px 0 var(--bordure);
-}
-
-.key--hint {
-  background: var(--ciel-pale);
+  flex: 1;
+  background: var(--touche-del-bg); /* posé en creux, jamais en rouge */
   color: var(--indigo-doux);
-  box-shadow: 0 4px 0 var(--bordure);
-  font-size: 20px;
+  box-shadow: none;
+  border: 1px solid rgba(32, 34, 107, 0.06);
 }
 
-/* ── Question display ─────────────────────────────────────────────────── */
+.key--del:active {
+  transform: scale(0.96);
+  background: var(--bordure);
+}
+
+/* ── Question display & ordre de compression ─────────────────────────── */
+.game-zone {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  justify-content: space-between;
+}
+
+.card--question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: clamp(20px, 3vh, 34px) 34px; /* Compression 1 : 34 -> 20px */
+  margin: clamp(10px, 1.5vh, 20px) 0;
+  background: var(--surface);
+  border-radius: var(--r-carte);
+  box-shadow: 0 8px 22px var(--ombre-douce);
+}
+
 .question-text {
   font-family: var(--titre);
-  font-weight: 800;
-  font-size: clamp(44px, 14vw, 68px);
+  font-weight: 700;
+  font-size: var(--t-question); /* Compression 2 : clamp(88px, 14vh, 116px) */
+  line-height: 1;
   text-align: center;
   letter-spacing: -1px;
   color: var(--indigo);
@@ -434,31 +477,49 @@ input, textarea, select, button { touch-action: manipulation; }
 .answer-box--wrong { background: var(--rouge-pale); color: var(--erreur-eleve); }
 
 /* ── Digit Boxes (modèle à cases) ──────────────────────────────────── */
-.digit-boxes { margin-top: 10px; min-height: 60px; }
+.digit-boxes {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 6px;
+}
 
 .digit-box {
-  width: 52px; height: 58px;
+  width: clamp(86px, 10vw, 104px);
+  height: clamp(104px, 12vh, 126px); /* Compression 3 : 126 -> 104px */
   font-family: var(--titre);
-  font-weight: 800; font-size: 28px;
-  text-align: center; line-height: 58px;
-  border-radius: 12px;
-  background: var(--ivoire);
-  border: 2.5px solid var(--bordure);
-  color: var(--indigo);
+  font-weight: 700;
+  font-size: clamp(58px, 8vh, 76px);
+  text-align: center;
+  line-height: clamp(104px, 12vh, 126px);
+  border-radius: var(--r-touche);
+  background: var(--surface);
+  border: 3px solid var(--bordure);
+  color: var(--indigo-encre);
   transition: border-color 0.15s ease, background 0.15s ease;
 }
+
 .digit-box--active {
   border-color: var(--action);
-  box-shadow: 0 0 0 3px var(--ombre-douce);
+  box-shadow: 0 0 0 3px var(--ciel-pale);
 }
+
 .digit-box--correct {
-  background: var(--vert-pale); border-color: var(--succes); color: var(--succes);
+  background: var(--vert-pale);
+  border-color: var(--succes);
+  color: var(--succes);
 }
+
 .digit-box--wrong {
-  background: var(--rouge-pale); border-color: var(--erreur-eleve); color: var(--erreur-eleve);
+  background: var(--rouge-pale);
+  border-color: var(--erreur-eleve);
+  color: var(--erreur-eleve);
 }
+
 .digit-box--reveal {
-  background: var(--vert-pale); border-color: var(--succes); color: var(--succes);
+  background: var(--vert-pale);
+  border-color: var(--succes);
+  color: var(--succes);
 }
 
 /* Question timer bar (chrono par question) */
@@ -668,8 +729,9 @@ input, textarea, select, button { touch-action: manipulation; }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.anim-pop { animation: pop 0.4s ease; }
-.anim-shake { animation: shake 0.45s ease; }
+.anim-pop { animation: pop var(--d-juste) ease; }
+.anim-shake { animation: shake var(--d-faux) ease; }
+.streak-badge--milestone { animation: streak-pop var(--d-palier) ease; }
 
 /* ── Reduced motion ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
