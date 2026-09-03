@@ -13,7 +13,7 @@ import { IconEffacer } from './Icons';
  */
 export default function Keypad({ onPress, onDelete, disabled = false }) {
     return (
-        <div className="keypad game-zone">
+        <div className="keypad">
             <div className="keypad__row">
                 <button type="button" className="key" onClick={() => !disabled && onPress('1')} disabled={disabled}>1</button>
                 <button type="button" className="key" onClick={() => !disabled && onPress('2')} disabled={disabled}>2</button>

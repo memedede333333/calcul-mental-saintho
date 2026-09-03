@@ -57,6 +57,11 @@ export default function Practice({
     }, [maitriseProp]);
 
     const handleDone = useCallback((r) => {
+        if (!r?.answered || r.answered === 0) {
+            onBack();
+            return;
+        }
+
         const maitriseSortie = construireMaitrise(r.resultats);
         setMastery(prev => ({ ...prev, ...maitriseSortie }));
         setResult(r);
@@ -1231,8 +1236,8 @@ function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome,
             }
         });
         const sorted = Object.entries(errorCounts).sort((a, b) => b[1] - a[1]);
-        return sorted.length ? parseInt(sorted[0][0], 10) : tables[0] || 7;
-    }, [faitsTravailles, tables]);
+        return sorted.length ? parseInt(sorted[0][0], 10) : null;
+    }, [faitsTravailles]);
 
     return (
         <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1347,16 +1352,18 @@ function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome,
 
             {/* Boutons d'action */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4, marginBottom: 16 }}>
-                <button
-                    onClick={() => onContinueWeakest(weakestTable)}
-                    style={{
-                        height: 90, borderRadius: 26, background: 'var(--action)',
-                        color: '#fff', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 25,
-                        border: 'none', cursor: 'pointer', boxShadow: 'var(--ombre-douce)',
-                    }}
-                >
-                    Continuer sur la table de {weakestTable}
-                </button>
+                {weakestTable && (
+                    <button
+                        onClick={() => onContinueWeakest(weakestTable)}
+                        style={{
+                            height: 90, borderRadius: 26, background: 'var(--action)',
+                            color: '#fff', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 25,
+                            border: 'none', cursor: 'pointer', boxShadow: 'var(--ombre-douce)',
+                        }}
+                    >
+                        Continuer sur la table de {weakestTable}
+                    </button>
+                )}
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button
                         onClick={onOpenGrid}
