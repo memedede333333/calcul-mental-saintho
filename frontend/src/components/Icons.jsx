@@ -121,6 +121,25 @@ export function IconDocument({ size = 24, color = 'var(--indigo)', ...props }) {
     );
 }
 
+export function IconAdmin({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke={actionColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconProf({ size = 36, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <circle cx="22" cy="14" r="8" stroke={color} strokeWidth="3.2" />
+            <path d="M7 38c0-7 7-12 15-12s15 5 15 12" stroke={color} strokeWidth="3.2" strokeLinecap="round" />
+            <path d="M14 13h16M22 6v14" stroke={actionColor} strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+    );
+}
+
 /**
  * Sélecteur d'icône pour les modes de jeu
  */

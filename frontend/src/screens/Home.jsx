@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rejoindreDefi } from '../api';
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
-import { IconSprint, IconSansFaute, IconChrono, IconMontee, IconApprendre, IconClassements, IconMaGrille, IconDefisPasses } from '../components/Icons';
+import { IconSprint, IconSansFaute, IconChrono, IconMontee, IconApprendre, IconClassements, IconMaGrille, IconDefisPasses, IconAdmin, IconProf } from '../components/Icons';
 
 /**
  * Home — Écran d'accueil
@@ -67,7 +67,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                     marginBottom: 14, display: 'flex',
                     alignItems: 'center', gap: 14, padding: '16px 20px',
                 }}>
-                    <span style={{ fontSize: 36 }}>👨‍🏫</span>
+                    <IconProf size={40} color="var(--indigo)" actionColor="var(--ciel)" />
                     <div>
                         <p className="font-display" style={{
                             fontWeight: 800, fontSize: 18, lineHeight: 1.2,
@@ -145,10 +145,10 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                     {estAdmin && (
                         <button
                             className="btn btn--ghost"
-                            style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
+                            style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             onClick={() => onGo('admin')}
                         >
-                            ⚙️ Administration
+                            <IconAdmin size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Administration
                         </button>
                     )}
                 </div>
@@ -177,7 +177,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                     alignItems: 'center', gap: 14, padding: '16px 20px',
                 }}>
                     <span style={{ fontSize: 36 }}>
-                        {profil.avatar_emoji || '🎯'}
+                        {profil.avatar_emoji || '🦊'}
                     </span>
                     <div>
                         <p className="font-display" style={{
