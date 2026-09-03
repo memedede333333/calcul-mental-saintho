@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rejoindreDefi } from '../api';
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
+import { IconSprint, IconSansFaute, IconChrono, IconMontee, IconApprendre, IconClassements, IconMaGrille, IconDefisPasses } from '../components/Icons';
 
 /**
  * Home — Écran d'accueil
@@ -83,7 +84,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
 
                 {/* Cartes de mode */}
                 <button className="mode-card mode-card--challenge" onClick={() => onGo('challenges')}>
-                    <span className="mode-card__emoji">⚔️</span>
+                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                        <IconSprint size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                    </span>
                     <span>
                         <div className="mode-card__title">Lancer un défi</div>
                         <div className="mode-card__desc">Sprint ou Contre-la-montre pour vos classes</div>
@@ -92,14 +95,16 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
 
                 <button
                     className="btn btn--ghost"
-                    style={{ fontSize: 13, padding: '8px 16px', marginTop: -4, marginBottom: 4 }}
+                    style={{ fontSize: 13, padding: '8px 16px', marginTop: -4, marginBottom: 4, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     onClick={() => onGo('mes-defis')}
                 >
-                    📋 Mes défis passés
+                    <IconDefisPasses size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Mes défis passés
                 </button>
 
                 <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
-                    <span className="mode-card__emoji">🚀</span>
+                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                        <IconSansFaute size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                    </span>
                     <span>
                         <div className="mode-card__title">S'entraîner</div>
                         <div className="mode-card__desc">Jouez vous aussi — Salle des profs</div>
@@ -107,9 +112,11 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 </button>
 
                 <button className="mode-card" onClick={() => onGo('classe')} style={{
-                    background: 'linear-gradient(135deg, var(--sky), var(--sky-dk))',
+                    background: 'linear-gradient(135deg, var(--action), var(--indigo))',
                 }}>
-                    <span className="mode-card__emoji">🗺</span>
+                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                        <IconMaGrille size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                    </span>
                     <span>
                         <div className="mode-card__title">Ma classe</div>
                         <div className="mode-card__desc">Maîtrise agrégée — qui bloque, sur quoi</div>
@@ -117,7 +124,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 </button>
 
                 <button className="mode-card mode-card--learn" onClick={() => onGo('leaderboards')}>
-                    <span className="mode-card__emoji">🏆</span>
+                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                        <IconClassements size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                    </span>
                     <span>
                         <div className="mode-card__title">Classements</div>
                         <div className="mode-card__desc">Progression, records, classes et Salle des profs</div>
@@ -128,10 +137,10 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                     <button
                         className="btn btn--ghost"
-                        style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
+                        style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                         onClick={() => onGo('profile')}
                     >
-                        👤 Profil
+                        <IconMaGrille size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Profil
                     </button>
                     {estAdmin && (
                         <button
@@ -242,7 +251,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
 
             {/* Cartes de mode */}
             <button className="mode-card mode-card--learn" onClick={() => onGo('learn')}>
-                <span className="mode-card__emoji">📘</span>
+                <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                    <IconApprendre size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                </span>
                 <span>
                     <div className="mode-card__title">Apprendre</div>
                     <div className="mode-card__desc">Groupes, tableaux, barres et astuces</div>
@@ -250,7 +261,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
             </button>
 
             <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
-                <span className="mode-card__emoji">🚀</span>
+                <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                    <IconSansFaute size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                </span>
                 <span>
                     <div className="mode-card__title">S'entraîner</div>
                     <div className="mode-card__desc">Quiz adaptatif avec indices et maîtrise</div>
@@ -258,28 +271,30 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
             </button>
 
             <button className="mode-card mode-card--challenge" onClick={() => onGo('challenges')}>
-                <span className="mode-card__emoji">⚔️</span>
+                <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
+                    <IconSprint size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                </span>
                 <span>
                     <div className="mode-card__title">Défis</div>
                     <div className="mode-card__desc">Défie tes camarades de classe !</div>
                 </span>
             </button>
 
-            {/* Accès rapides */}
+            {/* Accès rapides / boutons du bas */}
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
                 <button
                     className="btn btn--ghost"
-                    style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
+                    style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     onClick={() => onGo('leaderboards')}
                 >
-                    🏆 Classements
+                    <IconClassements size={20} color="var(--indigo)" actionColor="var(--ciel)" /> Classements
                 </button>
                 <button
                     className="btn btn--ghost"
-                    style={{ flex: 1, fontSize: 15, padding: '12px 16px' }}
+                    style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     onClick={() => onGo('profile')}
                 >
-                    👤 Profil
+                    <IconMaGrille size={20} color="var(--indigo)" actionColor="var(--ciel)" /> Ma grille
                 </button>
             </div>
         </div>

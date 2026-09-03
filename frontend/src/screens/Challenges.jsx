@@ -9,6 +9,7 @@ import {
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
+import { ModeIcon, IconDefisPasses } from '../components/Icons';
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 
 /**
@@ -394,10 +395,10 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
                 <div style={{ textAlign: 'center', marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                     <button
                         className="btn btn--ghost"
-                        style={{ fontSize: 13, padding: '4px 12px', color: 'var(--text-soft)' }}
+                        style={{ fontSize: 13, padding: '4px 12px', color: 'var(--gris)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                         onClick={() => onGo?.('mes-defis')}
                     >
-                        📋 Mes défis passés
+                        <IconDefisPasses size={16} color="var(--indigo)" actionColor="var(--ciel)" /> Mes défis passés
                     </button>
                 </div>
             </div>
@@ -407,25 +408,30 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
                     key={type.id}
                     className="mode-card"
                     style={{
-                        background: `linear-gradient(135deg, var(${type.color}), var(${type.color}-dk))`,
+                        background: 'var(--surface)',
+                        color: 'var(--indigo-encre)',
+                        border: '2px solid var(--bordure)',
+                        boxShadow: '0 8px 20px rgba(32,34,107,.08)',
                         marginTop: 10,
                     }}
                     onClick={() => onSelect(type)}
                 >
-                    <span className="mode-card__emoji">{type.emoji}</span>
+                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ModeIcon mode={type.id} size={40} color="var(--indigo)" actionColor="var(--ciel)" />
+                    </span>
                     <span>
-                        <div className="mode-card__title" style={{ fontSize: 20 }}>
+                        <div className="mode-card__title" style={{ fontSize: 20, color: 'var(--indigo)' }}>
                             {type.name}
                             {type.shareable && (
                                 <span style={{
-                                    fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.3)',
+                                    fontSize: 11, fontWeight: 700, background: 'var(--ciel-pale)', color: 'var(--indigo)',
                                     borderRadius: 8, padding: '2px 8px', marginLeft: 8, verticalAlign: 'middle',
                                 }}>
-                                    👥 En défi
+                                    En défi
                                 </span>
                             )}
                         </div>
-                        <div className="mode-card__desc">{type.desc}</div>
+                        <div className="mode-card__desc" style={{ color: 'var(--gris)' }}>{type.desc}</div>
                     </span>
                 </button>
             ))}
@@ -956,7 +962,9 @@ function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span className="pill">{isDefi ? '⚔️ Défi' : '⚡ Sprint'}</span>
+                <span className="pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <ModeIcon mode="sprint" size={18} /> {isDefi ? 'Défi' : 'Sprint'}
+                </span>
                 <span className="pill">{answered}/{total}</span>
                 <span className="pill">⭐ {score}</span>
             </div>
@@ -1326,10 +1334,12 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
         if (isSuccess) {
             import('canvas-confetti').then(mod => {
                 const style = getComputedStyle(document.documentElement);
-                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5'].map(v => style.getPropertyValue(v).trim());
+                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5']
+                    .map(v => style.getPropertyValue(v).trim())
+                    .filter(Boolean);
                 mod.default({
                     particleCount: 100, spread: 70, origin: { y: 0.6 },
-                    colors,
+                    colors: colors.length ? colors : undefined,
                 });
             }).catch(() => { });
         }

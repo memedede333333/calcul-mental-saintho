@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { monProfil, monProfilProf, mesTablesFaibles, changerAvatar, listeClasses, definirMesClasses } from '../api';
 import { masteryColor, cleFait } from '../logic/mastery';
+import { IconSansFaute } from '../components/Icons';
 
 /**
  * Profile — Aiguille vers ProfileEleve ou ProfileProf selon identite.type
@@ -145,66 +146,66 @@ function ProfileProf({ onBack, onLogout, onGo }) {
                         </p>
                         <button
                             className="btn btn--mint"
-                            style={{ fontSize: 15, padding: '10px 24px' }}
+                            style={{ fontSize: 15, padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: 8 }}
                             onClick={() => onGo?.('play')}
                         >
-                            🚀 S'entraîner
+                            <IconSansFaute size={20} color="var(--action-texte)" actionColor="var(--action-texte)" /> S'entraîner
                         </button>
                     </div>
                 ) : (
                     <>
                         <div className="stat-grid" style={{ marginBottom: 14 }}>
                             <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>
+                                <span className="stat__value" style={{ color: 'var(--succes)' }}>
                                     {records?.points_total || 0}
                                 </span>
                                 <span className="stat__label">
-                                    💰 Points total {records?.points_semaine > 0 ? `(+${records.points_semaine} 7j)` : ''}
+                                    Points total {records?.points_semaine > 0 ? `(+${records.points_semaine} 7j)` : ''}
                                 </span>
                             </div>
                             <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--navy)' }}>
+                                <span className="stat__value" style={{ color: 'var(--indigo)' }}>
                                     {records?.nb_sessions || 0}
                                 </span>
-                                <span className="stat__label">📊 Parties jouées</span>
+                                <span className="stat__label">Parties jouées</span>
                             </div>
                             <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--coral)' }}>
+                                <span className="stat__value" style={{ color: 'var(--erreur-eleve)' }}>
                                     {records?.meilleure_serie || 0}
                                 </span>
-                                <span className="stat__label">🔥 Meilleure série</span>
+                                <span className="stat__label">Meilleure série</span>
                             </div>
                             {records?.meilleur_sprint > 0 && (
                                 <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
+                                    <span className="stat__value" style={{ color: 'var(--action)' }}>
                                         {records.meilleur_sprint}s
                                     </span>
-                                    <span className="stat__label">⚡ Meilleur sprint</span>
+                                    <span className="stat__label">Meilleur sprint</span>
                                 </div>
                             )}
                             {records?.meilleur_chrono > 0 && (
                                 <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--gold)' }}>
+                                    <span className="stat__value" style={{ color: 'var(--orange)' }}>
                                         {records.meilleur_chrono}
                                     </span>
-                                    <span className="stat__label">⏱️ Meilleur chrono</span>
+                                    <span className="stat__label">Meilleur chrono</span>
                                 </div>
                             )}
                             {records?.plus_haute_table > 0 && (
                                 <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--purple)' }}>
+                                    <span className="stat__value" style={{ color: 'var(--indigo-doux)' }}>
                                         {records.plus_haute_table}
                                     </span>
-                                    <span className="stat__label">🏔️ Plus haute table</span>
+                                    <span className="stat__label">Plus haute table</span>
                                 </div>
                             )}
                         </div>
                         <button
                             className="btn btn--mint"
-                            style={{ width: '100%', fontSize: 14, padding: '10px 16px' }}
+                            style={{ width: '100%', fontSize: 14, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             onClick={() => onGo?.('play')}
                         >
-                            🚀 S'entraîner
+                            <IconSansFaute size={18} color="var(--action-texte)" actionColor="var(--action-texte)" /> S'entraîner
                         </button>
                     </>
                 )}
@@ -336,12 +337,12 @@ const BADGE_DEFS = {
     climb_20: { emoji: '🏔🏔', name: 'Légende des tables', desc: 'Table 20 en Montée' },
 };
 
-const AVATAR_OPTIONS = ['🎯', '🌟', '🚀', '⚡', '🌈', '🦋', '🎸', '🌸', '🐱', '🐶', '🦊', '🐻', '🎨', '⚽', '🏀', '🎮', '📚', '🧪', '🔬', '🎵'];
+const AVATAR_OPTIONS = ['🦊', '🐼', '🐢', '🐙', '🦉', '🐝'];
 
 const PALIER_STYLE = {
-    decouverte: { label: 'Découverte', emoji: '🌱', color: 'var(--sky)', bg: 'rgba(77, 168, 218, 0.12)' },
-    confirme:   { label: 'Confirmé',   emoji: '⭐', color: 'var(--navy)', bg: 'rgba(26, 35, 75, 0.10)' },
-    expert:     { label: 'Expert',     emoji: '🏆', color: 'var(--gold)', bg: 'rgba(201, 162, 39, 0.12)' },
+    decouverte: { label: 'Découverte', emoji: '🌱', color: 'var(--action)', bg: 'var(--ciel-pale)' },
+    confirme:   { label: 'Confirmé',   emoji: '⭐', color: 'var(--indigo)', bg: 'var(--ciel-pale)' },
+    expert:     { label: 'Expert',     emoji: '👑', color: 'var(--podium)', bg: 'var(--orange-pale)' },
 };
 
 function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
@@ -352,7 +353,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
     const [maitrise, setMaitrise] = useState({});
     const [badges, setBadges] = useState([]);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-    const [avatar, setAvatar] = useState(identite?.profil?.avatar_emoji || '🎯');
+    const [avatar, setAvatar] = useState(identite?.profil?.avatar_emoji || '🦊');
     const [showMastery, setShowMastery] = useState(true);
     const [tablesFaibles, setTablesFaibles] = useState(null);
     const [progression, setProgression] = useState(null);

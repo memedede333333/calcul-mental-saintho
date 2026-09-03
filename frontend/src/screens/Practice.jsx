@@ -612,8 +612,10 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
             import('canvas-confetti').then(mod => {
                 const fire = mod.default;
                 const style = getComputedStyle(document.documentElement);
-                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5'].map(v => style.getPropertyValue(v).trim());
-                fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors });
+                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5']
+                    .map(v => style.getPropertyValue(v).trim())
+                    .filter(Boolean);
+                fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: colors.length ? colors : undefined });
             }).catch(() => { });
         }
     }, [pct]);

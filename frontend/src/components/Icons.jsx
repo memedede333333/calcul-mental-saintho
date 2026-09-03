@@ -1,0 +1,154 @@
+import React from 'react';
+
+/**
+ * matHo — Les icônes dessinées à la main (issues de la maquette v2)
+ * Remplacent les emojis des 4 modes et des boutons d'action.
+ * Aucune bibliothèque externe : tout est vectoriel SVG pur.
+ */
+
+export function IconSprint({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M24 4 10 25h9l-2 15 15-22h-9z" fill={actionColor} stroke={color} strokeWidth="3" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconSansFaute({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <circle cx="22" cy="22" r="17" stroke={color} strokeWidth="3.4" />
+            <circle cx="22" cy="22" r="9" stroke={actionColor} strokeWidth="3.4" />
+            <circle cx="22" cy="22" r="2.6" fill={color} />
+        </svg>
+    );
+}
+
+export function IconChrono({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <circle cx="22" cy="25" r="15" stroke={color} strokeWidth="3.4" />
+            <path d="M22 16v9l6 4" stroke={actionColor} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M17 5h10M22 5v5" stroke={color} strokeWidth="3.4" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function IconMontee({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M5 37h9v-9h9v-9h9v-9h7" stroke={color} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M32 4h8v8" stroke={actionColor} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconApprendre({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M22 12C18 8 12 7 6 8v25c6-1 12 0 16 4 4-4 10-5 16-4V8c-6-1-12 0-16 4z" stroke={color} strokeWidth="3.2" strokeLinejoin="round" />
+            <path d="M22 12v25" stroke={actionColor} strokeWidth="3.2" />
+        </svg>
+    );
+}
+
+export function IconClassements({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="4" y="24" width="11" height="15" rx="2.5" stroke={color} strokeWidth="3.2" />
+            <rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke={actionColor} strokeWidth="3.2" />
+            <rect x="29" y="29" width="11" height="10" rx="2.5" stroke={color} strokeWidth="3.2" />
+        </svg>
+    );
+}
+
+export function IconMaGrille({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="5" y="5" width="11" height="11" rx="2.5" fill={actionColor} />
+            <rect x="18" y="5" width="11" height="11" rx="2.5" stroke={color} strokeWidth="3" />
+            <rect x="31" y="5" width="8" height="11" rx="2.5" stroke={color} strokeWidth="3" />
+            <rect x="5" y="18" width="11" height="11" rx="2.5" stroke={color} strokeWidth="3" />
+            <rect x="18" y="18" width="11" height="11" rx="2.5" fill={color} />
+            <rect x="31" y="18" width="8" height="11" rx="2.5" stroke={color} strokeWidth="3" />
+            <rect x="5" y="31" width="11" height="8" rx="2.5" stroke={color} strokeWidth="3" />
+            <rect x="18" y="31" width="11" height="8" rx="2.5" stroke={color} strokeWidth="3" />
+        </svg>
+    );
+}
+
+export function IconEffacer({ size = 32, color = 'var(--indigo-doux)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 48 48" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M17.5 10h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4h-20L5.5 24z" stroke={color} strokeWidth="3.4" strokeLinejoin="round" />
+            <path d="M21 19l10 10M31 19 21 29" stroke={color} strokeWidth="3.4" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function IconDefisPasses({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M9 8h26a2 2 0 0 1 2 2v26a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z" stroke={color} strokeWidth="3.2" />
+            <path d="M14 17h16M14 24h16M14 31h9" stroke={actionColor} strokeWidth="3.2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function IconCheck({ size = 24, color = 'var(--action-texte)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M5 12.5 10 17.5 19 7" stroke={color} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconCadenas({ size = 24, color = 'var(--gris-inerte)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" stroke={color} strokeWidth="2.4" />
+            <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function IconDocument({ size = 24, color = 'var(--indigo)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M6 20h12a2 2 0 0 0 2-2V9l-5-5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" stroke={color} strokeWidth="2" />
+            <path d="M14 4v5h5" stroke={color} strokeWidth="2" />
+        </svg>
+    );
+}
+
+/**
+ * Sélecteur d'icône pour les modes de jeu
+ */
+export function ModeIcon({ mode, size = 36, color, actionColor, ...props }) {
+    switch (mode) {
+        case 'sprint':
+            return <IconSprint size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'perfect':
+        case 'sans-faute':
+            return <IconSansFaute size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'countdown':
+        case 'chrono':
+        case 'contre-la-montre':
+            return <IconChrono size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'climb':
+        case 'montee':
+            return <IconMontee size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'learn':
+        case 'apprendre':
+            return <IconApprendre size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'leaderboards':
+        case 'classements':
+            return <IconClassements size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'profile':
+        case 'grille':
+        case 'ma-grille':
+            return <IconMaGrille size={size} color={color} actionColor={actionColor} {...props} />;
+        default:
+            return <IconSprint size={size} color={color} actionColor={actionColor} {...props} />;
+    }
+}
