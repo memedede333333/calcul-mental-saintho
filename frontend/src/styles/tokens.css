@@ -171,3 +171,68 @@ button, [role='button'] {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 }
+
+/* ---------------------------------------------------------------------
+   10. Pont de compatibilite — a vider ecran par ecran
+   ---------------------------------------------------------------------
+   POURQUOI CE BLOC EXISTE.
+   L'ancien `:root` d'index.css definissait une trentaine de variables.
+   La consigne de la section 2 n'en nommait que six : les 21 autres ont
+   disparu alors que le code les appelait encore — 279 fois. Or un
+   `var(--inexistante)` ne provoque AUCUNE erreur : ni au build, ni dans
+   la console. La propriete est simplement ignoree. Des couleurs de
+   texte, des bordures, des fonds, des polices et des rayons se sont
+   donc evapores en silence a travers toute l'application. Les barres de
+   « Ma classe », peintes en var(--mint), var(--sun) et var(--coral),
+   etaient toujours la — juste invisibles.
+
+   Ce bloc redonne un sens a ces 21 noms. Ce n'est PAS la solution
+   definitive : chaque ecran doit finir par appeler les roles de la
+   section 3 plutot que ces alias. On le vide au fur et a mesure, et le
+   jour ou il est vide, on le supprime.
+
+   DEUX ALIAS DEMANDENT UNE RELECTURE A L'OEIL, marques ci-dessous.
+   --------------------------------------------------------------------- */
+:root {
+  /* Encre et surfaces */
+  --navy:         var(--indigo);
+  --navy-mid:     var(--indigo-doux);
+  --navy-dk:      var(--indigo-encre);
+  --text:         var(--indigo-encre);
+  --text-soft:    var(--gris);
+  --border:       var(--bordure);
+  --surface-alt:  var(--ivoire);
+
+  /* Les trois couleurs de la maitrise */
+  --mint:         var(--vert);
+  --mint-dk:      var(--vert);
+  --mint-lt:      var(--vert-pale);
+  --sun:          var(--orange);
+
+  /* ATTENTION — `--coral` servait a DEUX choses dans l'ancienne palette :
+     la donnee « a revoir » (les barres de Ma classe) et un simple accent
+     decoratif (boutons, pastilles). On l'aligne ici sur la DONNEE, parce
+     qu'un chiffre faux est plus grave qu'un bouton terne. Les boutons et
+     pastilles qui s'en servaient comme accent passent a var(--action) :
+     voir `.btn--coral` et `.chip--coral` dans index.css. */
+  --coral:        var(--rouge);
+  --coral-dk:     var(--rouge);
+
+  --sky:          var(--ciel);
+  --sky-dk:       var(--ciel);
+
+  /* ATTENTION — l'or a ete supprime de la marque : il n'existe pas dans
+     le logo. On le remplace par la couleur d'action. Seule exception, a
+     remettre a la main : la 1re marche du podium, qui garde
+     var(--podium). */
+  --gold:         var(--action);
+  --gold-light:   var(--ciel-pale);
+
+  /* Le violet a ete supprime lui aussi. */
+  --purple:       var(--indigo-doux);
+
+  /* Polices et rayons */
+  --font-display: var(--titre);
+  --font-body:    var(--texte);
+  --radius-md:    var(--r-case);
+}
