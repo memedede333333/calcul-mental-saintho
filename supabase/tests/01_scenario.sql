@@ -815,3 +815,126 @@ select case when (apercu_defi_classe('6A','{15}'::smallint[])->>'eleves_classe')
 
 
 reset role;
+
+
+-- =====================================================================
+-- MIGRATION 24 — l import de rentree se regarde avant de s executer
+-- L ecran d administration promet « voila ce qui sera ecrit, rien ne l a
+-- encore ete ». Cette promesse n a de valeur que si l apercu et l import
+-- disent exactement la meme chose : ils partagent donc la meme fonction
+-- de validation. Ces cas verifient que la promesse tient.
+-- =====================================================================
+reset role; set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+
+\echo '=== 100. L apercu n ecrit rien ==='
+select count(*) as eleves_avant from public.eleves \gset
+select apercu_import_eleves('[
+  {"ligne":2,"email":"m24.un@demo.saintho.fr",  "nom":"Un",  "prenom":"Alpha","classe":"6B"},
+  {"ligne":3,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta", "classe":"6B"}
+]'::jsonb) as apercu;
+select case when (select count(*) from public.eleves) = :eleves_avant
+            then 'OK : aucune ligne ecrite par l apercu'
+            else 'ECHEC : l apercu a modifie la base' end as verdict;
+
+\echo '=== 101. L apercu annonce exactement ce que l import produit ==='
+-- Meme fichier, apercu d abord, import ensuite. Les trois compteurs
+-- doivent coincider : c est toute la valeur de l ecran.
+create temporary table t_m24 as
+select apercu_import_eleves('[
+  {"ligne":2,"email":"m24.un@demo.saintho.fr",  "nom":"Un",  "prenom":"Alpha","classe":"6B"},
+  {"ligne":3,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta", "classe":"6B"},
+  {"ligne":4,"email":"alice.dupont@demo.saintho.fr","nom":"Dupont","prenom":"Alice","classe":"6A"}
+]'::jsonb) as a;
+create temporary table t_m24b as
+select importer_eleves('[
+  {"ligne":2,"email":"m24.un@demo.saintho.fr",  "nom":"Un",  "prenom":"Alpha","classe":"6B"},
+  {"ligne":3,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta", "classe":"6B"},
+  {"ligne":4,"email":"alice.dupont@demo.saintho.fr","nom":"Dupont","prenom":"Alice","classe":"6A"}
+]'::jsonb) as i;
+select case when (select (a->>'creations')::int    from t_m24) = (select (i->>'crees')::int       from t_m24b)
+             and (select (a->>'mises_a_jour')::int from t_m24) = (select (i->>'mis_a_jour')::int  from t_m24b)
+             and (select (a->>'ignorees')::int     from t_m24)
+               = (select jsonb_array_length(i->'lignes_ignorees') from t_m24b)
+            then 'OK : l apercu ne ment pas'
+            else 'ECHEC : l apercu et l import divergent' end as verdict;
+
+\echo '=== 102. Chaque rejet porte sa propre raison ==='
+select jsonb_pretty(
+  apercu_import_eleves('[
+    {"ligne":10,"email":"",                         "nom":"A","prenom":"B","classe":"6B"},
+    {"ligne":11,"email":"pas-un-email",             "nom":"A","prenom":"B","classe":"6B"},
+    {"ligne":12,"email":"m24.trois@demo.saintho.fr","nom":"A","prenom":"", "classe":"6B"},
+    {"ligne":13,"email":"m24.quatre@demo.saintho.fr","nom":"","prenom":"B","classe":"6B"},
+    {"ligne":14,"email":"m24.cinq@demo.saintho.fr", "nom":"A","prenom":"B","classe":""}
+  ]'::jsonb)->'lignes_ignorees') as rejets;
+select case when (select count(distinct l->>'raison')
+                    from jsonb_array_elements(
+                      apercu_import_eleves('[
+                        {"ligne":10,"email":"",                          "nom":"A","prenom":"B","classe":"6B"},
+                        {"ligne":11,"email":"pas-un-email",              "nom":"A","prenom":"B","classe":"6B"},
+                        {"ligne":12,"email":"m24.trois@demo.saintho.fr", "nom":"A","prenom":"", "classe":"6B"},
+                        {"ligne":13,"email":"m24.quatre@demo.saintho.fr","nom":"","prenom":"B","classe":"6B"},
+                        {"ligne":14,"email":"m24.cinq@demo.saintho.fr",  "nom":"A","prenom":"B","classe":""}
+                      ]'::jsonb)->'lignes_ignorees') l) = 5
+            then 'OK : cinq rejets, cinq raisons differentes'
+            else 'ECHEC : une raison fourre-tout' end as verdict;
+
+\echo '=== 103. Un doublon dans le FICHIER nomme la ligne de la premiere occurrence ==='
+select case when (apercu_import_eleves('[
+                    {"ligne":20,"email":"m24.six@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"},
+                    {"ligne":88,"email":"m24.six@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"}
+                  ]'::jsonb)->'lignes_ignorees'->0->>'raison') = 'e-mail deja present ligne 20'
+            then 'OK : le doublon renvoie a sa premiere ligne'
+            else 'ECHEC : doublon avale en silence' end as verdict;
+
+\echo '=== 104. Un doublon n est plus compte deux fois par l import ==='
+-- Deux instructions separees : dans une seule, le sous-select verrait
+-- l instantane d avant l import et compterait zero fiche.
+select (importer_eleves('[
+          {"ligne":20,"email":"m24.six@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"},
+          {"ligne":88,"email":"m24.six@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"}
+        ]'::jsonb)->>'crees')::int as crees_doit_valoir_1 \gset
+select case when :crees_doit_valoir_1 = 1
+             and (select count(*) from public.eleves where email = 'm24.six@demo.saintho.fr') = 1
+            then 'OK : un eleve, une fiche, un comptage'
+            else 'ECHEC : le doublon a ete traite deux fois' end as verdict;
+
+\echo '=== 105. Une reactivation se voit, et reste un sous-ensemble ==='
+do $$ declare v uuid; begin
+  select id into v from public.eleves where email = 'm24.deux@demo.saintho.fr';
+  perform desactiver_eleve(v, 'test migration 24');
+end $$;
+select jsonb_pretty(apercu_import_eleves('[
+  {"ligne":2,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta","classe":"6B"}
+]'::jsonb) - 'actifs_absents_du_fichier' - 'lignes_ignorees') as apercu_reactivation;
+select case when (apercu_import_eleves('[
+                    {"ligne":2,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta","classe":"6B"}
+                  ]'::jsonb)->>'dont_reactivations')::int = 1
+             and (apercu_import_eleves('[
+                    {"ligne":2,"email":"m24.deux@demo.saintho.fr","nom":"Deux","prenom":"Beta","classe":"6B"}
+                  ]'::jsonb)->>'mises_a_jour')::int = 1
+            then 'OK : reactivation annoncee, et comptee DANS les mises a jour'
+            else 'ECHEC : reactivation invisible ou comptee a part' end as verdict;
+
+\echo '=== 106. Les trois compteurs partitionnent le fichier ==='
+-- creations + mises_a_jour + ignorees = lignes lues. Exactement.
+-- C est la propriete qui interdit a l ecran de fabriquer une population.
+select case when (select (a->>'creations')::int + (a->>'mises_a_jour')::int + (a->>'ignorees')::int
+                    = (a->>'lignes_lues')::int
+                   from (select apercu_import_eleves('[
+                     {"ligne":2,"email":"m24.sept@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"},
+                     {"ligne":3,"email":"alice.dupont@demo.saintho.fr","nom":"Dupont","prenom":"Alice","classe":"6A"},
+                     {"ligne":4,"email":"pas-un-email","nom":"A","prenom":"B","classe":"6B"},
+                     {"ligne":5,"email":"m24.sept@demo.saintho.fr","nom":"A","prenom":"B","classe":"6B"}
+                   ]'::jsonb) as a) s)
+            then 'OK : aucune ligne perdue, aucune comptee deux fois'
+            else 'ECHEC : les populations ne partitionnent plus le fichier' end as verdict;
+
+\echo '=== 107. Un eleve ne peut pas regarder l apercu ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$ begin
+  perform apercu_import_eleves('[]'::jsonb);
+  raise notice 'ECHEC : un eleve a pu lire un fichier d import !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+reset role;

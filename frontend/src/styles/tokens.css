@@ -1,0 +1,166 @@
+/* =====================================================================
+   matHo — les jetons de style
+   ---------------------------------------------------------------------
+   Extrait de la maquette « matHo - Refonte v2 » (docs/design/).
+   C'est le SEUL endroit ou une couleur, un rayon, une ombre ou une
+   taille de texte est ecrite en dur. Partout ailleurs, on utilise une
+   variable. Une couleur en dur dans un composant, c'est une couleur
+   qu'on oubliera de changer.
+
+   Les couleurs viennent du logo, relevees au pixel dans
+   frontend/public/matho-logo.png — pas d'une palette inventee.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Les polices — fichiers locaux, jamais une URL
+   Les iPads passent par un filtre MDM : aucune requete vers
+   fonts.googleapis.com n'aboutira. Les .woff2 sont dans le depot.
+   --------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Baloo 2';
+  src: url('/fonts/baloo2-variable.woff2') format('woff2-variations');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito-variable.woff2') format('woff2-variations');
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* -------------------------------------------------------------------
+     2. Les couleurs du logo
+     ------------------------------------------------------------------- */
+  --indigo:        #20226B;  /* le « 56 », le « Ho », les cadres */
+  --indigo-encre:  #1A1C55;  /* le texte courant */
+  --indigo-doux:   #3A3F86;  /* texte secondaire sur fond clair */
+  --ciel:          #23A4D9;  /* les mains, le « mat » — COULEUR D'ACTION */
+  --ciel-pale:     #DDF0FA;
+  --vert:          #018F4B;  /* maitrise */
+  --vert-pale:     #DDEFE4;
+  --rouge:         #E02020;  /* a revoir — donnee lue par un professeur */
+  --rouge-pale:    #FBE3E3;
+  --rouge-doux:    #E4736F;  /* l'erreur de l'eleve : le MEME rouge, adouci */
+  --orange:        #F38E1A;  /* en cours */
+  --orange-pale:   #FBE8D2;
+  --podium:        #E8A33A;  /* la 1re marche, derivee de l'orange */
+
+  --ivoire:        #FAF6EE;  /* le fond des ecrans */
+  --surface:       #FFFFFF;  /* les cartes */
+  --bordure:       #E4DED2;
+  --gris:          #6E7391;  /* texte tertiaire, libelles */
+  --gris-inerte:   #D8D2C6;  /* une table pas travaillee, un bouton eteint */
+
+  /* -------------------------------------------------------------------
+     3. Les roles — a preferer aux couleurs brutes dans les composants
+     Ecrire var(--action) plutot que var(--ciel) : le jour ou l'action
+     change de couleur, il y a un seul endroit a toucher.
+     ------------------------------------------------------------------- */
+  --action:            var(--ciel);
+  --action-texte:      #FFFFFF;
+  --succes:            var(--vert);
+  --erreur-eleve:      var(--rouge-doux);
+  --erreur-donnee:     var(--rouge);
+  --attention:         var(--orange);
+
+  /* -------------------------------------------------------------------
+     4. La mosaique du logo — cinq carres, dans cet ordre
+     Sert de barre de serie, de cases de la grille, et de confettis.
+     C'est le SEUL motif decoratif du systeme : ne pas en ajouter un
+     deuxieme.
+     ------------------------------------------------------------------- */
+  --mosaique-1: var(--rouge);
+  --mosaique-2: var(--orange);
+  --mosaique-3: var(--vert);
+  --mosaique-4: var(--ciel);
+  --mosaique-5: var(--indigo);
+
+  /* -------------------------------------------------------------------
+     5. Les polices
+     ------------------------------------------------------------------- */
+  --titre: 'Baloo 2', 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --texte: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+
+  /* Les tailles de la maquette. Les grands nombres (la question, le
+     score de fin de partie) sont en clamp() : ils cedent avant le pave.
+     Voir la regle de compression, plus bas. */
+  --t-question:  clamp(88px, 14vh, 116px);
+  --t-score:     clamp(52px, 10vh, 72px);
+  --t-touche:    clamp(34px, 4.6vh, 44px);   /* le chiffre d'une touche */
+  --t-titre:     26px;
+  --t-sous:      22px;
+  --t-corps:     17px;
+  --t-libelle:   15px;
+  --t-petit:     14px;
+  --t-minuscule: 13px;
+
+  /* -------------------------------------------------------------------
+     6. Rayons, ombres, espacements
+     ------------------------------------------------------------------- */
+  --r-carte:   26px;
+  --r-touche:  24px;
+  --r-bouton:  46px;
+  --r-pastille: 999px;
+  --r-case:    12px;   /* une case de la grille de maitrise */
+  --r-carre:   4px;    /* un carre de la mosaique */
+
+  --ombre-carte:  0 8px 20px rgba(32, 34, 107, .10);
+  --ombre-douce:  0 6px 16px rgba(32, 34, 107, .08);
+  --ombre-action: 0 8px 20px rgba(35, 164, 217, .28);
+  /* Anneau de reponse : bonne, puis mauvaise. */
+  --anneau-juste: 0 0 0 4px var(--vert-pale),  0 8px 22px rgba(32, 34, 107, .10);
+  --anneau-faux:  0 0 0 4px var(--rouge-pale), 0 8px 22px rgba(32, 34, 107, .10);
+
+  --e-1: 4px;
+  --e-2: 8px;
+  --e-3: 12px;
+  --e-4: 16px;
+  --e-5: 22px;
+  --e-6: 34px;
+
+  /* -------------------------------------------------------------------
+     7. Le pave numerique — la decision d'ergonomie du projet
+     L'iPad est pose a plat : le doigt part du bord bas. Le pave occupe
+     donc le bas, plein cadre, et la question se contente du tiers haut.
+     Ces valeurs ne sont pas decoratives, elles sont la regle :
+       — le pave prend 44 % de la hauteur utile, quel que soit l'ecran ;
+       — une touche ne descend JAMAIS sous 88 px de haut, 96 px de large ;
+       — la gouttiere doublee du ⌫ ne se comprime jamais : c'est elle
+         qui empeche de le taper a la place du 0.
+     ------------------------------------------------------------------- */
+  --pave-part:        44%;   /* de la hauteur utile */
+  --pave-gouttiere:   16px;
+  --pave-gouttiere-effacement: 32px;
+  --touche-h-min:     88px;
+  --touche-l-min:     96px;
+
+  /* -------------------------------------------------------------------
+     8. Les durees — la fete ne doit jamais faire attendre
+     ------------------------------------------------------------------- */
+  --d-juste:  180ms;   /* les cases passent au vert, la suite arrive pendant */
+  --d-faux:   200ms;   /* tremblement, puis les cases se vident */
+  --d-palier: 300ms;   /* la mosaique pulse une fois */
+}
+
+/* ---------------------------------------------------------------------
+   9. Ce que le tactile impose
+   Aucun etat de survol nulle part : un doigt ne survole pas, et sur iOS
+   un :hover reste colle apres le relachement. Tout retour se fait au
+   :active ou par une classe posee en JavaScript.
+   --------------------------------------------------------------------- */
+* { -webkit-tap-highlight-color: transparent; }
+
+button, [role='button'] {
+  touch-action: manipulation;      /* pas de zoom sur double-tape */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}

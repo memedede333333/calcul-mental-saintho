@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+:root{
+  --navy:#20226B; --ink:#1A1C55; --navy-soft:#3A3F86;
+  --ivory:#FAF6EE; --surface:#FFFFFF; --border:#E4DED2; --muted:#6E7391;
+  --sky:#23A4D9; --sky-soft:#DDF0FA; --mint:#018F4B; --mint-soft:#DDEFE4;
+  --coral:#E02020; --coral-soft:#FBE3E3; --red-pale:#E4736F;
+  --sun:#F38E1A; --sun-soft:#FBE8D2; --podium:#E8A33A;
+  --display:"Baloo 2","Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  --sans:"Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+}
+body{margin:0;background:#EFEAE0;font-family:var(--sans);color:var(--ink);text-wrap:pretty}
+a{color:var(--sky);text-decoration:none}
+a:hover{color:var(--navy)}
+</style>
+</helmet>
+
+<section style="padding:72px 80px 40px;display:flex;flex-direction:column;gap:44px">
+  <div id="2a" style="display:flex;flex-direction:column;gap:40px">
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:1060px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="background:#20226B;color:#fff;font:700 15px var(--sans);padding:5px 12px;border-radius:999px;letter-spacing:.06em">2a</span>
+        <span style="color:#6E7391;font:600 15px var(--sans);letter-spacing:.16em;text-transform:uppercase">Passe de correction — palette du logo, icônes dessinées, chiffres vérifiés</span>
+      </div>
+      <h1 style="margin:0;font:700 50px var(--display);color:#20226B;letter-spacing:-.01em">La palette vient du logo, plus de l'à-peu-près</h1>
+      <p style="margin:0;font:400 20px/1.5 var(--sans);color:#3A3F86;max-width:960px">Indigo #20226B partout où il y avait du bleu-gris, bleu ciel #23A4D9 sur toutes les actions, l'or supprimé — sauf la première marche du podium, dérivée de l'orange. Les sept icônes de mode et le ⌫ sont dessinés en SVG dans le fichier. La mise en page ne bouge pas ; <a href="#1a">1a</a> est la même proposition, recolorée.</p>
+    </div>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="flex:1 1 420px;background:#fff;border-radius:26px;padding:30px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:18px">
+        <h2 style="margin:0;font:700 24px var(--display);color:#20226B">Les cinq carrés, et rien d'autre</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#20226B"></div><div style="font:700 14px var(--sans);color:#3A3F86">#20226B<br><span style="font-weight:600;color:#6E7391">indigo</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#23A4D9"></div><div style="font:700 14px var(--sans);color:#3A3F86">#23A4D9<br><span style="font-weight:600;color:#6E7391">action</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#E02020"></div><div style="font:700 14px var(--sans);color:#3A3F86">#E02020<br><span style="font-weight:600;color:#6E7391">donnée prof</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#E4736F"></div><div style="font:700 14px var(--sans);color:#3A3F86">#E4736F<br><span style="font-weight:600;color:#6E7391">erreur élève</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#F38E1A"></div><div style="font:700 14px var(--sans);color:#3A3F86">#F38E1A<br><span style="font-weight:600;color:#6E7391">orange</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#018F4B"></div><div style="font:700 14px var(--sans);color:#3A3F86">#018F4B<br><span style="font-weight:600;color:#6E7391">maîtrisé</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><div style="width:88px;height:64px;border-radius:12px;background:#FAF6EE;border:2px solid #E4DED2"></div><div style="font:700 14px var(--sans);color:#3A3F86">#FAF6EE<br><span style="font-weight:600;color:#6E7391">fond</span></div></div>
+        </div>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:#3A3F86">L'erreur de l'élève et les barres de « Ma classe » sont <b>deux valeurs du même rouge</b> : franc pour la donnée lue par un adulte, pâli pour le collégien qui s'est trompé. Le contraste des cartes ne passe plus par un fond assombri mais par une ombre portée franche — le fond reste celui du logo.</p>
+      </div>
+
+      <div style="flex:1 1 420px;background:#fff;border-radius:26px;padding:30px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:18px">
+        <h2 style="margin:0;font:700 24px var(--display);color:#20226B">Huit dessins, un seul trait</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"></path></svg><span style="font:600 14px var(--sans);color:#6E7391">Sprint</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="17" stroke="#20226B" stroke-width="3.4"></circle><circle cx="22" cy="22" r="9" stroke="#23A4D9" stroke-width="3.4"></circle><circle cx="22" cy="22" r="2.6" fill="#20226B"></circle></svg><span style="font:600 14px var(--sans);color:#6E7391">Sans faute</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="25" r="15" stroke="#20226B" stroke-width="3.4"></circle><path d="M22 16v9l6 4" stroke="#23A4D9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 5h10M22 5v5" stroke="#20226B" stroke-width="3.4" stroke-linecap="round"></path></svg><span style="font:600 14px var(--sans);color:#6E7391">Chrono</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none"><path d="M5 37h9v-9h9v-9h9v-9h7" stroke="#20226B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M32 4h8v8" stroke="#23A4D9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font:600 14px var(--sans);color:#6E7391">Montée</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="34" height="34" viewBox="0 0 44 44" fill="none"><path d="M22 12C18 8 12 7 6 8v25c6-1 12 0 16 4 4-4 10-5 16-4V8c-6-1-12 0-16 4z" stroke="#20226B" stroke-width="3.2" stroke-linejoin="round"></path><path d="M22 12v25" stroke="#23A4D9" stroke-width="3.2"></path></svg><span style="font:600 14px var(--sans);color:#6E7391">Apprendre</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="34" height="34" viewBox="0 0 44 44" fill="none"><rect x="4" y="24" width="11" height="15" rx="2.5" stroke="#20226B" stroke-width="3.2"></rect><rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke="#23A4D9" stroke-width="3.2"></rect><rect x="29" y="29" width="11" height="10" rx="2.5" stroke="#20226B" stroke-width="3.2"></rect></svg><span style="font:600 14px var(--sans);color:#6E7391">Classements</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="34" height="34" viewBox="0 0 44 44" fill="none"><rect x="5" y="5" width="11" height="11" rx="2.5" fill="#23A4D9"></rect><rect x="18" y="5" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="31" y="5" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="5" y="18" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="18" y="18" width="11" height="11" rx="2.5" fill="#20226B"></rect><rect x="31" y="18" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="5" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="18" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"></rect></svg><span style="font:600 14px var(--sans);color:#6E7391">Ma grille</span></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="40" height="40" viewBox="0 0 48 48" fill="none"><path d="M17.5 10h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4h-20L5.5 24z" stroke="#3A3F86" stroke-width="3.4" stroke-linejoin="round"></path><path d="M21 19l10 10M31 19 21 29" stroke="#3A3F86" stroke-width="3.4" stroke-linecap="round"></path></svg><span style="font:600 14px var(--sans);color:#6E7391">Effacer</span></div>
+        </div>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:#3A3F86">Trait de 3,2 à 3,4 px, bouts arrondis, indigo pour la structure et bleu ciel pour ce qui bouge — le même geste que les mains du logo. Tout est dans le fichier, aucune bibliothèque appelée. Les avatars animaux et les emojis de fête restent tels quels.</p>
+      </div>
+
+      <div style="flex:1 1 420px;background:#20226B;border-radius:26px;padding:30px;display:flex;flex-direction:column;gap:16px">
+        <h2 style="margin:0;font:700 24px var(--display);color:#fff">La règle des tailles, pas les 132 px</h2>
+        <p style="margin:0;font:400 17px/1.55 var(--sans);color:#C7CCEA"><b style="color:#fff">Le pavé prend 44 % de la hauteur utile</b>, quel que soit l'écran : 4 rangées + 3 gouttières de 16 px. Sur 1194 pt cela fait 132 px de touche, sur un iPad mini de 744 × 1133 environ 124 px.</p>
+        <p style="margin:0;font:400 17px/1.55 var(--sans);color:#C7CCEA"><b style="color:#fff">Plancher absolu : 88 px de haut, 96 px de large.</b> En dessous, le pavé ne rétrécit plus — c'est la question qui cède.</p>
+        <p style="margin:0;font:400 17px/1.55 var(--sans);color:#C7CCEA"><b style="color:#fff">Ordre de compression</b>, du premier au dernier : les marges verticales de la carte question (34 → 20 px), le chiffre de la question (116 → 88 px, jamais moins), les cases de saisie (126 → 104 px), la barre de série qui passe en compteur seul. Le pavé, lui, ne bouge qu'en dernier recours.</p>
+        <p style="margin:0;font:400 17px/1.55 var(--sans);color:#C7CCEA">Largeur de touche = (largeur écran − 64 px de marges − 32 px de gouttières) ÷ 3. Le ⌫ garde sa gouttière doublée de 32 px, elle ne se comprime jamais : c'est elle qui empêche de le taper à la place du 0.</p>
+      </div>
+
+      <div style="flex:1 1 420px;background:#fff;border-radius:26px;padding:30px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font:700 24px var(--display);color:#20226B">Les trois chiffres, corrigés</h2>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:#3A3F86"><b>Le bandeau de reprise</b> ne prétend plus rien savoir : « Défi UEWTR en cours · Contre-la-montre · 6ᵉA · le défi reprend à la première question ». La dernière clause n'est pas une donnée, c'est l'annonce du comportement — l'élève doit le savoir avant de toucher le bouton.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:#3A3F86"><b>« Ma classe » n'a plus qu'une unité par colonne</b> : partout des élèves sur 27, jamais de pourcentage. Le titre de colonne le dit en toutes lettres au-dessus des barres.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:#3A3F86"><b>« 24 ont joué cette semaine » a disparu.</b> L'écran ne déduit aucune population : il ne reste que le nombre d'élèves de la classe et le nombre de tables travaillées.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+      <div data-screen-label="Accueil professeur" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:#20226B">6 · Accueil professeur <span style="color:#6E7391;font:600 16px var(--sans)">— remplace l'écran actuel</span></div>
+        <div style="width:834px;height:1194px;background:#FAF6EE;border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:#6E7391"><span>08:12</span><span>Wi‑Fi · 50 %</span></div>
+
+          <div style="padding:10px 36px 0;display:flex;align-items:center;gap:16px">
+            <img src="logo.png" alt="matHo" style="width:66px;height:66px;object-fit:contain">
+            <div style="display:flex;flex-direction:column">
+              <div style="font:700 34px var(--display);color:#20226B;letter-spacing:-.01em">matHo</div>
+              <div style="font:600 16px var(--sans);color:#6E7391">Collège Saint‑Honoré d'Eylau</div>
+            </div>
+            <div style="margin-left:auto;text-align:right">
+              <div style="font:700 24px var(--display);color:#20226B">Aymeri Desjardins</div>
+              <div style="font:600 16px var(--sans);color:#6E7391">Administrateur · 6ᵉA, 6ᵉB, 5ᵉC</div>
+            </div>
+          </div>
+
+          <div style="margin:30px 36px 0;background:#23A4D9;border-radius:30px;padding:34px 32px;display:flex;align-items:center;gap:22px">
+            <svg width="58" height="58" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round"></path></svg>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:700 38px var(--display);color:#fff">Lancer un défi</div>
+              <div style="font:600 19px var(--sans);color:#DFF2FB">Sprint ou Contre‑la‑montre · code projeté au tableau</div>
+            </div>
+          </div>
+
+          <div style="margin:18px 36px 0;background:#fff;border-radius:26px;padding:26px 28px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;gap:20px">
+            <div style="width:12px;height:52px;border-radius:6px;background:#E02020;flex:none"></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="font:700 24px var(--display);color:#20226B">18 élèves de 6ᵉA bloquent sur la table de 7</div>
+              <div style="font:600 17px var(--sans);color:#6E7391">Un défi ciblé maintenant vaut mieux qu'une révision dans trois semaines.</div>
+            </div>
+            <div style="margin-left:auto;font:700 19px var(--sans);color:#23A4D9;white-space:nowrap">Voir ›</div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div style="background:#fff;border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:10px">
+              <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><rect x="5" y="5" width="11" height="11" rx="2.5" fill="#23A4D9"></rect><rect x="18" y="5" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="31" y="5" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="5" y="18" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="18" y="18" width="11" height="11" rx="2.5" fill="#20226B"></rect><rect x="31" y="18" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="5" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"></rect><rect x="18" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"></rect></svg>
+              <div style="font:700 27px var(--display);color:#20226B">Ma classe</div>
+              <div style="font:600 17px/1.4 var(--sans);color:#6E7391">Maîtrise agrégée — qui bloque, sur quoi</div>
+            </div>
+            <div style="background:#fff;border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:10px">
+              <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><rect x="4" y="24" width="11" height="15" rx="2.5" stroke="#20226B" stroke-width="3.2"></rect><rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke="#23A4D9" stroke-width="3.2"></rect><rect x="29" y="29" width="11" height="10" rx="2.5" stroke="#20226B" stroke-width="3.2"></rect></svg>
+              <div style="font:700 27px var(--display);color:#20226B">Classements</div>
+              <div style="font:600 17px/1.4 var(--sans);color:#6E7391">Progression, records, Salle des profs</div>
+            </div>
+            <div style="background:#fff;border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:10px">
+              <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="17" stroke="#20226B" stroke-width="3.4"></circle><circle cx="22" cy="22" r="9" stroke="#23A4D9" stroke-width="3.4"></circle><circle cx="22" cy="22" r="2.6" fill="#20226B"></circle></svg>
+              <div style="font:700 27px var(--display);color:#20226B">S'entraîner</div>
+              <div style="font:600 17px/1.4 var(--sans);color:#6E7391">Jouez vous aussi — Salle des profs</div>
+            </div>
+            <div style="background:#fff;border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:10px">
+              <svg width="38" height="38" viewBox="0 0 44 44" fill="none"><path d="M9 8h26a2 2 0 0 1 2 2v26a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z" stroke="#20226B" stroke-width="3.2"></path><path d="M14 17h16M14 24h16M14 31h9" stroke="#23A4D9" stroke-width="3.2" stroke-linecap="round"></path></svg>
+              <div style="font:700 27px var(--display);color:#20226B">Mes défis passés</div>
+              <div style="font:600 17px/1.4 var(--sans);color:#6E7391">4 défis · le dernier avant‑hier</div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;align-items:center;gap:14px">
+            <div style="flex:1;height:88px;border-radius:24px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);color:#20226B;font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">Profil</div>
+            <div style="flex:1;height:88px;border-radius:24px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);color:#20226B;font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">Administration</div>
+            <div style="height:88px;padding:0 26px;border-radius:24px;color:#6E7391;font:600 19px var(--sans);display:flex;align-items:center">Se déconnecter</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Sélecteur de tables" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:#20226B">7 · Sélecteur de tables <span style="color:#6E7391;font:600 16px var(--sans)">— avant une partie</span></div>
+        <div style="width:834px;height:1194px;background:#FAF6EE;border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:#6E7391"><span>22:44</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:10px 36px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="font:700 22px var(--sans);color:#3A3F86">‹ Retour</div>
+            <div style="display:flex;align-items:center;gap:10px;background:#DDF0FA;padding:10px 20px;border-radius:999px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"></path></svg><span style="font:700 20px var(--sans);color:#20226B">Sprint</span></div>
+          </div>
+
+          <div style="padding:24px 36px 0;display:flex;flex-direction:column;gap:6px">
+            <h2 style="margin:0;font:700 42px var(--display);color:#20226B">Sur quelles tables ?</h2>
+            <div style="font:600 19px var(--sans);color:#6E7391">Tes tables sont ouvertes jusqu'à la 12. La 13 se débloque par la Montée.</div>
+          </div>
+
+          <div style="padding:22px 36px 0;display:flex;gap:12px;flex-wrap:wrap">
+            <div style="background:#20226B;color:#fff;font:700 19px var(--sans);padding:14px 24px;border-radius:999px">Mes 3 tables faibles</div>
+            <div style="background:#fff;color:#3A3F86;font:700 19px var(--sans);padding:14px 24px;border-radius:999px;box-shadow:0 6px 16px rgba(32,34,107,.08)">Tout sélectionner</div>
+            <div style="background:#fff;color:#3A3F86;font:700 19px var(--sans);padding:14px 24px;border-radius:999px;box-shadow:0 6px 16px rgba(32,34,107,.08)">Effacer</div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:#3A3F86"><span style="width:14px;height:14px;border-radius:4px;background:#E02020"></span>À revoir</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:#3A3F86"><span style="width:14px;height:14px;border-radius:4px;background:#F38E1A"></span>En cours</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:#3A3F86"><span style="width:14px;height:14px;border-radius:4px;background:#018F4B"></span>Maîtrisé</div>
+          </div>
+
+          <div style="padding:20px 36px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">2</span><span style="width:56px;height:8px;border-radius:4px;background:#018F4B"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">3</span><span style="width:56px;height:8px;border-radius:4px;background:#018F4B"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">4</span><span style="width:56px;height:8px;border-radius:4px;background:#018F4B"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">5</span><span style="width:56px;height:8px;border-radius:4px;background:#F38E1A"></span></div>
+            <div style="height:150px;border-radius:26px;background:#23A4D9;box-shadow:0 8px 20px rgba(35,164,217,.28);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative"><span style="font:700 52px var(--display);color:#fff">6</span><span style="width:56px;height:8px;border-radius:4px;background:#fff;opacity:.7"></span><svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="position:absolute;top:14px;right:14px"><path d="M5 12.5 10 17.5 19 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+            <div style="height:150px;border-radius:26px;background:#23A4D9;box-shadow:0 8px 20px rgba(35,164,217,.28);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative"><span style="font:700 52px var(--display);color:#fff">7</span><span style="width:56px;height:8px;border-radius:4px;background:#fff;opacity:.7"></span><svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="position:absolute;top:14px;right:14px"><path d="M5 12.5 10 17.5 19 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+            <div style="height:150px;border-radius:26px;background:#23A4D9;box-shadow:0 8px 20px rgba(35,164,217,.28);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative"><span style="font:700 52px var(--display);color:#fff">8</span><span style="width:56px;height:8px;border-radius:4px;background:#fff;opacity:.7"></span><svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="position:absolute;top:14px;right:14px"><path d="M5 12.5 10 17.5 19 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">9</span><span style="width:56px;height:8px;border-radius:4px;background:#E02020"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">10</span><span style="width:56px;height:8px;border-radius:4px;background:#018F4B"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">11</span><span style="width:56px;height:8px;border-radius:4px;background:#F38E1A"></span></div>
+            <div style="height:150px;border-radius:26px;background:#fff;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><span style="font:700 52px var(--display);color:#20226B">12</span><span style="width:56px;height:8px;border-radius:4px;background:#E4DED2"></span></div>
+            <div style="height:150px;border-radius:26px;background:#F2EDE3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" stroke="#9A93A8" stroke-width="2.4"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#9A93A8" stroke-width="2.4" stroke-linecap="round"></path></svg>
+              <span style="font:700 40px var(--display);color:#B3ACBE">13</span>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 18px var(--sans);color:#6E7391;text-align:center">3 tables choisies · 20 questions · 3 s par question</div>
+            <div style="height:110px;border-radius:28px;background:#23A4D9;color:#fff;font:700 30px var(--sans);display:flex;align-items:center;justify-content:center">Commencer</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Annonce du défi" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:#20226B">8 · Annonce du défi <span style="color:#6E7391;font:600 16px var(--sans)">— juste avant la première question</span></div>
+        <div style="width:834px;height:1194px;background:#20226B;border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:150px;left:64px;width:26px;height:26px;border-radius:6px;background:#E02020;transform:rotate(14deg)"></div>
+          <div style="position:absolute;top:214px;left:120px;width:18px;height:18px;border-radius:4px;background:#F38E1A;transform:rotate(-18deg)"></div>
+          <div style="position:absolute;top:170px;right:78px;width:22px;height:22px;border-radius:5px;background:#23A4D9;transform:rotate(22deg)"></div>
+          <div style="position:absolute;top:250px;right:132px;width:16px;height:16px;border-radius:4px;background:#018F4B;transform:rotate(-8deg)"></div>
+
+          <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:#8E93C6"><span>10:05</span><span>Wi‑Fi · 62 %</span></div>
+
+          <div style="padding:120px 60px 0;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center">
+            <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.12);padding:12px 24px;border-radius:999px">
+              <svg width="26" height="26" viewBox="0 0 44 44" fill="none"><path d="M22 12C18 8 12 7 6 8v25c6-1 12 0 16 4 4-4 10-5 16-4V8c-6-1-12 0-16 4z" stroke="#fff" stroke-width="3.2" stroke-linejoin="round"></path><path d="M22 12v25" stroke="#23A4D9" stroke-width="3.2"></path></svg>
+              <span style="font:700 21px var(--sans);color:#fff;letter-spacing:.1em;text-transform:uppercase">Travail de classe</span>
+            </div>
+            <div style="font:700 60px/1.1 var(--display);color:#fff">Défi de M. Desjardins</div>
+            <div style="font:600 30px var(--sans);color:#A9AFDE">6ᵉA · aujourd'hui</div>
+          </div>
+
+          <div style="margin:56px 60px 0;background:rgba(255,255,255,.08);border-radius:32px;padding:34px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;align-items:center;gap:18px">
+              <svg width="40" height="40" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#23A4D9" stroke-width="3" stroke-linejoin="round"></path></svg>
+              <div><div style="font:700 30px var(--display);color:#fff">Sprint</div><div style="font:600 19px var(--sans);color:#A9AFDE">20 questions · 3 secondes chacune</div></div>
+            </div>
+            <div style="height:2px;background:rgba(255,255,255,.14)"></div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="display:grid;grid-template-columns:repeat(2,16px);gap:5px;flex:none"><div style="width:16px;height:16px;border-radius:4px;background:#E02020"></div><div style="width:16px;height:16px;border-radius:4px;background:#F38E1A"></div><div style="width:16px;height:16px;border-radius:4px;background:#018F4B"></div><div style="width:16px;height:16px;border-radius:4px;background:#23A4D9"></div></div>
+              <div><div style="font:700 30px var(--display);color:#fff">Tables 6 à 9</div><div style="font:600 19px var(--sans);color:#A9AFDE">Choisies par ton professeur</div></div>
+            </div>
+          </div>
+
+          <div style="margin:36px 60px 0;text-align:center;font:600 21px/1.5 var(--sans);color:#A9AFDE">Ton résultat apparaîtra dans le classement de la classe.<br>Tu peux le rejouer, seul le premier essai compte.</div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 60px 44px;display:flex;flex-direction:column;gap:16px">
+            <div style="height:120px;border-radius:30px;background:#23A4D9;color:#fff;font:700 34px var(--sans);display:flex;align-items:center;justify-content:center">Commencer</div>
+            <div style="height:76px;border-radius:24px;color:#A9AFDE;font:600 22px var(--sans);display:flex;align-items:center;justify-content:center">Plus tard</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Code projeté" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:#20226B">9 · Code projeté au tableau <span style="color:#6E7391;font:600 16px var(--sans)">— lu du fond de la salle, 1280 × 720</span></div>
+        <div style="width:1280px;height:720px;background:#20226B;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:60px;left:60px;display:grid;grid-template-columns:repeat(3,26px);gap:8px;opacity:.9"><div style="width:26px;height:26px;border-radius:6px;background:#E02020"></div><div style="width:26px;height:26px;border-radius:6px;background:#F38E1A"></div><div style="width:26px;height:26px;border-radius:6px;background:#018F4B"></div><div style="width:26px;height:26px;border-radius:6px;background:#F38E1A"></div><div style="width:26px;height:26px;border-radius:6px;background:#23A4D9"></div><div style="width:26px;height:26px;border-radius:6px;background:#E02020"></div><div style="width:26px;height:26px;border-radius:6px;background:#018F4B"></div><div style="width:26px;height:26px;border-radius:6px;background:#23A4D9"></div><div style="width:26px;height:26px;border-radius:6px;background:#fff;opacity:.25"></div></div>
+          <div style="position:absolute;bottom:56px;right:60px;display:grid;grid-template-columns:repeat(3,20px);gap:7px;opacity:.55"><div style="width:20px;height:20px;border-radius:5px;background:#23A4D9"></div><div style="width:20px;height:20px;border-radius:5px;background:#E02020"></div><div style="width:20px;height:20px;border-radius:5px;background:#F38E1A"></div><div style="width:20px;height:20px;border-radius:5px;background:#018F4B"></div><div style="width:20px;height:20px;border-radius:5px;background:#23A4D9"></div><div style="width:20px;height:20px;border-radius:5px;background:#E02020"></div></div>
+
+          <div style="padding:52px 60px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="margin-left:130px;display:flex;flex-direction:column">
+              <div style="font:700 34px var(--display);color:#fff">matHo</div>
+              <div style="font:600 20px var(--sans);color:#A9AFDE">Défi de M. Desjardins · 6ᵉA · Sprint, tables 6 à 9</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.12);padding:14px 26px;border-radius:999px">
+              <div style="width:14px;height:14px;border-radius:4px;background:#018F4B"></div>
+              <span style="font:700 24px var(--sans);color:#fff">18 connectés</span>
+            </div>
+          </div>
+
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+            <div style="font:700 30px var(--sans);color:#A9AFDE;letter-spacing:.22em;text-transform:uppercase">Rejoindre avec le code</div>
+            <div style="display:flex;gap:22px">
+              <div style="width:150px;height:190px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 130px var(--display);color:#20226B">U</div>
+              <div style="width:150px;height:190px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 130px var(--display);color:#20226B">E</div>
+              <div style="width:150px;height:190px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 130px var(--display);color:#20226B">W</div>
+              <div style="width:150px;height:190px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 130px var(--display);color:#20226B">T</div>
+              <div style="width:150px;height:190px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 130px var(--display);color:#20226B">R</div>
+            </div>
+            <div style="font:600 26px var(--sans);color:#A9AFDE">Accueil › Défi de classe › saisir le code</div>
+          </div>
+
+          <div style="padding:0 60px 46px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:-8px">
+              <span style="font-size:38px">🦊</span><span style="font-size:38px">🐼</span><span style="font-size:38px">🐢</span><span style="font-size:38px">🐙</span><span style="font-size:38px">🦉</span><span style="font-size:38px">🐝</span>
+            </div>
+            <div style="font:600 22px var(--sans);color:#A9AFDE">Lou, Inès, Malo, Agathe, Sacha, Nour <span style="color:#fff">+ 12 autres</span></div>
+            <div style="margin-left:auto;font:600 22px var(--sans);color:#A9AFDE">Le classement s'affichera ici à la fin</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-screen-label="Administration" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:#20226B">10 · Administration <span style="color:#6E7391;font:600 16px var(--sans)">— liste des élèves, import de rentrée ouvert, 1194 × 834</span></div>
+        <div style="width:1194px;height:834px;background:#F6F2EA;border-radius:24px;border:1px solid #E4DED2;overflow:hidden;display:flex;font-family:var(--sans)">
+
+          <div style="width:170px;flex:none;background:#20226B;padding:24px 12px;display:flex;flex-direction:column;gap:6px">
+            <div style="padding:0 12px 20px;display:flex;flex-direction:column">
+              <span style="font:700 22px var(--display);color:#fff">Administration</span>
+              <span style="font:600 14px var(--sans);color:#8E93C6">Aymeri Desjardins</span>
+            </div>
+            <div style="padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.14);font:700 16px var(--sans);color:#fff">Élèves <span style="float:right;color:#A9AFDE;font-weight:600">347</span></div>
+            <div style="padding:12px 14px;border-radius:10px;font:600 16px var(--sans);color:#C7CCEA">Enseignants <span style="float:right;color:#8E93C6">14</span></div>
+            <div style="padding:12px 14px;border-radius:10px;font:600 16px var(--sans);color:#C7CCEA">Import de rentrée</div>
+            <div style="padding:12px 14px;border-radius:10px;font:600 16px var(--sans);color:#C7CCEA">Journal</div>
+            <div style="flex:1"></div>
+            <div style="padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.06);font:600 14px/1.5 var(--sans);color:#A9AFDE">On ne supprime jamais un élève en cours d'année. On le désactive.</div>
+          </div>
+
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+            <div style="padding:22px 26px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <h2 style="margin:0;font:700 26px var(--display);color:#20226B;flex:none">Élèves</h2>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <span style="background:#20226B;color:#fff;font:600 14px var(--sans);padding:7px 14px;border-radius:8px">Toutes classes</span>
+                <span style="background:#fff;color:#3A3F86;font:600 14px var(--sans);padding:7px 14px;border-radius:8px;border:1px solid #E4DED2">6ᵉA</span>
+                <span style="background:#fff;color:#3A3F86;font:600 14px var(--sans);padding:7px 14px;border-radius:8px;border:1px solid #E4DED2">6ᵉB</span>
+                <span style="background:#FBE3E3;color:#8E1616;font:600 14px var(--sans);padding:7px 14px;border-radius:8px;white-space:nowrap">Jamais connectés · 23</span>
+              </div>
+              <div style="margin-left:auto;display:flex;gap:8px;flex:none">
+                <span style="background:#fff;color:#3A3F86;font:600 14px var(--sans);padding:9px 16px;border-radius:8px;border:1px solid #E4DED2;white-space:nowrap;flex:none">Ajouter un élève</span>
+                <span style="background:#23A4D9;color:#fff;font:700 14px var(--sans);padding:9px 16px;border-radius:8px;white-space:nowrap;flex:none">Import de rentrée</span>
+              </div>
+            </div>
+
+            <div style="margin:18px 26px 0;background:#fff;border:1px solid #E4DED2;border-radius:12px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:10px 16px;background:#F6F2EA;border-bottom:1px solid #E4DED2;font:700 12px var(--sans);color:#6E7391;letter-spacing:.08em;text-transform:uppercase">
+                <span>Nom</span><span>E‑mail</span><span>Classe</span><span>Connexion</span><span>État</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;border-bottom:1px solid #F1ECE2;font:600 14px var(--sans);color:#1A1C55;align-items:center">
+                <span>ABADIE Lou</span><span style="color:#6E7391">l.abadie@…</span><span>6ᵉA</span><span style="color:#6E7391">hier, 22:47</span><span style="color:#018F4B">actif</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;border-bottom:1px solid #F1ECE2;font:600 14px var(--sans);color:#1A1C55;align-items:center">
+                <span>BERTIN Sacha</span><span style="color:#6E7391">s.bertin@…</span><span>6ᵉA</span><span style="color:#6E7391">hier, 21:12</span><span style="color:#018F4B">actif</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;border-bottom:1px solid #F1ECE2;font:600 14px var(--sans);color:#1A1C55;align-items:center;background:#FDF6F6">
+                <span>CHAUVET Agathe</span><span style="color:#6E7391">a.chauvet@…</span><span>6ᵉA</span><span style="color:#B34141">jamais</span><span style="color:#B34141;font-size:13px;line-height:1.25">jamais connecté</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;border-bottom:1px solid #F1ECE2;font:600 14px var(--sans);color:#1A1C55;align-items:center">
+                <span>DIALLO Nour</span><span style="color:#6E7391">n.diallo@…</span><span>6ᵉB</span><span style="color:#6E7391">3 sept., 09:04</span><span style="color:#018F4B">actif</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;border-bottom:1px solid #F1ECE2;font:600 14px var(--sans);color:#9A93A8;align-items:center">
+                <span>ESTEVE Malo</span><span>m.esteve@…</span><span>5ᵉC</span><span>12 juin, 14:20</span><span style="font-size:13px;line-height:1.25">désactivé</span>
+              </div>
+              <div style="display:grid;grid-template-columns:150px 150px 52px 108px 1fr;padding:11px 16px;font:600 14px var(--sans);color:#1A1C55;align-items:center">
+                <span>FONTAINE Ilan</span><span style="color:#6E7391">i.fontaine@…</span><span>5ᵉC</span><span style="color:#6E7391">2 sept., 18:31</span><span style="color:#018F4B">actif</span>
+              </div>
+            </div>
+
+            <div style="margin:10px 26px 0;font:600 13px var(--sans);color:#6E7391">6 lignes sur 347 · trié par nom</div>
+
+            <div style="flex:1"></div>
+          </div>
+
+          <div style="width:300px;flex:none;background:#fff;border-left:1px solid #E4DED2;padding:18px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <h3 style="margin:0;font:700 20px var(--display);color:#20226B">Import de rentrée</h3>
+              <span style="font:600 15px var(--sans);color:#6E7391">Fermer</span>
+            </div>
+
+            <div style="border:1.5px dashed #C9C2B4;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;background:#FBF8F2">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style="flex:none"><path d="M6 20h12a2 2 0 0 0 2-2V9l-5-5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" stroke="#20226B" stroke-width="2"></path><path d="M14 4v5h5" stroke="#20226B" stroke-width="2"></path></svg>
+              <div style="min-width:0"><div style="font:700 14px var(--sans);color:#1A1C55;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">eleves-rentree-2026.csv</div><div style="font:600 13px var(--sans);color:#6E7391">350 lignes lues · email, nom, prenom, classe</div></div>
+              <span style="margin-left:auto;font:600 13px var(--sans);color:#23A4D9">Changer</span>
+            </div>
+
+            <div style="font:700 12px var(--sans);color:#6E7391;letter-spacing:.08em;text-transform:uppercase">Ce qui sera écrit</div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;border:1px solid #E4DED2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font:700 26px var(--display);color:#018F4B">312</span><span style="font:600 13px var(--sans);color:#6E7391">créés</span></div>
+              <div style="flex:1;border:1px solid #E4DED2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font:700 26px var(--display);color:#20226B">34</span><span style="font:600 13px var(--sans);color:#6E7391">mis à jour</span></div>
+              <div style="flex:1;border:1px solid #E4DED2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font:700 26px var(--display);color:#B34141">4</span><span style="font:600 13px var(--sans);color:#6E7391">ignorés</span></div>
+            </div>
+
+            <div style="border:1px solid #F0C9C9;background:#FDF3F3;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px">
+              <div style="font:700 14px var(--sans);color:#8E1616">4 lignes ignorées — elles ne seront pas écrites</div>
+              <div style="font:600 13px/1.5 var(--sans);color:#7A4A4A">L.  47 · e‑mail sans « @ » — <span style="color:#9A93A8">m.dupont.college</span><br>L. 112 · classe vide<br>L. 203 · e‑mail déjà présent ligne 88<br>L. 288 · prénom manquant</div>
+              <div style="font:600 13px var(--sans);color:#23A4D9">Télécharger les 4 lignes ›</div>
+            </div>
+
+            <div style="border:1px solid #E4DED2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px">
+              <div style="font:700 14px var(--sans);color:#1A1C55">6 élèves actifs sont absents du fichier</div>
+              <div style="font:600 13px/1.5 var(--sans);color:#6E7391">L'import ne désactive personne. Ils resteront actifs — à traiter un par un après coup.</div>
+              <div style="font:600 13px var(--sans);color:#23A4D9">Voir la liste ›</div>
+            </div>
+
+            <div style="flex:1"></div>
+
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="height:46px;border-radius:10px;background:#23A4D9;color:#fff;font:700 16px var(--sans);display:flex;align-items:center;justify-content:center">Importer 346 lignes</div>
+              <div style="font:600 12.5px/1.5 var(--sans);color:#6E7391;text-align:center">Rien n'a encore été écrit. L'import s'exécute d'un bloc : s'il échoue, aucune ligne n'est créée.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section style="padding:0 80px 120px;display:flex;flex-direction:column;gap:44px">
+
+  <div id="1a" style="display:flex;flex-direction:column;gap:44px">
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:1000px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="background:var(--navy);color:#fff;font:700 15px var(--sans);padding:5px 12px;border-radius:999px;letter-spacing:.06em">1a</span>
+        <span style="color:var(--muted);font:600 15px var(--sans);letter-spacing:.16em;text-transform:uppercase">matHo — refonte visuelle et ergonomique</span>
+      </div>
+      <h1 style="margin:0;font:700 54px var(--display);color:var(--navy);letter-spacing:-.01em">Sobre au repos, éclatant à la réussite</h1>
+      <p style="margin:0;font:400 21px/1.5 var(--sans);color:var(--navy-soft);max-width:940px">Je reste dans l'univers du logo : encre marine, fond ivoire, un accent par contexte, et la mosaïque de carrés colorés du « 56 » comme unique motif — elle sert de série, de grille de maîtrise et de confettis. Aucune ressource extérieure, couleurs en variables CSS, cibles ≥ 96 px, portrait 834 × 1194.</p>
+    </div>
+
+    <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:stretch">
+      <div style="flex:1 1 460px;background:var(--surface);border-radius:28px;padding:32px;box-shadow:0 6px 16px rgba(32,34,107,.08);display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font:700 26px var(--display);color:var(--navy)">Le pavé — pourquoi là</h2>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">iPad posé à plat, tenu d'aucune main : le doigt part du bord bas de la tablette. Je pousse donc le pavé <b>en bas, plein cadre</b> (touches de 241 × 132 px, gouttière 16 px) et je réduis la question à ce qu'elle doit être : grande, mais compacte, dans le tiers haut.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Ordre <b>1‑2‑3 en haut</b> : c'est le pavé du téléphone et celui d'iOS, déjà automatisé chez un collégien. Le 0 occupe deux colonnes au centre-bas — c'est le chiffre le plus tapé après un multiple de 10, il n'a pas à être visé.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Le <b>⌫ est isolé en bas à droite</b>, séparé par une gouttière doublée (32 px) et posé en creux, pas en rouge : il ne doit ni attirer l'œil ni se prendre à la place du 0. La correction automatique après erreur fait le reste du travail.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:var(--muted)"><b>Hypothèse à vérifier</b> : la latéralité. Un droitier masque la colonne 3‑6‑9 avec sa main ; si l'observation le confirme, une bascule gauche/droite du ⌫ dans le profil coûte trois lignes.</p>
+      </div>
+      <div style="flex:1 1 460px;background:var(--surface);border-radius:28px;padding:32px;box-shadow:0 6px 16px rgba(32,34,107,.08);display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font:700 26px var(--display);color:var(--navy)">La fête, sans casser le rythme</h2>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)">Trois intensités, jamais bloquantes :</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>1 · Bonne réponse (180 ms)</b> — les cases passent menthe, le nombre grossit d'un cran, six carrés du logo jaillissent derrière la carte. La question suivante arrive pendant l'animation : rien n'attend.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>2 · Série (à 5, 10, 15)</b> — la barre de série se remplit d'un carré coloré de plus ; au palier, la mosaïque pulse une fois et le compteur claque. Aucune modale.</p>
+        <p style="margin:0;font:400 18px/1.55 var(--sans);color:var(--navy-soft)"><b>3 · Fin de partie réussie, badge, table débloquée</b> — c'est là que ça pète : pluie de carrés, score qui compte de 0 à sa valeur, badge qui se retourne. Un seul écran, une seule fois, uniquement en cas de réussite.</p>
+        <p style="margin:0;font:400 17px/1.5 var(--sans);color:var(--muted)">L'erreur, elle, reste sobre : rouge + tremblement 200 ms, puis les cases se vident. Pas de son, pas de croix géante — l'erreur d'un collégien est une quasi‑réussite, on ne la punit pas.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:56px;flex-wrap:wrap;align-items:flex-start">
+
+      <!-- ÉCRAN 1 — partie en cours, saisie -->
+      <div data-screen-label="Partie · saisie" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie en cours <span style="color:var(--muted);font:600 16px var(--sans)">— saisie</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"/></svg> Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">7<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:35%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--coral)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sun)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--mint)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sky)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+              </div>
+              <span style="font:700 22px var(--display);color:var(--navy)">4</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 6px 16px rgba(32,34,107,.08);display:flex;flex-direction:column;align-items:center;gap:22px">
+            <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">8 <span style="color:var(--muted)">×</span> 6</div>
+            <div style="width:100%;height:8px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:62%;height:100%;background:var(--sky);border-radius:999px"></div></div>
+            <div style="display:flex;gap:16px">
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--surface);border:4px solid var(--sky);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--navy)">4</div>
+              <div style="width:104px;height:126px;border-radius:24px;background:#F6F2EA;border:4px solid var(--border);display:flex;align-items:center;justify-content:center"><div style="width:4px;height:56px;background:var(--navy-soft);border-radius:2px"></div></div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;color:var(--navy-soft)"><svg width="46" height="46" viewBox="0 0 48 48" fill="none"><path d="M17.5 10h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4h-20L5.5 24z" stroke="#3A3F86" stroke-width="3.4" stroke-linejoin="round"/><path d="M21 19l10 10M31 19 21 29" stroke="#3A3F86" stroke-width="3.4" stroke-linecap="round"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 1b — bonne réponse -->
+      <div data-screen-label="Partie · juste" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie <span style="color:var(--mint);font:700 16px var(--sans)">— bonne réponse, 180 ms</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"/></svg> Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">8<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:40%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--coral)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sun)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--mint)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--sky)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--navy)"></div>
+              </div>
+              <span style="font:700 26px var(--display);color:var(--mint)">5</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;position:relative">
+            <div style="position:absolute;top:-10px;left:40px;width:22px;height:22px;border-radius:5px;background:var(--coral);transform:rotate(18deg)"></div>
+            <div style="position:absolute;top:30px;left:-14px;width:18px;height:18px;border-radius:4px;background:var(--sun);transform:rotate(-12deg)"></div>
+            <div style="position:absolute;top:-18px;right:96px;width:20px;height:20px;border-radius:5px;background:var(--sky);transform:rotate(24deg)"></div>
+            <div style="position:absolute;top:44px;right:-16px;width:24px;height:24px;border-radius:6px;background:var(--mint);transform:rotate(-20deg)"></div>
+            <div style="position:absolute;bottom:24px;left:-18px;width:16px;height:16px;border-radius:4px;background:var(--navy);transform:rotate(30deg)"></div>
+            <div style="position:absolute;bottom:-8px;right:56px;width:18px;height:18px;border-radius:4px;background:var(--sky);transform:rotate(-8deg)"></div>
+            <div style="background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 0 0 4px var(--mint-soft), 0 8px 22px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;gap:22px;position:relative">
+              <div style="position:absolute;top:26px;right:32px;background:var(--mint);color:#fff;font:700 30px var(--display);padding:6px 20px;border-radius:999px">+1</div>
+              <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">8 <span style="color:var(--muted)">×</span> 6</div>
+              <div style="width:100%;height:8px;border-radius:999px;background:var(--mint-soft);overflow:hidden"><div style="width:100%;height:100%;background:var(--mint);border-radius:999px"></div></div>
+              <div style="display:flex;gap:16px">
+                <div style="width:112px;height:134px;border-radius:24px;background:var(--mint);display:flex;align-items:center;justify-content:center;font:700 84px var(--display);color:#fff">4</div>
+                <div style="width:112px;height:134px;border-radius:24px;background:var(--mint);display:flex;align-items:center;justify-content:center;font:700 84px var(--display);color:#fff">8</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px;opacity:.55">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;color:var(--navy-soft)"><svg width="46" height="46" viewBox="0 0 48 48" fill="none"><path d="M17.5 10h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4h-20L5.5 24z" stroke="#3A3F86" stroke-width="3.4" stroke-linejoin="round"/><path d="M21 19l10 10M31 19 21 29" stroke="#3A3F86" stroke-width="3.4" stroke-linecap="round"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 1c — mauvaise réponse -->
+      <div data-screen-label="Partie · faux" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">1 · Partie <span style="color:var(--coral);font:700 16px var(--sans)">— mauvaise réponse, 200 ms puis vidage</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+          <div style="padding:6px 40px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px;font:700 22px var(--sans);color:var(--navy-soft)">‹ Quitter</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--sky-soft);color:var(--navy);font:700 20px var(--sans);padding:10px 20px;border-radius:999px"><svg width="24" height="24" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"/></svg> Sprint</div>
+          </div>
+          <div style="padding:26px 40px 0;display:flex;align-items:center;gap:20px">
+            <div style="font:700 24px var(--display);color:var(--navy)">9<span style="color:var(--muted);font:600 20px var(--sans)"> / 20</span></div>
+            <div style="flex:1;height:10px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:45%;height:100%;background:var(--navy);border-radius:999px"></div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:grid;grid-template-columns:repeat(5,12px);gap:4px">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--border)"></div>
+              </div>
+              <span style="font:700 22px var(--display);color:var(--muted)">0</span>
+            </div>
+          </div>
+
+          <div style="margin:26px 40px 0;background:var(--surface);border-radius:32px;padding:34px 34px 40px;box-shadow:0 0 0 4px var(--coral-soft), 0 8px 22px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;gap:22px">
+            <div style="font:700 116px/1 var(--display);color:var(--navy);letter-spacing:.02em">7 <span style="color:var(--muted)">×</span> 7</div>
+            <div style="width:100%;height:8px;border-radius:999px;background:var(--border);overflow:hidden"><div style="width:28%;height:100%;background:var(--sky);border-radius:999px"></div></div>
+            <div style="display:flex;gap:16px;transform:translateX(-10px)">
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--coral-soft);border:4px solid var(--red-pale);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--red-pale)">4</div>
+              <div style="width:104px;height:126px;border-radius:24px;background:var(--coral-soft);border:4px solid var(--red-pale);display:flex;align-items:center;justify-content:center;font:700 76px var(--display);color:var(--red-pale)">8</div>
+            </div>
+            <div style="font:700 22px var(--sans);color:var(--red-pale)">Presque — il te reste 1,4 s</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 32px 34px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">1</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">2</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">3</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">4</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">5</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">6</div>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">7</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">8</div>
+              <div style="flex:1;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">9</div>
+            </div>
+            <div style="display:flex;gap:32px">
+              <div style="flex:2;height:132px;background:var(--surface);border-radius:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;justify-content:center;font:700 60px var(--display);color:var(--ink)">0</div>
+              <div style="flex:1;height:132px;background:#F1ECE2;border-radius:26px;display:flex;align-items:center;justify-content:center;color:var(--navy-soft)"><svg width="46" height="46" viewBox="0 0 48 48" fill="none"><path d="M17.5 10h20a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4h-20L5.5 24z" stroke="#3A3F86" stroke-width="3.4" stroke-linejoin="round"/><path d="M21 19l10 10M31 19 21 29" stroke="#3A3F86" stroke-width="3.4" stroke-linecap="round"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 2 — accueil élève -->
+      <div data-screen-label="Accueil élève" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">2 · Accueil élève <span style="color:var(--muted);font:600 16px var(--sans)">— avec défi interrompu</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:46</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:14px 36px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:78px;height:78px;border-radius:24px;background:var(--sky-soft);display:flex;align-items:center;justify-content:center;font-size:44px">🦊</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font:700 34px var(--display);color:var(--navy)">Lou</div>
+                <div style="font:600 19px var(--sans);color:var(--muted)">6ᵉA · Confirmé</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:999px;padding:12px 22px;box-shadow:0 6px 16px rgba(32,34,107,.08)">
+              <span style="font:700 26px var(--display);color:var(--navy)">1 240</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">pts</span>
+            </div>
+          </div>
+
+          <div style="margin:22px 36px 0;background:var(--navy);border-radius:26px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:700 24px var(--display);color:#fff">Défi UEWTR en cours</div>
+              <div style="font:600 17px var(--sans);color:#B9C6DD">Contre-la-montre · 6ᵉA · le défi reprend à la première question</div>
+            </div>
+            <div style="background:var(--sky);color:#fff;font:700 21px var(--sans);padding:16px 26px;border-radius:999px;white-space:nowrap">Reprendre</div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="font:700 17px var(--sans);color:var(--muted);letter-spacing:.14em;text-transform:uppercase">Jouer</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:8px;border-left:0">
+                <div style="display:flex;align-items:center;gap:12px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#20226B" stroke-width="3" stroke-linejoin="round"/></svg><span style="font:700 27px var(--display);color:var(--navy)">Sprint</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">20 questions, 3 s chacune</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none" style="flex:none"><circle cx="22" cy="22" r="17" stroke="#20226B" stroke-width="3.4"/><circle cx="22" cy="22" r="9" stroke="#23A4D9" stroke-width="3.4"/><circle cx="22" cy="22" r="2.6" fill="#20226B"/></svg><span style="font:700 27px var(--display);color:var(--navy)">Sans faute</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">Zéro erreur, pas de chrono</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none" style="flex:none"><circle cx="22" cy="25" r="15" stroke="#20226B" stroke-width="3.4"/><path d="M22 16v9l6 4" stroke="#23A4D9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 5h10M22 5v5" stroke="#20226B" stroke-width="3.4" stroke-linecap="round"/></svg><span style="font:700 27px var(--display);color:var(--navy)">Contre-la-montre</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">2 min, un max de bonnes</div>
+              </div>
+              <div style="background:var(--surface);border-radius:26px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:12px"><svg width="40" height="40" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M5 37h9v-9h9v-9h9v-9h7" stroke="#20226B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 4h8v8" stroke="#23A4D9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:700 27px var(--display);color:var(--navy)">Montée</span></div>
+                <div style="font:600 17px/1.4 var(--sans);color:var(--muted)">Palier 12 · débloque la 13</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:26px 36px 0;display:flex;flex-direction:column;gap:14px">
+            <div style="font:700 17px var(--sans);color:var(--muted);letter-spacing:.14em;text-transform:uppercase">Défi de classe</div>
+            <div style="background:var(--surface);border-radius:26px;padding:22px 24px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;align-items:center;gap:16px">
+              <div style="flex:1;height:86px;border-radius:20px;border:3px dashed var(--border);display:flex;align-items:center;justify-content:center;font:700 30px var(--sans);color:#B9B0A0;letter-spacing:.34em">CODE</div>
+              <div style="height:86px;padding:0 34px;border-radius:20px;background:var(--sky);color:#fff;font:700 25px var(--sans);display:flex;align-items:center">Rejoindre</div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;gap:16px">
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><svg width="32" height="32" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M22 12C18 8 12 7 6 8v25c6-1 12 0 16 4 4-4 10-5 16-4V8c-6-1-12 0-16 4z" stroke="#20226B" stroke-width="3.2" stroke-linejoin="round"/><path d="M22 12v25" stroke="#23A4D9" stroke-width="3.2"/></svg><span style="font:700 19px var(--sans);color:var(--navy)">Apprendre</span></div>
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><svg width="32" height="32" viewBox="0 0 44 44" fill="none" style="flex:none"><rect x="4" y="24" width="11" height="15" rx="2.5" stroke="#20226B" stroke-width="3.2"/><rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke="#23A4D9" stroke-width="3.2"/><rect x="29" y="29" width="11" height="10" rx="2.5" stroke="#20226B" stroke-width="3.2"/></svg><span style="font:700 19px var(--sans);color:var(--navy)">Classements</span></div>
+            <div style="flex:1;height:104px;background:var(--surface);border-radius:24px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><svg width="32" height="32" viewBox="0 0 44 44" fill="none" style="flex:none"><rect x="5" y="5" width="11" height="11" rx="2.5" fill="#23A4D9"/><rect x="18" y="5" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"/><rect x="31" y="5" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"/><rect x="5" y="18" width="11" height="11" rx="2.5" stroke="#20226B" stroke-width="3"/><rect x="18" y="18" width="11" height="11" rx="2.5" fill="#20226B"/><rect x="31" y="18" width="8" height="11" rx="2.5" stroke="#20226B" stroke-width="3"/><rect x="5" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"/><rect x="18" y="31" width="11" height="8" rx="2.5" stroke="#20226B" stroke-width="3"/></svg><span style="font:700 19px var(--sans);color:var(--navy)">Ma grille</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 3 — fin de partie -->
+      <div data-screen-label="Fin de partie" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">3 · Fin de partie <span style="color:var(--mint);font:700 16px var(--sans)">— réussie, badge décroché</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column;position:relative">
+          <div style="position:absolute;top:120px;left:70px;width:26px;height:26px;border-radius:6px;background:var(--coral);transform:rotate(16deg)"></div>
+          <div style="position:absolute;top:190px;right:90px;width:22px;height:22px;border-radius:5px;background:var(--sky);transform:rotate(-22deg)"></div>
+          <div style="position:absolute;top:300px;left:120px;width:18px;height:18px;border-radius:4px;background:var(--sun);transform:rotate(34deg)"></div>
+          <div style="position:absolute;top:96px;right:180px;width:16px;height:16px;border-radius:4px;background:var(--mint);transform:rotate(-10deg)"></div>
+          <div style="position:absolute;top:360px;right:56px;width:24px;height:24px;border-radius:6px;background:var(--navy);transform:rotate(12deg)"></div>
+          <div style="position:absolute;top:250px;left:32px;width:20px;height:20px;border-radius:5px;background:var(--sky);transform:rotate(-28deg)"></div>
+
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:40px 40px 0;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div style="font:700 26px var(--sans);color:var(--mint);letter-spacing:.1em;text-transform:uppercase">Sprint terminé</div>
+            <div style="display:flex;align-items:baseline;gap:12px">
+              <span style="font:700 156px/1 var(--display);color:var(--navy)">18</span>
+              <span style="font:700 56px var(--display);color:var(--muted)">/ 20</span>
+            </div>
+            <div style="font:700 25px var(--sans);color:var(--navy-soft)">du premier coup</div>
+            <div style="margin-top:6px;background:var(--sun-soft);color:#8A5A10;font:700 21px var(--sans);padding:10px 22px;border-radius:999px">2 rattrapées au 2ᵉ essai · ½ pt chacune</div>
+          </div>
+
+          <div style="margin:32px 36px 0;display:flex;gap:16px">
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--mint)">+19</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">points</span>
+            </div>
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--navy)">11</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">meilleure série</span>
+            </div>
+            <div style="flex:1;background:var(--surface);border-radius:24px;padding:22px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font:700 44px var(--display);color:var(--navy)">2,1 s</span>
+              <span style="font:600 17px var(--sans);color:var(--muted)">par question</span>
+            </div>
+          </div>
+
+          <div style="margin:20px 36px 0;background:var(--navy);border-radius:28px;padding:26px;display:flex;align-items:center;gap:22px">
+            <div style="width:92px;height:92px;border-radius:24px;background:var(--sun);display:flex;align-items:center;justify-content:center;font-size:48px">🏅</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font:700 17px var(--sans);color:var(--sun);letter-spacing:.14em;text-transform:uppercase">Nouveau badge</div>
+              <div style="font:700 30px var(--display);color:#fff">Foudre — 10 bonnes de suite</div>
+            </div>
+          </div>
+
+          <div style="margin:20px 36px 0;background:var(--surface);border-radius:28px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font:700 24px var(--display);color:var(--navy)">Ta grille a bougé</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">4 cases passent au vert</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">8×6</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">7×8</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">9×4</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--mint);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">6×6</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--sun);color:#4A3706;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">7×7</div>
+              <div style="width:62px;height:62px;border-radius:14px;background:var(--coral);color:#fff;font:700 20px var(--display);display:flex;align-items:center;justify-content:center">8×9</div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;flex-direction:column;gap:14px">
+            <div style="height:104px;border-radius:26px;background:var(--sky);color:#fff;font:700 28px var(--sans);display:flex;align-items:center;justify-content:center">Rejouer un Sprint</div>
+            <div style="display:flex;gap:14px">
+              <div style="flex:2;height:88px;border-radius:24px;background:var(--coral-soft);color:#8E2C30;font:700 22px var(--sans);display:flex;align-items:center;justify-content:center">Réviser mes 2 cases rouges</div>
+              <div style="flex:1;height:88px;border-radius:24px;background:#F1ECE2;color:var(--navy-soft);font:700 22px var(--sans);display:flex;align-items:center;justify-content:center">Accueil</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 4 — classement du défi -->
+      <div data-screen-label="Classement défi" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">4 · Classement d'un défi <span style="color:var(--muted);font:600 16px var(--sans)">— se remplit en direct</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="background:var(--navy);padding:26px 36px 30px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="font:700 20px var(--sans);color:#B9C6DD">‹ Accueil</div>
+              <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);padding:8px 18px;border-radius:999px">
+                <div style="width:10px;height:10px;border-radius:3px;background:var(--mint)"></div>
+                <span style="font:700 17px var(--sans);color:#fff">En direct</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font:700 44px var(--display);color:#fff;letter-spacing:.22em">UEWTR</div>
+                <div style="font:600 19px var(--sans);color:#B9C6DD"><svg width="22" height="22" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#23A4D9" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round"/></svg> Sprint · tables 6 à 9 · 6ᵉA</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font:700 32px var(--display);color:var(--sky)">18 / 27</div>
+                <div style="font:600 16px var(--sans);color:#B9C6DD">ont terminé</div>
+              </div>
+            </div>
+            <div style="height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden"><div style="width:66%;height:100%;background:var(--sky);border-radius:999px"></div></div>
+          </div>
+
+          <div style="padding:34px 36px 0;display:flex;align-items:flex-end;gap:14px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:72px;height:72px;border-radius:22px;background:var(--sky-soft);display:flex;align-items:center;justify-content:center;font-size:38px">🐼</div>
+              <div style="font:700 21px var(--sans);color:var(--navy)">Inès M.</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">1:12</div>
+              <div style="width:100%;height:120px;border-radius:22px 22px 0 0;background:#DCD4C6;display:flex;align-items:flex-start;justify-content:center;padding-top:14px;font:700 36px var(--display);color:#fff">2</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="font-size:30px">👑</div>
+              <div style="width:88px;height:88px;border-radius:26px;background:#FBEBD3;display:flex;align-items:center;justify-content:center;font-size:46px">🦊</div>
+              <div style="font:700 23px var(--sans);color:var(--navy)">Lou A. <span style="color:var(--podium)">(toi)</span></div>
+              <div style="font:700 19px var(--sans);color:var(--podium)">1:04</div>
+              <div style="width:100%;height:168px;border-radius:22px 22px 0 0;background:var(--podium);display:flex;align-items:flex-start;justify-content:center;padding-top:16px;font:700 44px var(--display);color:#fff">1</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:72px;height:72px;border-radius:22px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;font-size:38px">🐢</div>
+              <div style="font:700 21px var(--sans);color:var(--navy)">Malo T.</div>
+              <div style="font:600 17px var(--sans);color:var(--muted)">1:19</div>
+              <div style="width:100%;height:92px;border-radius:22px 22px 0 0;background:#E3D8C0;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;font:700 34px var(--display);color:#fff">3</div>
+            </div>
+          </div>
+
+          <div style="margin:26px 36px 0;background:var(--surface);border-radius:28px;padding:12px 26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:2px solid var(--ivory)">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">4</span>
+              <span style="font-size:30px">🐙</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)">Agathe C.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">17 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:26</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0;border-bottom:2px solid var(--ivory)">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">5</span>
+              <span style="font-size:30px">🦉</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)">Sacha B.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">16 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:31</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;padding:18px 0">
+              <span style="width:40px;font:700 24px var(--display);color:var(--muted)">6</span>
+              <span style="font-size:30px">🐝</span>
+              <span style="flex:1;font:700 23px var(--sans);color:var(--navy)" data-last="1">Nour K.</span>
+              <span style="font:600 20px var(--sans);color:var(--muted)">16 / 20</span>
+              <span style="font:700 22px var(--display);color:var(--navy)">1:38</span>
+            </div>
+          </div>
+
+          <div style="margin:18px 36px 0;display:flex;align-items:center;gap:14px;background:var(--sky-soft);border-radius:22px;padding:20px 24px">
+            <div style="width:12px;height:12px;border-radius:4px;background:var(--sky)"></div>
+            <div style="font:600 19px var(--sans);color:var(--navy-soft)">9 camarades jouent encore — la liste se complète toute seule.</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;gap:14px">
+            <div style="flex:1;height:96px;border-radius:26px;background:var(--surface);box-shadow:0 8px 20px rgba(32,34,107,.10);color:var(--navy);font:700 23px var(--sans);display:flex;align-items:center;justify-content:center">Ma grille</div>
+            <div style="flex:1;height:96px;border-radius:26px;background:var(--navy);color:#fff;font:700 23px var(--sans);display:flex;align-items:center;justify-content:center">Accueil</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉCRAN 5 — ma classe (prof) -->
+      <div data-screen-label="Ma classe" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font:700 20px var(--display);color:var(--navy)">5 · Ma classe <span style="color:var(--muted);font:600 16px var(--sans)">— professeur, trié par ce qui coince</span></div>
+        <div style="width:834px;height:1194px;background:var(--ivory);border-radius:46px;border:10px solid #20226B;overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;font:700 15px var(--sans);color:var(--muted)"><span>22:47</span><span>Wi‑Fi · 18 %</span></div>
+
+          <div style="padding:14px 36px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="font:700 20px var(--sans);color:var(--navy-soft)">‹ Accueil</div>
+            <div style="display:flex;gap:10px">
+              <div style="background:var(--navy);color:#fff;font:700 20px var(--sans);padding:12px 24px;border-radius:999px">6ᵉA</div>
+              <div style="background:var(--surface);color:var(--navy-soft);font:700 20px var(--sans);padding:12px 24px;border-radius:999px;box-shadow:0 6px 16px rgba(32,34,107,.08)">6ᵉB</div>
+              <div style="background:var(--surface);color:var(--navy-soft);font:700 20px var(--sans);padding:12px 24px;border-radius:999px;box-shadow:0 6px 16px rgba(32,34,107,.08)">5ᵉC</div>
+            </div>
+          </div>
+
+          <div style="padding:24px 36px 0;display:flex;flex-direction:column;gap:6px">
+            <h2 style="margin:0;font:700 40px var(--display);color:var(--navy)">6ᵉA — 27 élèves</h2>
+            <div style="font:600 19px var(--sans);color:var(--muted)">12 tables travaillées · données de la semaine en cours</div>
+          </div>
+
+          <div style="margin:22px 36px 0;background:var(--coral-soft);border-radius:26px;padding:24px 26px;display:flex;flex-direction:column;gap:6px">
+            <div style="font:700 26px var(--display);color:#8E2C30">18 élèves sur 27 bloquent sur la table de 7</div>
+            <div style="font:600 18px var(--sans);color:#A2504F">La table de 8 suit de près. Un défi ciblé maintenant vaut mieux qu'une révision dans trois semaines.</div>
+          </div>
+
+          <div style="padding:22px 36px 0;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--coral)"></span>À revoir</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--sun)"></span>En cours</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--mint)"></span>Maîtrisé</div>
+            <div style="display:flex;align-items:center;gap:8px;font:600 17px var(--sans);color:var(--navy-soft)"><span style="width:14px;height:14px;border-radius:4px;background:var(--border)"></span>Pas travaillé</div>
+            <div style="margin-left:auto;font:700 15px var(--sans);color:var(--muted);letter-spacing:.1em;text-transform:uppercase">Colonne de droite : élèves sur 27</div>
+          </div>
+
+          <div style="margin:18px 36px 0;background:var(--surface);border-radius:28px;padding:26px;box-shadow:0 8px 20px rgba(32,34,107,.10);display:flex;flex-direction:column;gap:20px">
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 7</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:67%;background:var(--coral)"></div>
+                <div style="width:22%;background:var(--sun)"></div>
+                <div style="width:11%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--coral)">18 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 8</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:52%;background:var(--coral)"></div>
+                <div style="width:26%;background:var(--sun)"></div>
+                <div style="width:22%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--coral)">14 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 9</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:30%;background:var(--coral)"></div>
+                <div style="width:33%;background:var(--sun)"></div>
+                <div style="width:37%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">8 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 6</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:15%;background:var(--coral)"></div>
+                <div style="width:26%;background:var(--sun)"></div>
+                <div style="width:59%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">4 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 4</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:7%;background:var(--coral)"></div>
+                <div style="width:15%;background:var(--sun)"></div>
+                <div style="width:78%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">3 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 3</div>
+              <div style="flex:1;height:34px;border-radius:12px;overflow:hidden;display:flex">
+                <div style="width:4%;background:var(--coral)"></div>
+                <div style="width:11%;background:var(--sun)"></div>
+                <div style="width:85%;background:var(--mint)"></div>
+              </div>
+              <div style="width:150px;text-align:right;font:700 19px var(--sans);color:var(--navy-soft)">2 bloquent</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;opacity:.55">
+              <div style="width:64px;font:700 28px var(--display);color:var(--navy)">× 13</div>
+              <div style="flex:1;height:34px;border-radius:12px;background:var(--border)"></div>
+              <div style="width:150px;text-align:right;font:600 18px var(--sans);color:var(--muted)">pas ouverte</div>
+            </div>
+            <div style="font:600 18px var(--sans);color:var(--sky)">Voir les 6 autres tables ›</div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <div style="padding:0 36px 34px;display:flex;flex-direction:column;gap:14px">
+            <div style="height:110px;border-radius:28px;background:var(--sky);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+              <div style="display:flex;align-items:center;gap:12px;font:700 28px var(--sans)"><svg width="28" height="28" viewBox="0 0 44 44" fill="none" style="flex:none"><path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round"/></svg> Lancer un défi sur les tables 7 et 8</div>
+              <div style="font:600 17px var(--sans);color:#DFF2FB">Sprint · 6ᵉA · code projeté à l'écran</div>
+            </div>
+            <div style="display:flex;gap:14px">
+              <div style="flex:1;height:88px;border-radius:24px;background:var(--surface);box-shadow:0 8px 20px rgba(32,34,107,.10);color:var(--navy);font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">🔓 Découvrir la 13</div>
+              <div style="flex:1;height:88px;border-radius:24px;background:var(--surface);box-shadow:0 8px 20px rgba(32,34,107,.10);color:var(--navy);font:700 21px var(--sans);display:flex;align-items:center;justify-content:center">Élève par élève</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

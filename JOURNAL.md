@@ -56,6 +56,80 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 # Entrées
 
+## 2026-09-03 — La refonte visuelle est arrêtée, et elle a produit une migration
+
+**Fait** — Deuxième passe de Claude Design, cette fois **avec le code de
+l'application en pièce jointe** (`docs/design/CODE_POUR_CLAUDE_DESIGN.md` :
+`api.js`, le CSS, les cinq composants, les onze écrans). Résultat : dix
+maquettes au lieu de sept, la palette du logo appliquée, 36 icônes SVG là où il
+n'y en avait aucune, et les trois chiffres inventés corrigés.
+
+Livrés dans ce lot :
+- **Migration 24** — `apercu_import_eleves()`, les raisons de rejet détaillées,
+  et la détection des doublons intra-fichier. Scénario passé de 99 à
+  **107 cas, tous verts**.
+- **`frontend/src/styles/tokens.css`** — toutes les couleurs, rayons, ombres,
+  tailles, durées et la règle du pavé, en variables. Plus aucune couleur en dur
+  ailleurs.
+- **`PROMPT_ANTIGRAVITY_lot13.md`** — le lot de refonte, en un seul message.
+
+**Décidé**
+
+- **La palette vient du logo, relevée au pixel** : indigo `#20226B`, bleu ciel
+  `#23A4D9` (la couleur d'action), rouge `#E02020`, orange `#F38E1A`, vert
+  `#018F4B`, ivoire `#FAF6EE`. L'or `#C9A227` et le violet `#8B6FC0`
+  disparaissent : ils venaient de la palette « Calcul Mental Saintho », écrite
+  avant que le logo n'existe, et que j'avais donnée telle quelle dans le
+  premier brief. C'est Aymeri qui a vu que le rendu était loin du logo.
+  ✅ *validé par Aymeri le 03/09*
+- **Deux valeurs du même rouge, pas deux couleurs** : `#E02020` pour les barres
+  du professeur (de la donnée, elle doit se lire), `#E4736F` pour l'erreur de
+  l'élève. Le corail précédent était une autre teinte, pas une nuance.
+  ✅ *validé par Aymeri le 03/09*
+- **L'emoji reste pour les avatars, la couronne et le badge ; tout le reste
+  passe en SVG écrit à la main.** Un avatar choisi dans une liste est une
+  identité personnelle sans une lettre de texte libre — c'est exactement ce que
+  la règle du projet demande. Les icônes de mode, elles, faisaient planche
+  d'autocollants. ✅ *validé par Aymeri le 03/09*
+- **L'écran d'administration reste dans le périmètre du design**, et il est en
+  **paysage**, à rebours du portrait imposé ailleurs : il s'utilise sur un Mac.
+  Sobre et dense, l'opposé des écrans élèves. C'est Aymeri qui a refusé qu'on
+  l'écarte. ✅ *validé par Aymeri le 03/09*
+- **L'aperçu et l'import partagent leur fonction de validation**
+  (`valider_lignes_import`). Deux copies des règles, c'est deux copies qui
+  divergent au premier correctif — et un aperçu qui ment est pire que pas
+  d'aperçu du tout.
+
+**Constaté**
+
+- **La maquette a trouvé un vrai défaut du serveur.** En dessinant l'écran
+  d'import, Claude Design écrit « e-mail déjà présent ligne 88 ». Vérification
+  faite : `importer_eleves` traitait **deux fois** deux lignes du même fichier
+  portant le même e-mail — création puis mise à jour — et les comptait deux
+  fois. Un doublon dans un export de vie scolaire n'a rien d'exceptionnel.
+  Corrigé par la migration 24.
+- **Deux chiffres que je croyais inventés étaient exacts.** Le calcul « premier
+  coup / rattrapée à ½ point » est bien `points_session` (migration 12), et
+  « 18 sur 27 ont terminé, 9 jouent encore » nomme correctement ses deux
+  populations. J'allais les corriger : la règle « ne rien affirmer sans
+  exécuter » a servi dans l'autre sens.
+- **Le `.dc.html` n'est pas du code réutilisable** : 783 styles écrits dans les
+  balises, 1 736 tailles en pixels durs, zéro classe. C'est une peinture. D'où
+  `tokens.css`, extrait à la main, et la consigne explicite à Antigravity de ne
+  pas recopier la fausse barre d'état de l'iPad ni la géométrie figée à
+  834 × 1194.
+- **Les polices n'ont pas pu être récupérées ici** : le registre npm répond 403
+  depuis le conteneur comme depuis la machine d'Aymeri. Baloo 2 et Nunito
+  passent donc à Antigravity, avec les commandes exactes ; le `@font-face` est
+  déjà écrit dans `tokens.css`.
+- Un cas de test a d'abord échoué à tort : dans une seule instruction SQL, le
+  sous-`select` qui compte les fiches voit l'instantané d'**avant** l'appel à
+  `importer_eleves`. Scindé en deux instructions.
+
+**Ensuite** — Aymeri applique la migration 24 dans Supabase et transmet le
+lot 13. Le chemin critique reste entier : base de production, import des
+350 élèves, Jamf, RGPD.
+
 ## 2026-09-02 (7) — Reprendre un defi ferme : le dernier lot de code
 
 **Fait** — Relu dans le code, rien a corriger. Quatre points verifies parce que

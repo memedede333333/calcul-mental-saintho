@@ -4,11 +4,13 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **2 septembre 2026, soir** — 23 migrations, 99 cas de
+> Dernière mise à jour : **3 septembre 2026, matin** — 24 migrations, 107 cas de
 > test verts. **L'application s'appelle `matHo`**, le logo et les icônes sont en
-> place, et **le code est terminé** : plus rien en attente côté Antigravity avant
-> la passe visuelle. Le chemin critique est désormais entièrement chez Aymeri —
-> base de production, import, Jamf, RGPD — et chez Claude Design.
+> place. **La refonte visuelle est arrêtée** : dix maquettes validées, la palette
+> du logo, `frontend/src/styles/tokens.css` extrait, et **le lot 13 est prêt à
+> partir chez Antigravity** (`PROMPT_ANTIGRAVITY_lot13.md`). La migration 24
+> attend d'être appliquée dans Supabase. Le chemin critique reste entier chez
+> Aymeri — base de production, import des 350 élèves, Jamf, RGPD.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -36,7 +38,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **23 migrations**, 99 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **24 migrations**, 107 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -65,7 +67,9 @@ d'interface se juge à cette aune.
 |---|---|
 | ✅ **Le nom : `matHo`** — casse exacte, m minuscule, H majuscule, o minuscule | tranché par Aymeri le 02/09 |
 | ✅ Logo et icônes (180, 192, 512, favicon) dans `frontend/public/` | fait le 02/09 |
-| ⬜ Passe visuelle avec Claude Design | après le nom |
+| ✅ **Passe visuelle avec Claude Design** — 10 maquettes, palette du logo, 36 icônes SVG | fait le 03/09 |
+| ⬜ **Appliquer la migration 24** dans Supabase (aperçu d'import) | Aymeri |
+| ⬜ **Transmettre le lot 13** à Antigravity (`PROMPT_ANTIGRAVITY_lot13.md`) | Aymeri |
 | ⬜ Base de **production** (projet Supabase séparé, région EU) | migrations seules, **aucun seed** |
 | ⬜ Import de rentrée des 350 élèves | onglet Import, format `email, nom, prénom, classe` |
 | ⬜ `*.supabase.co` autorisé dans Jamf | Aymeri |
@@ -460,6 +464,55 @@ sur une base de production reconstruite depuis zéro. Deux bases qui divergent
 sans un seul message d'erreur. On ne renomme pas la 19, déjà appliquée : on
 retient que **la suivante doit dépasser `20260901080000`**.
 
+### Design et identité — 3 septembre
+
+**La palette vient du logo, relevée au pixel, pas d'une palette héritée.**
+Indigo `#20226B`, bleu ciel `#23A4D9`, rouge `#E02020`, orange `#F38E1A`, vert
+`#018F4B`, ivoire `#FAF6EE`. **Le bleu ciel est la couleur d'action** : c'est
+celle des mains du logo et de la moitié du mot « matHo ». L'or `#C9A227` et le
+violet `#8B6FC0` ont été supprimés — ils venaient de la palette « Calcul Mental
+Saintho », écrite avant le logo, que j'avais donnée telle quelle à Claude
+Design. Il l'a suivie fidèlement ; c'est Aymeri qui a vu que le rendu était loin
+du logo. **Une palette donnée en brief fait plus autorité qu'une consigne
+d'intention : quand les deux se contredisent, c'est la palette qui gagne.**
+
+**Deux valeurs du même rouge, jamais deux teintes.** `#E02020` pour les barres
+du professeur — de la donnée, elle doit se lire ; `#E4736F` pour l'erreur de
+l'élève. Le corail précédent était plus rose : une autre couleur, pas une
+nuance. C'est ce qui sépare une palette d'un assortiment.
+
+**`frontend/src/styles/tokens.css` est le seul endroit où une couleur est
+écrite en dur.** Les composants utilisent des rôles (`--action`, `--succes`,
+`--erreur-eleve`), pas des couleurs brutes.
+
+**L'emoji ne sert plus qu'à trois choses** : les avatars des élèves, la
+couronne du podium, le badge. Tout le reste est du SVG écrit à la main. Un
+avatar choisi dans une liste donne une identité personnelle **sans une lettre
+de texte libre** — c'est la seule façon de respecter la règle du projet.
+
+**L'écran d'administration est en paysage**, à rebours du portrait imposé
+partout ailleurs : il s'utilise sur un Mac, pas sur un iPad tenu debout. Sobre
+et dense, l'opposé des écrans élèves.
+
+### Migration 24 — l'import se regarde avant de s'exécuter
+
+**`apercu_import_eleves()` et `importer_eleves()` partagent leur fonction de
+validation** (`valider_lignes_import`). Deux copies des mêmes règles, ce sont
+deux copies qui divergent au premier correctif — et un aperçu qui ment est pire
+que pas d'aperçu du tout.
+
+**Populations.** `creations + mises_a_jour + ignorees = lignes_lues`, exactement
+(cas 106). `dont_reactivations` est un **sous-ensemble** de `mises_a_jour` : le
+mot « dont » est dans le nom pour qu'on ne l'additionne jamais.
+`actifs_absents_du_fichier` porte sur la **base**, pas sur le fichier — jamais
+de fraction entre les deux.
+
+**Le défaut trouvé par la maquette.** En dessinant l'écran d'import, Claude
+Design a écrit « e-mail déjà présent ligne 88 ». Vérification faite,
+`importer_eleves` traitait **deux fois** deux lignes du même fichier portant le
+même e-mail, et les comptait deux fois. Corrigé. Un dessin peut trouver un bug
+de serveur : il suffit qu'il dise ce qu'un humain attendrait.
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -469,7 +522,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-99 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
+107 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
