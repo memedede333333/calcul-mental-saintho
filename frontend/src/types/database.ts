@@ -452,6 +452,7 @@ export type Database = {
         Args: { p_classe: string; p_tables: number[] }
         Returns: Json
       }
+      apercu_import_eleves: { Args: { p_eleves: Json }; Returns: Json }
       auteur_defi: {
         Args: { p_defi_id: string }
         Returns: {
@@ -748,6 +749,7 @@ export type Database = {
         }
         Returns: Json
       }
+      valider_lignes_import: { Args: { p_eleves: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
