@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rejoindreDefi } from '../api';
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
-import { IconSprint, IconSansFaute, IconChrono, IconMontee, IconApprendre, IconClassements, IconMaGrille, IconDefisPasses, IconAdmin, IconProf } from '../components/Icons';
+import { IconSprint, IconSansFaute, IconChrono, IconMontee, IconApprendre, IconClassements, IconMaGrille, IconDefisPasses, IconAdmin, IconProf, IconLibre } from '../components/Icons';
 
 /**
  * Home — Écran d'accueil
@@ -105,7 +105,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
 
                 <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
                     <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
-                        <IconSansFaute size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
+                        <IconLibre size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
                     </span>
                     <span>
                         <div className="mode-card__title">S'entraîner</div>
@@ -311,8 +311,38 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 </div>
             )}
 
+            {/* Entrée Mode Libre — S'entraîner */}
+            <button
+                onClick={() => onGo('play')}
+                style={{
+                    background: 'var(--surface)', borderRadius: 26, padding: '20px 24px',
+                    boxShadow: '0 8px 20px rgba(32,34,107,.10)', border: 'none',
+                    display: 'flex', alignItems: 'center', gap: 18, textAlign: 'left',
+                    cursor: 'pointer', width: '100%',
+                }}
+            >
+                <div style={{
+                    width: 58, height: 58, borderRadius: 18,
+                    background: 'var(--ciel-pale)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                    <IconLibre size={34} color="var(--indigo)" actionColor="var(--action)" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--indigo)' }}>
+                        S'entraîner
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 16, color: 'var(--gris)', fontWeight: 600, marginTop: 2 }}>
+                        Sans chrono, pas de score · pour s'exercer librement
+                    </div>
+                </div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M9 6l6 6-6 6" stroke="var(--action)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
+
             {/* 3. Section Jouer (Grille 2x2 des 4 modes) */}
-            <div style={{ padding: '10px 0 0' }}>
+            <div style={{ padding: '4px 0 0' }}>
                 <div style={{
                     fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17,
                     color: 'var(--gris)', letterSpacing: '0.14em',

@@ -191,6 +191,17 @@ export function IconSablier({ size = 24, color = 'var(--gris)', ...props }) {
     );
 }
 
+export function IconLibre({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="6" y="6" width="14" height="14" rx="3.5" stroke={color} strokeWidth="3.2" />
+            <rect x="24" y="6" width="14" height="14" rx="3.5" fill={actionColor} />
+            <rect x="6" y="24" width="14" height="14" rx="3.5" fill={actionColor} />
+            <rect x="24" y="24" width="14" height="14" rx="3.5" stroke={color} strokeWidth="3.2" />
+        </svg>
+    );
+}
+
 /**
  * Sélecteur d'icône pour les modes de jeu
  */
@@ -200,6 +211,7 @@ export function ModeIcon({ mode, size = 36, color, actionColor, ...props }) {
             return <IconSprint size={size} color={color} actionColor={actionColor} {...props} />;
         case 'perfect':
         case 'sans-faute':
+        case 'flawless':
             return <IconSansFaute size={size} color={color} actionColor={actionColor} {...props} />;
         case 'countdown':
         case 'chrono':
@@ -208,6 +220,9 @@ export function ModeIcon({ mode, size = 36, color, actionColor, ...props }) {
         case 'climb':
         case 'montee':
             return <IconMontee size={size} color={color} actionColor={actionColor} {...props} />;
+        case 'libre':
+        case 'entrainement':
+            return <IconLibre size={size} color={color} actionColor={actionColor} {...props} />;
         case 'learn':
         case 'apprendre':
             return <IconApprendre size={size} color={color} actionColor={actionColor} {...props} />;
@@ -219,6 +234,6 @@ export function ModeIcon({ mode, size = 36, color, actionColor, ...props }) {
         case 'ma-grille':
             return <IconMaGrille size={size} color={color} actionColor={actionColor} {...props} />;
         default:
-            return <IconSprint size={size} color={color} actionColor={actionColor} {...props} />;
+            return <IconLibre size={size} color={color} actionColor={actionColor} {...props} />;
     }
 }
