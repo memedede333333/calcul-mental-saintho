@@ -13,3 +13,6 @@ dist-ssr/
 
 # Export brut de Claude Design (23 Mo) — on ne versionne que le .dc.html
 docs/design/*.zip
+
+# Archives de backup locales
+backups/
