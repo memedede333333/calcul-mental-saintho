@@ -5,6 +5,7 @@ import {
     classementClasses,
     classementProfs,
 } from '../api';
+import { IconClassements } from '../components/Icons';
 
 /**
  * Leaderboards — Classements
@@ -20,16 +21,16 @@ import {
  */
 
 const ONGLETS = [
-    { id: 'progression', label: '📈 Progression' },
-    { id: 'records', label: '🏆 Records' },
-    { id: 'classes', label: '🏫 Classes' },
+    { id: 'progression', label: 'Progression' },
+    { id: 'records', label: 'Records' },
+    { id: 'classes', label: 'Classes' },
 ];
 
 const RECORD_CATS = [
-    { id: 'serie', label: '🔥 Série', unit: 'sans faute' },
-    { id: 'chrono', label: '⏱ Chrono', unit: 'pts / 2 min' },
-    { id: 'sprint', label: '🏃 Sprint', unit: 's' },
-    { id: 'montee', label: '🧗 Montée', unit: 'table' },
+    { id: 'serie', label: 'Série', unit: 'sans faute' },
+    { id: 'chrono', label: 'Chrono', unit: 'pts / 2 min' },
+    { id: 'sprint', label: 'Sprint', unit: 's' },
+    { id: 'montee', label: 'Montée', unit: 'table' },
 ];
 
 const PERIODES = [
@@ -47,10 +48,10 @@ const PORTEES = [
 
 const PALIERS = [
     { id: null, label: 'Mon palier' },
-    { id: 'decouverte', label: '🌱 Découverte' },
-    { id: 'confirme', label: '⭐ Confirmé' },
-    { id: 'expert', label: '🏆 Expert' },
-    { id: 'tous', label: '🌟 Tous' },
+    { id: 'decouverte', label: 'Découverte' },
+    { id: 'confirme', label: 'Confirmé' },
+    { id: 'expert', label: 'Expert' },
+    { id: 'tous', label: 'Tous' },
 ];
 
 export default function Leaderboards({ onBack, identite, estProf }) {
@@ -70,8 +71,8 @@ export default function Leaderboards({ onBack, identite, estProf }) {
     // (eleve_courant() vaut null pour lui, ces classements seraient vides)
     const onglets = useMemo(() => (
         estProf
-            ? [{ id: 'classes', label: '🏫 Classes' },
-               { id: 'profs',   label: '🎓 Salle des profs' }]
+            ? [{ id: 'classes', label: 'Classes' },
+               { id: 'profs',   label: 'Salle des profs' }]
             : [...ONGLETS]
     ), [estProf]);
 
@@ -108,7 +109,7 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                             rang: r.rang,
                             nom_affiche: r.classe,
                             classe: r.classe,
-                            avatar: '🏫',
+                            avatar: null,
                             valeur: r.points_moyens ?? 0,
                             est_moi: r.est_ma_classe === true,
                             eleves_actifs: r.eleves_actifs ?? 0,
@@ -148,8 +149,8 @@ export default function Leaderboards({ onBack, identite, estProf }) {
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
 
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>
-                    🏆 Classements
+                <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <IconClassements size={24} color="var(--indigo)" actionColor="var(--ciel)" /> Classements
                 </h1>
             </div>
 
@@ -282,7 +283,6 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                 </div>
             ) : data.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-                    <p style={{ fontSize: 40, marginBottom: 8 }}>🏜</p>
                     <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 15 }}>
                         Aucun résultat pour ces filtres.
                     </p>
@@ -294,7 +294,6 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                 const topValue = data[0]?.valeur ?? data[0]?.points ?? data[0]?.moyenne ?? 0;
                 if (topValue === 0) return (
                     <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-                        <p style={{ fontSize: 40, marginBottom: 8 }}>🏜</p>
                         <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 15 }}>
                             Aucun résultat pour ces filtres.
                         </p>
@@ -337,7 +336,7 @@ export default function Leaderboards({ onBack, identite, estProf }) {
                             textAlign: 'center', fontSize: 12, fontWeight: 600,
                             color: 'var(--text-soft)', marginTop: 12, fontStyle: 'italic',
                         }}>
-                            💡 Le classement repart à zéro chaque lundi — tout le monde a sa chance.
+                            Le classement repart à zéro chaque lundi — tout le monde a sa chance.
                         </p>
                     )}
                 </>

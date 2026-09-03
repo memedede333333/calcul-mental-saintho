@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { maitriseClasse, listeClasses } from '../api';
+import { IconMaGrille, IconSprint, IconCadenas } from '../components/Icons';
 
 /**
  * MaClasse — L'écran qui décide de l'adoption en salle des profs.
@@ -151,8 +152,8 @@ export default function MaClasse({ onBack, onLancerDefi }) {
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
 
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <h1 className="font-display" style={{ fontSize: 24, fontWeight: 800, color: 'var(--navy)' }}>
-                    🗺 Ma classe
+                <h1 className="font-display" style={{ fontSize: 24, fontWeight: 800, color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Ma classe
                 </h1>
             </div>
 
@@ -271,7 +272,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             }}
                             onClick={() => onLancerDefi?.(tablesDefi, selectedClasse)}
                         >
-                            ⚔️ Lancer un défi sur {tablesDefi.length === 1 ? 'la table' : 'les tables'} {tablesDefi.join(', ')}
+                            <IconSprint size={18} color="var(--action-texte)" /> Lancer un défi sur {tablesDefi.length === 1 ? 'la table' : 'les tables'} {tablesDefi.join(', ')}
                         </button>
                     ) : rienNeCoince ? (
                         <div className="card" style={{
@@ -281,7 +282,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             borderRadius: 14, textAlign: 'center',
                         }}>
                             <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--navy)', marginBottom: 4 }}>
-                                ✅ Rien ne coince dans cette classe.
+                                Rien ne coince dans cette classe.
                             </p>
                             <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', lineHeight: 1.4 }}>
                                 Aucun élève n'est en difficulté sur les tables travaillées. Le bouton « Découvrir » ci-dessous ouvre les tables suivantes.
@@ -310,7 +311,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             }}
                             onClick={() => onLancerDefi?.(tablesDecouverte, selectedClasse)}
                         >
-                            🔍 Découvrir les tables {tablesDecouverte.join(', ')}
+                            Découvrir les tables {tablesDecouverte.join(', ')}
                         </button>
                     )}
                 </>
@@ -356,7 +357,7 @@ function TableBar({ tableN, verts, jaunes, rouges, sansTrace, effectif, tauxMait
                 fontFamily: 'var(--font-display)',
             }}>
                 × {tableN}
-                {!dansPlafond && <span style={{ fontSize: 10 }}> 🔒</span>}
+                {!dansPlafond && <span style={{ marginLeft: 4 }}><IconCadenas size={11} color="var(--gris-inerte)" /></span>}
             </div>
 
             {/* Barre */}

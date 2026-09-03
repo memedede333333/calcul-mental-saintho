@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { monProfil, monProfilProf, mesTablesFaibles, changerAvatar, listeClasses, definirMesClasses } from '../api';
 import { masteryColor, cleFait } from '../logic/mastery';
-import { IconSansFaute } from '../components/Icons';
+import { IconSansFaute, IconMaGrille } from '../components/Icons';
 
 /**
  * Profile — Aiguille vers ProfileEleve ou ProfileProf selon identite.type
@@ -377,7 +377,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
             setMaitrise(d.maitrise || {});
             setBadges(d.badges || []);
             setProgression(d.progression || null);
-            setAvatar(d.profil?.avatar_emoji || '🎯');
+            setAvatar(d.profil?.avatar_emoji || '🦊');
             setLoading(false);
 
             // Charger les tables faibles en arrière-plan
@@ -496,7 +496,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
             {/* ===== Cette semaine ===== */}
             <div className="card" style={{ marginBottom: 14 }}>
                 <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
-                    📈 Cette semaine
+                    Cette semaine
                 </h3>
                 <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
                     Le classement repart à zéro chaque lundi — tout le monde a sa chance.
@@ -507,7 +507,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                         {/* Score principal */}
                         <div style={{
                             textAlign: 'center', marginBottom: 14, padding: '16px 0',
-                            background: 'linear-gradient(135deg, rgba(201,162,39,0.10), rgba(201,162,39,0.03))',
+                            background: 'var(--orange-pale)',
                             borderRadius: 14,
                         }}>
                             <div className="font-display" style={{ fontSize: 36, fontWeight: 800, color: 'var(--gold)' }}>
@@ -524,19 +524,19 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                                 <span className="stat__value" style={{ color: 'var(--navy)' }}>
                                     {progression.points_jeu ?? 0}
                                 </span>
-                                <span className="stat__label">🎮 Points de jeu</span>
+                                <span className="stat__label">Points de jeu</span>
                             </div>
                             <div className="stat">
                                 <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
                                     +{progression.bonus_jours ?? 0}
                                 </span>
-                                <span className="stat__label">📅 {progression.jours_actifs ?? 0} jour{(progression.jours_actifs ?? 0) > 1 ? 's' : ''} actif{(progression.jours_actifs ?? 0) > 1 ? 's' : ''}</span>
+                                <span className="stat__label">{progression.jours_actifs ?? 0} jour{(progression.jours_actifs ?? 0) > 1 ? 's' : ''} actif{(progression.jours_actifs ?? 0) > 1 ? 's' : ''}</span>
                             </div>
                             <div className="stat">
                                 <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>
                                     +{progression.bonus_vertes ?? 0}
                                 </span>
-                                <span className="stat__label">🟢 {progression.cases_vertes ?? 0} case{(progression.cases_vertes ?? 0) > 1 ? 's' : ''} verte{(progression.cases_vertes ?? 0) > 1 ? 's' : ''}</span>
+                                <span className="stat__label">{progression.cases_vertes ?? 0} case{(progression.cases_vertes ?? 0) > 1 ? 's' : ''} verte{(progression.cases_vertes ?? 0) > 1 ? 's' : ''}</span>
                             </div>
                         </div>
                     </>
@@ -546,13 +546,13 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                             <span className="stat__value" style={{ color: 'var(--mint)' }}>
                                 {records?.points_semaine || 0}
                             </span>
-                            <span className="stat__label">📈 Points semaine</span>
+                            <span className="stat__label">Points semaine</span>
                         </div>
                         <div className="stat">
                             <span className="stat__value" style={{ color: 'var(--sky)' }}>
                                 {records?.jours_actifs_7j || 0}
                             </span>
-                            <span className="stat__label">📅 Jours actifs (7j)</span>
+                            <span className="stat__label">Jours actifs (7j)</span>
                         </div>
                     </div>
                 )}
@@ -561,7 +561,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
             {/* ===== Depuis toujours ===== */}
             <div className="card" style={{ marginBottom: 14 }}>
                 <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
-                    🏆 Depuis toujours
+                    Depuis toujours
                 </h3>
                 <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
                     Tes records personnels — ça ne recule jamais.
@@ -571,31 +571,31 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                         <span className="stat__value" style={{ color: 'var(--coral)' }}>
                             {records?.meilleure_serie || 0}
                         </span>
-                        <span className="stat__label">🔥 Meilleure série</span>
+                        <span className="stat__label">Meilleure série</span>
                     </div>
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
                             {records?.meilleur_chrono || 0}
                         </span>
-                        <span className="stat__label">⏱ Score 2 min</span>
+                        <span className="stat__label">Score 2 min</span>
                     </div>
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--purple)' }}>
                             {records?.plus_haute_table || 0}
                         </span>
-                        <span className="stat__label">🧗 Plus haute table</span>
+                        <span className="stat__label">Plus haute table</span>
                     </div>
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--navy)' }}>
                             {records?.nb_sessions || 0}
                         </span>
-                        <span className="stat__label">📊 Sessions jouées</span>
+                        <span className="stat__label">Sessions jouées</span>
                     </div>
                     <div className="stat">
                         <span className="stat__value" style={{ color: 'var(--gold)' }}>
                             {records?.points_total || 0}
                         </span>
-                        <span className="stat__label">💰 Points total</span>
+                        <span className="stat__label">Points total</span>
                     </div>
                 </div>
             </div>
@@ -614,7 +614,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                             if (!badge) return null;
                             return (
                                 <div key={id} className="anim-pop" style={{
-                                    background: 'linear-gradient(135deg, rgba(201,162,39,0.15), rgba(201,162,39,0.05))',
+                                    background: 'var(--orange-pale)',
                                     borderRadius: 14, padding: '10px 14px', textAlign: 'center', minWidth: 80,
                                     border: '1px solid var(--gold-light)',
                                 }}>
@@ -654,8 +654,8 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
             {/* Grille de maîtrise */}
             <div className="card" style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800 }}>
-                        🗺 Grille de maîtrise
+                    <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Grille de maîtrise
                     </h3>
                     <button
                         className="btn btn--ghost"
@@ -693,11 +693,23 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                                 </React.Fragment>
                             ))}
                         </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, fontSize: 11, fontWeight: 700 }}>
-                            <span>🔴 À revoir</span>
-                            <span>🟡 En cours</span>
-                            <span>🟢 Maîtrisé</span>
-                            <span>⬜ Pas testé</span>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, fontSize: 11, fontWeight: 700, flexWrap: 'wrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--rouge)', display: 'inline-block' }} />
+                                À revoir
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--orange)', display: 'inline-block' }} />
+                                En cours
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--vert)', display: 'inline-block' }} />
+                                Maîtrisé
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gris-inerte)', display: 'inline-block' }} />
+                                Pas testé
+                            </span>
                         </div>
 
                         {/* Bouton « Réviser mes cases rouges » */}
@@ -709,7 +721,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                                     fontSize: 15, fontWeight: 700, color: 'var(--mint)',
                                     padding: '10px 0',
                                 }}>
-                                    Aucune case rouge — bravo ! 🎉
+                                    Aucune case rouge — bravo !
                                 </p>
                             ) : (
                                 <button
@@ -717,7 +729,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                                     style={{ fontSize: 16, padding: '12px 24px' }}
                                     onClick={handleReviser}
                                 >
-                                    Réviser mes cases rouges 🔴
+                                    Réviser mes cases rouges
                                 </button>
                             )}
                         </div>

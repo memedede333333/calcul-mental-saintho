@@ -1,5 +1,6 @@
 import React from 'react';
 import { masteryColor } from '../logic/mastery';
+import { IconMaGrille } from './Icons';
 
 /**
  * MasteryGrid — Grille de maîtrise 15×15 (symétrique)
@@ -11,8 +12,8 @@ export default function MasteryGrid({ mastery, tables, onClose }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="card" style={{ maxWidth: 460, width: '100%' }} onClick={e => e.stopPropagation()}>
-                <h3 className="font-display" style={{ fontWeight: 800, fontSize: 20, marginBottom: 12 }}>
-                    🗺 Grille de maîtrise
+                <h3 className="font-display" style={{ fontWeight: 800, fontSize: 20, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Grille de maîtrise
                 </h3>
                 <div
                     className="mastery-grid"
@@ -41,11 +42,23 @@ export default function MasteryGrid({ mastery, tables, onClose }) {
                         </React.Fragment>
                     ))}
                 </div>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 14, fontSize: 12, fontWeight: 700 }}>
-                    <span>🔴 À revoir</span>
-                    <span>🟡 En cours</span>
-                    <span>🟢 Maîtrisé</span>
-                    <span>⬜ Pas testé</span>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 14, fontSize: 12, fontWeight: 700, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--rouge)', display: 'inline-block' }} />
+                        À revoir
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--orange)', display: 'inline-block' }} />
+                        En cours
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--vert)', display: 'inline-block' }} />
+                        Maîtrisé
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gris-inerte)', display: 'inline-block' }} />
+                        Pas testé
+                    </span>
                 </div>
                 <button className="btn btn--ghost" style={{ width: '100%', marginTop: 14 }} onClick={onClose}>
                     Fermer

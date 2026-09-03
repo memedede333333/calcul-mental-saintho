@@ -140,6 +140,57 @@ export function IconProf({ size = 36, color = 'var(--indigo)', actionColor = 'va
     );
 }
 
+export function IconAmpoule({ size = 24, color = 'var(--indigo-doux)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M9 21h6M12 3a6 6 0 0 1 4 10.5V17a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-3.5A6 6 0 0 1 12 3Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconRefresh({ size = 24, color = 'var(--indigo)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M1 4v6h6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconSignal({ size = 24, color = 'var(--gris)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconEnvelope({ size = 24, color = 'var(--indigo)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="2" y="4" width="20" height="16" rx="2" stroke={color} strokeWidth="2" />
+            <path d="M22 7l-10 7L2 7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+export function IconLock({ size = 24, color = 'var(--gris-inerte)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <rect x="5" y="11" width="14" height="10" rx="2" stroke={color} strokeWidth="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+export function IconSablier({ size = 24, color = 'var(--gris)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M6 2h12M6 22h12M6 2v5l6 5-6 5v5M18 2v5l-6 5 6 5v5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 /**
  * Sélecteur d'icône pour les modes de jeu
  */

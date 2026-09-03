@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { mesDefis } from '../api';
 import { DefiLeaderboard } from './Challenges';
+import { IconDefisPasses, ModeIcon } from '../components/Icons';
 
 /**
  * MesDefis — La porte de retour vers les défis passés.
@@ -13,10 +14,10 @@ import { DefiLeaderboard } from './Challenges';
  */
 
 const TYPE_LABELS = {
-    sprint: { emoji: '⚡', label: 'Sprint' },
-    countdown: { emoji: '⏱', label: 'Contre-la-montre' },
-    flawless: { emoji: '🎯', label: 'Sans faute' },
-    climb: { emoji: '🧗', label: 'Montée' },
+    sprint: { label: 'Sprint' },
+    countdown: { label: 'Contre-la-montre' },
+    flawless: { label: 'Sans faute' },
+    climb: { label: 'Montée' },
 };
 
 function formatDate(iso) {
@@ -99,7 +100,9 @@ export default function MesDefis({ onBack, estProf }) {
             <button className="btn-back" onClick={onBack}>‹ Retour</button>
 
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 40 }}>📋</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                    <IconDefisPasses size={40} color="var(--indigo)" actionColor="var(--ciel)" />
+                </div>
                 <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--navy)' }}>
                     Mes défis
                 </h2>
@@ -113,7 +116,6 @@ export default function MesDefis({ onBack, estProf }) {
 
             {defis.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-                    <p style={{ fontSize: 40, marginBottom: 8 }}>🏜</p>
                     <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
                         Aucun défi créé pour le moment.
                     </p>
@@ -121,7 +123,7 @@ export default function MesDefis({ onBack, estProf }) {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {defis.map(d => {
-                        const typeInfo = TYPE_LABELS[d.type] || { emoji: '❓', label: d.type };
+                        const typeInfo = TYPE_LABELS[d.type] || { label: d.type };
                         const ouvert = d.encore_ouvert;
                         return (
                             <button
@@ -155,7 +157,9 @@ export default function MesDefis({ onBack, estProf }) {
                                     fontSize: 13, fontWeight: 600, color: 'var(--text-soft)',
                                     marginBottom: 6,
                                 }}>
-                                    <span>{typeInfo.emoji} {typeInfo.label}</span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <ModeIcon mode={d.type} size={16} color="var(--indigo)" /> {typeInfo.label}
+                                    </span>
                                     {d.classe && (
                                         <span className="chip" style={{
                                             fontSize: 11, padding: '2px 8px', height: 'auto',
@@ -176,7 +180,7 @@ export default function MesDefis({ onBack, estProf }) {
                                         color: d.origine === 'prof'
                                             ? 'var(--action)' : 'var(--orange)',
                                     }}>
-                                        {d.origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
+                                        {d.origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
                                     </span>
                                     {d.auteur_nom && (
                                         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gris)', marginLeft: 6 }}>

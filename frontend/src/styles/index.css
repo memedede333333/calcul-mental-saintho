@@ -140,13 +140,13 @@ input, textarea, select, button { touch-action: manipulation; }
 
 .mode-card:active { transform: translateY(0) scale(0.985); }
 
-.mode-card--learn { background: linear-gradient(135deg, var(--action), var(--action)); }
-.mode-card--practice { background: linear-gradient(135deg, var(--erreur-eleve), var(--erreur-eleve)); }
-.mode-card--challenge { background: linear-gradient(135deg, var(--action), var(--orange)); }
+.mode-card--learn { background: var(--surface); color: var(--indigo); border: 1px solid var(--bordure); }
+.mode-card--practice { background: var(--surface); color: var(--indigo); border: 1px solid var(--bordure); }
+.mode-card--challenge { background: var(--surface); color: var(--indigo); border: 1px solid var(--bordure); }
 
-.mode-card__emoji { font-size: 44px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
-.mode-card__title { font-family: var(--titre); font-weight: 800; font-size: 24px; line-height: 1.1; }
-.mode-card__desc { font-weight: 700; opacity: 0.92; font-size: 14px; margin-top: 3px; }
+.mode-card__emoji { font-size: 44px; line-height: 1; }
+.mode-card__title { font-family: var(--titre); font-weight: 800; font-size: 24px; line-height: 1.1; color: var(--indigo); }
+.mode-card__desc { font-weight: 700; opacity: 0.92; font-size: 14px; margin-top: 3px; color: var(--gris); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 .btn {
@@ -160,28 +160,18 @@ input, textarea, select, button { touch-action: manipulation; }
   color: var(--action-texte);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
   position: relative;
-  overflow: hidden;
-}
-
-.btn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(255,255,255,0.12) 0%, transparent 50%);
-  pointer-events: none;
 }
 
 .btn:active { transform: scale(0.96); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 
-.btn--coral { background: var(--erreur-eleve); box-shadow: 0 6px 18px rgba(255, 90, 95, 0.35); }
-.btn--mint { background: var(--succes); box-shadow: 0 6px 18px rgba(0, 201, 167, 0.32); }
-.btn--sky { background: var(--action); box-shadow: 0 6px 18px rgba(77, 168, 218, 0.32); }
-.btn--purple { background: var(--indigo-doux); box-shadow: 0 6px 18px rgba(139, 111, 192, 0.32); }
+.btn--coral { background: var(--action); box-shadow: 0 6px 18px var(--ombre-douce); }
+.btn--mint { background: var(--action); box-shadow: 0 6px 18px var(--ombre-douce); }
+.btn--sky { background: var(--action); box-shadow: 0 6px 18px var(--ombre-douce); }
+.btn--purple { background: var(--indigo-doux); box-shadow: 0 6px 18px var(--ombre-douce); }
 .btn--gold { background: var(--action); box-shadow: 0 6px 18px var(--ombre-douce); }
-.btn--navy { background: var(--indigo); box-shadow: 0 6px 18px rgba(27, 42, 74, 0.32); }
-.btn--ghost { background: var(--ivoire); color: var(--indigo-encre); box-shadow: none; }
-.btn--ghost::after { display: none; }
+.btn--navy { background: var(--indigo); box-shadow: 0 6px 18px var(--ombre-douce); }
+.btn--ghost { background: var(--ivoire); color: var(--indigo-encre); box-shadow: none; border: 1px solid var(--bordure); }
 
 .btn-back {
   background: none;
@@ -224,7 +214,7 @@ input, textarea, select, button { touch-action: manipulation; }
 .chip:active { transform: scale(0.92); }
 
 .chip--sky { background: var(--action); border-color: var(--action); color: var(--action-texte); }
-.chip--coral { background: var(--erreur-eleve); border-color: var(--erreur-eleve); color: var(--action-texte); }
+.chip--coral { background: var(--action); border-color: var(--action); color: var(--action-texte); }
 .chip--gold { background: var(--action); border-color: var(--action); color: var(--action-texte); }
 .chip--navy { background: var(--indigo); border-color: var(--indigo); color: var(--action-texte); }
 .chip--purple { background: var(--indigo-doux); border-color: var(--indigo-doux); color: var(--action-texte); }
@@ -522,6 +512,41 @@ input, textarea, select, button { touch-action: manipulation; }
   color: var(--succes);
 }
 
+/* ── Paliers de compression d'écran (Section 4 du Lot 13) ───────────────
+   Ordre strict quand la hauteur utile se réduit :
+   1. Marges verticales de la carte question (34 -> 20 px)
+   2. Chiffre de la question (116 -> 88 px, jamais moins)
+   3. Cases de saisie (126 -> 104 px)
+   4. Barre de série : jauge masquée ou réduite
+   Le pavé ne bouge qu'en dernier recours.
+   ──────────────────────────────────────────────────────────────────────── */
+@media (max-height: 950px) {
+  /* Étape 1 : tassement des marges de la carte */
+  .card--question {
+    padding: 20px 24px;
+    margin: 8px 0;
+    gap: 12px;
+  }
+}
+
+@media (max-height: 850px) {
+  /* Étape 2 : réduction de la question au plancher 88px */
+  .question-text {
+    font-size: 88px;
+  }
+  /* Étape 3 : cases de saisie au plancher 104px */
+  .digit-box {
+    height: 104px;
+    line-height: 104px;
+    font-size: 58px;
+    width: 88px;
+  }
+  /* Étape 4 : barre de série passe en compteur compact */
+  .progress-bar {
+    height: 6px;
+  }
+}
+
 /* Question timer bar (chrono par question) */
 .question-timer {
   height: 4px; border-radius: 2px;
@@ -750,4 +775,13 @@ input, textarea, select, button { touch-action: manipulation; }
 
 @media (min-width: 1024px) {
   .app-stage { max-width: 720px; }
+}
+
+/* ── Exception :hover réservée à l'écran d'administration (Mac + souris) ─ */
+.admin-row {
+  transition: background-color 0.15s ease;
+  border-radius: 8px;
+}
+.admin-row:hover {
+  background-color: var(--ciel-pale);
 }

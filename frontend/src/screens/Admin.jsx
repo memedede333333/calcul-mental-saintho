@@ -6,6 +6,7 @@ import {
     listeProfs, creerProf, modifierProf, desactiverProf,
     importerEleves, reparerRattachements, journalAdmin,
 } from '../api.js';
+import { IconProf, IconDocument, IconAdmin } from '../components/Icons';
 
 /**
  * Admin — Dashboard enseignant / administrateur
@@ -50,11 +51,11 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     }, []);
 
     const tabs = [
-        { id: 'eleves', label: '📋 Élèves' },
+        { id: 'eleves', label: 'Élèves' },
         ...(estAdmin ? [
-            { id: 'profs', label: '👩‍🏫 Enseignants' },
-            { id: 'import', label: '📥 Import' },
-            { id: 'journal', label: '📜 Journal' },
+            { id: 'profs', label: 'Enseignants' },
+            { id: 'import', label: 'Import' },
+            { id: 'journal', label: 'Journal' },
         ] : []),
     ];
 
@@ -65,8 +66,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
 
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <h1 className="font-display" style={{ fontSize: 26, fontWeight: 800, color: 'var(--navy)' }}>
-                    ⚙️ Administration
+                <h1 className="font-display" style={{ fontSize: 26, fontWeight: 800, color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <IconAdmin size={26} color="var(--indigo)" /> Administration
                 </h1>
                 <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 13 }}>
                     {identite?.nom || 'Enseignant'}{estAdmin ? ' — admin' : ''}
@@ -264,7 +265,7 @@ function ElevesTab({ selectedClass, classInfo, onRefresh, estAdmin }) {
             {estAdmin && (
                 <div className="card" style={{ marginBottom: 14 }}>
                     <h3 className="font-display" style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
-                        📐 Plafond de tables — {selectedClass}
+                        Plafond de tables — {selectedClass}
                     </h3>
                     <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
                         Relève le plafond quand la classe est prête. Ne redescend jamais un élève qui a débloqué plus haut.
@@ -296,12 +297,12 @@ function StudentRow({ eleve, busy, onToggle }) {
     const nbSessions = eleve.nb_sessions ?? 0;
 
     return (
-        <div style={{
+        <div className="admin-row" style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
             borderBottom: '1px solid var(--border)',
             opacity: eleve.actif === false ? 0.5 : 1,
         }}>
-            <span style={{ fontSize: 22 }}>{eleve.avatar_emoji || '👤'}</span>
+            <span style={{ fontSize: 22 }}>{eleve.avatar_emoji || '🦊'}</span>
             <div style={{ flex: 1 }}>
                 <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
                     {prenom} {nom}
@@ -310,7 +311,7 @@ function StudentRow({ eleve, busy, onToggle }) {
                     {email}
                     {!dejaConnecte && (
                         <span style={{ marginLeft: 6, color: 'var(--coral)', fontWeight: 700 }}>
-                            ⏳ compte Google pas encore rattaché
+                            compte Google pas encore rattaché
                         </span>
                     )}
                     {dejaConnecte && nbSessions === 0 && (
@@ -326,12 +327,11 @@ function StudentRow({ eleve, busy, onToggle }) {
                 </p>
             </div>
             <button
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy ? 0.4 : 1 }}
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 12, padding: '4px 8px', fontWeight: 700, color: eleve.actif === false ? 'var(--succes)' : 'var(--coral)', opacity: busy ? 0.4 : 1 }}
                 onClick={onToggle}
                 disabled={busy}
-                title={eleve.actif === false ? 'Réactiver' : 'Désactiver'}
             >
-                {eleve.actif === false ? '♻️' : '⛔'}
+                {eleve.actif === false ? 'Réactiver' : 'Désactiver'}
             </button>
         </div>
     );
@@ -448,7 +448,7 @@ function ProfsTab({ identite, onIdentiteChange }) {
         <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                    👩‍🏫 Enseignants — {profs.filter(p => p.actif).length} actif{profs.filter(p => p.actif).length > 1 ? 's' : ''}
+                    Enseignants — {profs.filter(p => p.actif).length} actif{profs.filter(p => p.actif).length > 1 ? 's' : ''}
                 </h3>
                 <button className="btn btn--mint" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => setShowAdd(!showAdd)}>
                     + Ajouter
@@ -473,11 +473,11 @@ function ProfsTab({ identite, onIdentiteChange }) {
                 profs.filter(p => p.actif).map(p => {
                     const estMoi = p.prof_id === monId;
                     return (
-                        <div key={p.prof_id} style={{
+                        <div key={p.prof_id} className="admin-row" style={{
                             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
                             borderBottom: '1px solid var(--border)',
                         }}>
-                            <span style={{ fontSize: 22 }}>👤</span>
+                            <IconProf size={22} color="var(--indigo)" />
                             <div style={{ flex: 1 }}>
                                 <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
                                     {p.nom}{estMoi && <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}> (toi)</span>}
@@ -493,7 +493,7 @@ function ProfsTab({ identite, onIdentiteChange }) {
                                     className={`chip${p.role === 'admin' ? ' chip--gold' : ''}`}
                                     style={{ fontSize: 11, height: 28, minWidth: 60, cursor: 'default', pointerEvents: 'none' }}
                                 >
-                                    {p.role === 'admin' ? '👑 admin' : '📚 prof'}
+                                    {p.role === 'admin' ? 'Admin' : 'Prof'}
                                 </span>
                             ) : (
                                 /* Menu déroulant pour les autres */
@@ -509,18 +509,17 @@ function ProfsTab({ identite, onIdentiteChange }) {
                                         fontFamily: 'var(--font-body)',
                                     }}
                                 >
-                                    <option value="prof">📚 Prof</option>
-                                    <option value="admin">👑 Admin</option>
+                                    <option value="prof">Prof</option>
+                                    <option value="admin">Admin</option>
                                 </select>
                             )}
                             {!estMoi && (
                                 <button
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, opacity: busy === p.prof_id ? 0.4 : 1 }}
+                                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 12, padding: '4px 8px', fontWeight: 700, color: 'var(--coral)', opacity: busy === p.prof_id ? 0.4 : 1 }}
                                     onClick={() => handleToggle(p)}
                                     disabled={busy === p.prof_id}
-                                    title="Désactiver"
                                 >
-                                    ⛔
+                                    Désactiver
                                 </button>
                             )}
                         </div>
@@ -556,9 +555,11 @@ function AddProfForm({ onDone }) {
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <button className={`chip${role === 'prof' ? ' chip--navy' : ''}`}
-                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('prof')}>📚 Prof</button>
-                <button className={`chip${role === 'admin' ? ' chip--navy' : ''}`}
-                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('admin')}>👑 Admin</button>
+                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('prof')}>Prof</button>
+                <button
+                    type="button"
+                    className={`btn ${role === 'admin' ? 'btn--gold' : 'btn--ghost'}`}
+                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('admin')}>Admin</button>
             </div>
             {msg && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 6 }}>{msg}</p>}
             <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={handleAdd} disabled={busy}>
@@ -614,7 +615,7 @@ function ImportTab({ onRefresh }) {
     return (
         <div className="card">
             <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                📥 Import de rentrée
+                Import de rentrée
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
                 Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.
@@ -688,7 +689,7 @@ function ImportTab({ onRefresh }) {
             {/* Section Réparation des rattachements */}
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
                 <h4 className="font-display" style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
-                    🔧 Rattachement des comptes Google
+                    Rattachement des comptes Google
                 </h4>
                 <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
                     À lancer après chaque import ou si un élève s'est connecté avant la création de sa fiche.
@@ -720,7 +721,7 @@ function JournalTab() {
     return (
         <div className="card">
             <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                📜 Journal d'administration
+                Journal d'administration
             </h3>
 
             {loading ? (

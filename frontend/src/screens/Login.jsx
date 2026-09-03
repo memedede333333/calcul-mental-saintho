@@ -154,7 +154,7 @@ export default function Login({ onIdentite }) {
                     <div style={{
                         width: 80, height: 80, borderRadius: 16,
                         margin: '0 auto 12px',
-                        background: 'linear-gradient(135deg, var(--navy), var(--navy-mid))',
+                        background: 'var(--indigo)',
                         color: 'var(--gold)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -205,7 +205,7 @@ export default function Login({ onIdentite }) {
                             }}
                         >
                             {loading ? (
-                                '⏳ Redirection…'
+                                'Redirection…'
                             ) : (
                                 <>
                                     <GoogleIcon />
@@ -262,7 +262,7 @@ export default function Login({ onIdentite }) {
                                     color: 'var(--text-soft)',
                                     display: 'block', marginBottom: 6,
                                 }}>
-                                    📧 Adresse e-mail scolaire
+                                    Adresse e-mail scolaire
                                 </label>
                                 <input
                                     type="email"
@@ -283,7 +283,7 @@ export default function Login({ onIdentite }) {
                                 disabled={loading}
                                 style={{ width: '100%', fontSize: 17, padding: 14 }}
                             >
-                                {loading ? '⏳ Envoi…' : '📧 Recevoir mon code'}
+                                {loading ? 'Envoi…' : 'Recevoir mon code'}
                             </button>
                         </form>
 
@@ -349,10 +349,10 @@ export default function Login({ onIdentite }) {
                             <button
                                 type="submit"
                                 className="btn btn--navy"
-                                disabled={loading}
+                                disabled={loading || codeOtp.length < 6}
                                 style={{ width: '100%', fontSize: 17, padding: 14 }}
                             >
-                                {loading ? '⏳ Vérification…' : 'Valider'}
+                                {loading ? 'Vérification…' : 'Valider'}
                             </button>
                         </form>
 

@@ -9,7 +9,7 @@ import {
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
-import { ModeIcon, IconDefisPasses } from '../components/Icons';
+import { ModeIcon, IconDefisPasses, IconCadenas, IconDocument, IconClassements } from '../components/Icons';
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 
 /**
@@ -552,14 +552,14 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
             )}
 
             <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                    📋 Règles
+                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconDocument size={18} color="var(--indigo)" /> Règles
                 </h3>
                 {type.id === 'sprint' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
                         <li>20 questions, 3s par question</li>
                         <li>1er essai = 1 pt, rattrapé = ½ pt</li>
-                        <li>⚡ Le plus rapide gagne — chaque erreur ajoute 3 secondes</li>
+                        <li>Le plus rapide gagne — chaque erreur ajoute 3 secondes</li>
                     </ul>
                 )}
                 {type.id === 'flawless' && (
@@ -589,7 +589,7 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
             {estProf && isShareable && classes.length > 0 && (
                 <div className="card" style={{ marginBottom: 14 }}>
                     <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                        🏫 Classe du défi
+                        Classe du défi
                     </h3>
                     <div className="chips">
                         {classes.map(c => (
@@ -598,7 +598,7 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
                                 className={`chip${selectedClasse === c.classe ? ' chip--navy' : ''}`}
                                 onClick={() => setSelectedClasse(c.classe)}
                             >
-                                {c.classe}{c.est_favorite ? ' ⭐' : ''}
+                                {c.classe}
                             </button>
                         ))}
                     </div>
@@ -1036,7 +1036,7 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                 <span className="pill" style={{
-                    background: 'linear-gradient(135deg, var(--orange-pale), var(--orange))',
+                    background: 'var(--orange)',
                     color: 'var(--action-texte)', fontSize: 20, padding: '8px 28px',
                 }}>
                     🔥 {streak}
@@ -1202,7 +1202,7 @@ function ClimbPlay({ onQuit, onDone }) {
                 } else {
                     setCurrentTable(nextTable);
                     setQuestionsInLevel(0); setCorrectInLevel(0);
-                    setLevelMsg(`Table ${nextTable} ! 🧗`);
+                    setLevelMsg(`Table ${nextTable} !`);
                     setTimeout(() => setLevelMsg(''), 1500);
                     resetQuestion(newQuestion([nextTable], null, null));
                 }
@@ -1276,10 +1276,10 @@ function ClimbPlay({ onQuit, onDone }) {
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span className="pill" style={{ background: 'var(--indigo-doux)', color: 'var(--action-texte)' }}>
-                    🧗 Table {currentTable}
+                    Table {currentTable}
                 </span>
                 <span className="pill">{questionsInLevel}/5</span>
-                <span className="pill" style={{ color: 'var(--mint-dk)' }}>✅ {correctInLevel}</span>
+                <span className="pill" style={{ color: 'var(--succes)' }}>{correctInLevel} justes</span>
             </div>
 
             <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
@@ -1452,7 +1452,7 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                         border: '2px solid var(--vert)',
                     }}>
                         <p className="font-display" style={{ fontWeight: 800, fontSize: 20, color: 'var(--succes)' }}>
-                            🔓 Table {nouveauPlafond} débloquée !
+                            Table {nouveauPlafond} débloquée !
                         </p>
                         <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
                             Tu peux maintenant t'entraîner sur la table {nouveauPlafond} en mode libre.
@@ -1465,12 +1465,12 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                         fontSize: 13, color: 'var(--text-soft)', fontWeight: 600,
                         textAlign: 'center', marginTop: 14, marginBottom: 14,
                     }}>
-                        📡 Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
+                        Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
                     </p>
                 )}
 
                 <button className="btn btn--gold" style={{ width: '100%', marginTop: 16, marginBottom: 10 }} onClick={onReplay}>
-                    Relancer ⚔️
+                    Relancer
                 </button>
                 <button className="btn btn--ghost" style={{ width: '100%', marginBottom: 10 }} onClick={onHome}>
                     Autres défis
@@ -1517,7 +1517,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
             </button>
 
             <div style={{
-                background: 'linear-gradient(135deg, var(--navy), var(--navy-dk))',
+                background: 'var(--indigo)',
                 borderRadius: 24, padding: estProf ? '48px 32px' : '32px 24px',
                 width: '100%', maxWidth: 500, marginTop: 24,
             }}>
@@ -1537,7 +1537,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                     borderTop: '1px solid rgba(255,255,255,0.15)',
                 }}>
                     <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--action-texte)' }}>
-                        👥 {nbParticipants}
+                        {nbParticipants}
                     </span>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, marginTop: 4 }}>
                         participant{nbParticipants !== 1 ? 's' : ''} {nbParticipants > 0 ? '' : 'pour le moment'}
@@ -1547,10 +1547,10 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
 
             <button
                 className="btn btn--gold"
-                style={{ width: '100%', maxWidth: 500, fontSize: 20, padding: 16, marginTop: 20 }}
+                style={{ width: '100%', maxWidth: 500, fontSize: 20, padding: 16, marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 onClick={onStart}
             >
-                📊 Voir le classement
+                <IconClassements size={20} color="var(--indigo)" /> Voir le classement
             </button>
 
             <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 12 }}>
@@ -1580,8 +1580,8 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
         }}>
             <div style={{
                 background: origine === 'prof'
-                    ? 'linear-gradient(135deg, var(--ciel), var(--action))'
-                    : 'linear-gradient(135deg, var(--orange), var(--orange-pale))',
+                    ? 'var(--action)'
+                    : 'var(--orange)',
                 borderRadius: 24, padding: '40px 32px',
                 width: '100%', maxWidth: 420,
             }}>
@@ -1682,7 +1682,7 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
                             color: origine === 'prof'
                                 ? 'var(--action)' : 'var(--orange)',
                         }}>
-                            {origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
+                            {origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
                         </span>
                         {auteurNom && (
                             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)', marginTop: 4 }}>
@@ -1782,7 +1782,7 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
                                 }}>
                                     {medal || entry.rang || i + 1}
                                 </span>
-                                <span style={{ fontSize: 20 }}>{entry.avatar || '🎯'}</span>
+                                <span style={{ fontSize: 20 }}>{entry.avatar || '🦊'}</span>
                                 <div style={{ flex: 1 }}>
                                     <div style={{
                                         fontWeight: entry.est_moi ? 800 : 700, fontSize: 15,

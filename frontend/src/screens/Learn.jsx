@@ -42,7 +42,7 @@ export default function Learn({ onBack }) {
                         style={{ fontSize: 14, padding: '8px 14px' }}
                         onClick={() => setHide(h => !h)}
                     >
-                        {hide ? '👁 Montrer' : '🙈 Cacher'}
+                        {hide ? 'Montrer' : 'Cacher'}
                     </button>
                 </div>
                 <div className="chips" style={{ margin: '14px 0 4px' }}>
@@ -80,7 +80,7 @@ export default function Learn({ onBack }) {
             {/* Comptage par sauts */}
             <div className="card" style={{ marginTop: 14 }}>
                 <p className="font-display" style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-                    🔢 Comptage par sauts de {table}
+                    Comptage par sauts de {table}
                 </p>
                 <div className="viz-skip">
                     {multipliers.map(m => (
@@ -101,7 +101,7 @@ export default function Learn({ onBack }) {
             {/* Visualisation CPA */}
             <div className="card" style={{ marginTop: 14 }}>
                 <p className="font-display" style={{ fontWeight: 800, fontSize: 18, marginBottom: 2 }}>
-                    👁 Visualiser {a} × {b} = {a * b}
+                    Visualiser {a} × {b} = {a * b}
                 </p>
 
                 {/* Toggle commutativité */}
@@ -131,7 +131,7 @@ export default function Learn({ onBack }) {
             {/* Astuce */}
             {TIPS[table] && (
                 <div className="tip-box">
-                    <b>💡 Astuce × {table} :</b> {TIPS[table]}
+                    <b>Astuce × {table} :</b> {TIPS[table]}
                 </div>
             )}
         </div>

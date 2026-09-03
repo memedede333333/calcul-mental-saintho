@@ -160,12 +160,29 @@ export default function App() {
         traiterIdentite(data);
     }, []);
 
-    const goHome = useCallback(() => { setScreen('home'); setTablesADemarrer(null); }, []);
+    const [practiceConfig, setPracticeConfig] = useState(null);
+
+    const goHome = useCallback(() => {
+        setScreen('home');
+        setTablesADemarrer(null);
+        setPracticeConfig(null);
+    }, []);
+
+    const handleGo = useCallback((scr, opts) => {
+        if (scr === 'play') {
+            setPracticeConfig(opts || null);
+        }
+        if (scr === 'challenges' && opts?.mode) {
+            setDefiPreConfig({ type: opts.mode });
+        }
+        setScreen(scr);
+    }, []);
 
     // --- Navigation vers Practice avec des tables pré-sélectionnées ---
     // Utilisé par Profile → « Réviser mes cases rouges »
     const goPlayWithTables = useCallback((tables) => {
         setTablesADemarrer(tables);
+        setPracticeConfig(null);
         setScreen('play');
     }, []);
 
@@ -193,7 +210,7 @@ export default function App() {
                 }}>
                     <div style={{
                         width: 80, height: 80, borderRadius: 16,
-                        background: 'linear-gradient(135deg, var(--navy), var(--navy-mid))',
+                        background: 'var(--indigo)',
                         color: 'var(--gold)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -328,7 +345,7 @@ export default function App() {
         <Layout showHeader={screen === 'home'}>
             {screen === 'home' && (
                 <Home
-                    onGo={setScreen}
+                    onGo={handleGo}
                     identite={identite}
                     estProf={estProf}
                     estAdmin={estAdmin}
@@ -348,6 +365,7 @@ export default function App() {
                     onPlafondChange={handlePlafondChange}
                     tablesInitiales={tablesADemarrer}
                     maitrise={maitrise}
+                    config={practiceConfig}
                 />
             )}
             {screen === 'challenges' && (
