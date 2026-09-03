@@ -18,10 +18,10 @@ export function cleFait(a, b) {
  * Couleur de maîtrise — échelle serveur (1/2/3).
  */
 export function masteryColor(val) {
-    if (val === undefined || val === null) return '#E8E2D8'; // non testé → gris doux
-    if (val >= 3) return '#00C9A7';   // maîtrisé → menthe
-    if (val >= 2) return '#F0B429';   // en cours → or
-    return '#FF5A5F';                 // à revoir → corail
+    if (val === undefined || val === null) return 'var(--gris-inerte)'; // non testé → gris inerte
+    if (val >= 3) return 'var(--vert)';         // maîtrisé → vert
+    if (val >= 2) return 'var(--orange)';       // en cours → orange
+    return 'var(--rouge)';                     // à revoir → rouge
 }
 
 /**

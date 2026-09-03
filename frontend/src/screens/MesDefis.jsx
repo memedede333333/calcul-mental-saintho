@@ -172,14 +172,14 @@ export default function MesDefis({ onBack, estProf }) {
                                         fontSize: 11, fontWeight: 800,
                                         padding: '2px 8px', borderRadius: 6,
                                         background: d.origine === 'prof'
-                                            ? 'rgba(77,168,218,0.12)' : 'rgba(201,162,39,0.12)',
+                                            ? 'var(--ciel-pale)' : 'var(--orange-pale)',
                                         color: d.origine === 'prof'
-                                            ? 'var(--sky-dk)' : 'var(--gold-dk, #8a6d10)',
+                                            ? 'var(--action)' : 'var(--orange)',
                                     }}>
                                         {d.origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
                                     </span>
                                     {d.auteur_nom && (
-                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginLeft: 6 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gris)', marginLeft: 6 }}>
                                             Défi de {d.auteur_nom}
                                         </span>
                                     )}

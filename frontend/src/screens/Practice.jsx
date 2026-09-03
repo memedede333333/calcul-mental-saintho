@@ -496,7 +496,7 @@ function Quiz({ tables, length, timer, mastery, onQuit, onDone }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span className="pill">⭐ {score}</span>
                 <span className={`pill streak-badge${streakMilestone ? ' streak-badge--milestone' : ''}`}
-                    style={streak >= 10 ? { background: 'linear-gradient(135deg, var(--gold-light), var(--gold))', color: '#fff' } : undefined}
+                    style={streak >= 10 ? { background: 'linear-gradient(135deg, var(--orange-pale), var(--orange))', color: 'var(--action-texte)' } : undefined}
                 >
                     🔥 {streak}
                 </span>
@@ -611,7 +611,9 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
         if (pct >= 70) {
             import('canvas-confetti').then(mod => {
                 const fire = mod.default;
-                fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#C9A227', '#4DA8DA', '#00C9A7', '#FF5A5F'] });
+                const style = getComputedStyle(document.documentElement);
+                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5'].map(v => style.getPropertyValue(v).trim());
+                fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors });
             }).catch(() => { });
         }
     }, [pct]);
@@ -687,11 +689,11 @@ function Results({ result, serverResult, onReplay, onReviewErrors, onHome, onSet
                 {/* Badges débloqués */}
                 {badges.length > 0 && (
                     <div style={{
-                        textAlign: 'center', background: 'linear-gradient(135deg, #FFF8E1, #FFF0C0)',
-                        borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16,
-                        border: '2px solid var(--gold)',
+                        textAlign: 'center', background: 'var(--orange-pale)',
+                        borderRadius: 'var(--r-touche)', padding: 16, marginBottom: 16,
+                        border: '2px solid var(--orange)',
                     }}>
-                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--gold)' }}>
+                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--orange)' }}>
                             🏅 Nouveau{badges.length > 1 ? 'x' : ''} badge{badges.length > 1 ? 's' : ''} !
                         </p>
                         {badges.map((b, i) => (

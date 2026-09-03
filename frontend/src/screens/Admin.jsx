@@ -656,21 +656,21 @@ function ImportTab({ onRefresh }) {
                                 </p>
                             </div>
                             {result.lignes_ignorees?.length > 0 && (
-                                <div style={{ background: '#FFF8F0', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid #FFE0C0' }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral-dk)', marginBottom: 4 }}>
+                                <div style={{ background: 'var(--orange-pale)', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid var(--bordure)' }}>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--erreur-eleve)', marginBottom: 4 }}>
                                         ⚠️ {result.lignes_ignorees.length} ligne{result.lignes_ignorees.length > 1 ? 's' : ''} ignorée{result.lignes_ignorees.length > 1 ? 's' : ''}
                                     </p>
                                     {result.lignes_ignorees.slice(0, 10).map((l, i) => (
-                                        <p key={i} style={{ fontSize: 11, color: 'var(--text-soft)' }}>{l.raison}: {l.email || '(vide)'}</p>
+                                        <p key={i} style={{ fontSize: 11, color: 'var(--gris)' }}>{l.raison}: {l.email || '(vide)'}</p>
                                     ))}
                                 </div>
                             )}
                             {result.actifs_absents_du_fichier?.length > 0 && (
-                                <div style={{ background: '#FFF3E0', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid #FFE0C0' }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: '#E67E00', marginBottom: 4 }}>
+                                <div style={{ background: 'var(--orange-pale)', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid var(--bordure)' }}>
+                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--orange)', marginBottom: 4 }}>
                                         ℹ️ {result.actifs_absents_du_fichier.length} élève{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} actif{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} absent{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} du fichier
                                     </p>
-                                    <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
+                                    <p style={{ fontSize: 11, color: 'var(--gris)' }}>
                                         Vérifiez au cas par cas — l'import ne les a pas désactivés.
                                     </p>
                                     {result.actifs_absents_du_fichier.slice(0, 10).map((e, i) => (

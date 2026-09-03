@@ -168,10 +168,10 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         style={{
                             padding: '8px 16px', fontSize: 14, fontWeight: 700,
                             background: selectedClasse === c.classe
-                                ? 'var(--navy)' : 'var(--bg-card)',
-                            color: selectedClasse === c.classe ? '#fff' : 'var(--text)',
+                                ? 'var(--indigo)' : 'var(--surface)',
+                            color: selectedClasse === c.classe ? 'var(--action-texte)' : 'var(--indigo-encre)',
                             border: selectedClasse === c.classe
-                                ? '2px solid var(--navy)' : '2px solid var(--border)',
+                                ? '2px solid var(--indigo)' : '2px solid var(--bordure)',
                             borderRadius: 12, cursor: 'pointer',
                             transition: 'all 0.15s',
                         }}

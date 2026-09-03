@@ -352,7 +352,7 @@ export default function Leaderboards({ onBack, identite, estProf }) {
 function PodiumCard({ entry, position, unit }) {
     const heights = { 1: 100, 2: 75, 3: 60 };
     const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    const colors = { 1: 'var(--gold)', 2: '#B0B0B0', 3: '#CD7F32' };
+    const colors = { 1: 'var(--podium)', 2: 'var(--gris)', 3: 'var(--orange)' };
 
     const name = entry.nom_affiche || entry.classe || '—';
     const avatar = entry.avatar_emoji || entry.avatar || '';
@@ -369,13 +369,13 @@ function PodiumCard({ entry, position, unit }) {
             </p>
             <div style={{
                 height: heights[position],
-                background: `linear-gradient(to top, ${colors[position]}, ${colors[position]}44)`,
+                background: colors[position],
                 borderRadius: '12px 12px 0 0',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 marginTop: 6,
             }}>
                 <span style={{ fontSize: 24 }}>{medals[position]}</span>
-                <span className="font-display" style={{ fontWeight: 800, fontSize: 18, color: '#fff' }}>
+                <span className="font-display" style={{ fontWeight: 800, fontSize: 18, color: 'var(--action-texte)' }}>
                     {value}
                 </span>
             </div>
@@ -397,16 +397,16 @@ function LeaderboardRow({ entry, index, unit, isLast, onglet }) {
         <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 8px',
-            borderBottom: isLast ? 'none' : '1px solid var(--border)',
+            borderBottom: isLast ? 'none' : '1px solid var(--bordure)',
             background: estMoi
-                ? 'linear-gradient(135deg, rgba(201,162,39,0.12), rgba(201,162,39,0.05))'
-                : index < 3 ? 'rgba(201, 162, 39, 0.04)' : 'transparent',
+                ? 'var(--ciel-pale)'
+                : index < 3 ? 'var(--ivoire)' : 'transparent',
             borderRadius: estMoi || index < 3 ? 8 : 0,
-            border: estMoi ? '2px solid var(--gold)' : 'none',
+            border: estMoi ? '2px solid var(--action)' : 'none',
         }}>
             <span className="font-display" style={{
                 fontWeight: 800, fontSize: 18, width: 28, textAlign: 'center',
-                color: index === 0 ? 'var(--gold)' : index === 1 ? '#A0A0A0' : index === 2 ? '#CD7F32' : 'var(--text-soft)',
+                color: index === 0 ? 'var(--podium)' : index === 1 ? 'var(--gris)' : index === 2 ? 'var(--orange)' : 'var(--gris)',
             }}>
                 {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : rang}
             </span>

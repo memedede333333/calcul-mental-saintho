@@ -15,9 +15,9 @@ export const PRAISE = [
 
 // Couleurs pour les barres (visualisation)
 export const BAR_COLORS = [
-    '#4DA8DA', '#FF5A5F', '#00C9A7', '#F0B429', '#8B6FC0',
-    '#FF8C42', '#E04347', '#3A8FBE', '#00A88A', '#D69E1D',
-    '#5B8DEF', '#FF6B9D', '#2DD4BF', '#FBBF24', '#A78BFA'
+    'var(--ciel)', 'var(--erreur-eleve)', 'var(--vert)', 'var(--orange)', 'var(--indigo-doux)',
+    'var(--orange)', 'var(--erreur-eleve)', 'var(--action)', 'var(--vert)', 'var(--podium)',
+    'var(--ciel)', 'var(--erreur-eleve)', 'var(--vert)', 'var(--orange)', 'var(--indigo)'
 ];
 
 /**

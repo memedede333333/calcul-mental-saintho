@@ -1028,8 +1028,8 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                 <span className="pill" style={{
-                    background: 'linear-gradient(135deg, var(--gold-light), var(--gold))',
-                    color: '#fff', fontSize: 20, padding: '8px 28px',
+                    background: 'linear-gradient(135deg, var(--orange-pale), var(--orange))',
+                    color: 'var(--action-texte)', fontSize: 20, padding: '8px 28px',
                 }}>
                     🔥 {streak}
                 </span>
@@ -1267,7 +1267,7 @@ function ClimbPlay({ onQuit, onDone }) {
         <div className="screen-enter game-zone">
             <button className="btn-back" onClick={onQuit}>‹ Quitter</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span className="pill" style={{ background: 'var(--purple)', color: '#fff' }}>
+                <span className="pill" style={{ background: 'var(--indigo-doux)', color: 'var(--action-texte)' }}>
                     🧗 Table {currentTable}
                 </span>
                 <span className="pill">{questionsInLevel}/5</span>
@@ -1325,9 +1325,11 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
     useEffect(() => {
         if (isSuccess) {
             import('canvas-confetti').then(mod => {
+                const style = getComputedStyle(document.documentElement);
+                const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5'].map(v => style.getPropertyValue(v).trim());
                 mod.default({
                     particleCount: 100, spread: 70, origin: { y: 0.6 },
-                    colors: ['#C9A227', '#4DA8DA', '#00C9A7', '#FF5A5F']
+                    colors,
                 });
             }).catch(() => { });
         }
@@ -1404,11 +1406,11 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
 
                 {badges.length > 0 && (
                     <div style={{
-                        textAlign: 'center', background: 'linear-gradient(135deg, #FFF8E1, #FFF0C0)',
-                        borderRadius: 'var(--radius-md)', padding: 16, marginTop: 16, marginBottom: 16,
-                        border: '2px solid var(--gold)',
+                        textAlign: 'center', background: 'var(--orange-pale)',
+                        borderRadius: 'var(--r-touche)', padding: 16, marginTop: 16, marginBottom: 16,
+                        border: '2px solid var(--orange)',
                     }}>
-                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--gold)' }}>
+                        <p className="font-display" style={{ fontWeight: 800, marginBottom: 8, color: 'var(--orange)' }}>
                             🏅 Nouveau{badges.length > 1 ? 'x' : ''} badge{badges.length > 1 ? 's' : ''} !
                         </p>
                         {badges.map((b, i) => (
@@ -1421,11 +1423,11 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
 
                 {type.id === 'climb' && nouveauPlafond && ancienPlafond && nouveauPlafond > ancienPlafond && (
                     <div className="anim-pop" style={{
-                        textAlign: 'center', background: 'linear-gradient(135deg, #E8F5E9, #C8E6C9)',
-                        borderRadius: 'var(--radius-md)', padding: 16, marginTop: 16, marginBottom: 16,
-                        border: '2px solid var(--mint)',
+                        textAlign: 'center', background: 'var(--vert-pale)',
+                        borderRadius: 'var(--r-touche)', padding: 16, marginTop: 16, marginBottom: 16,
+                        border: '2px solid var(--vert)',
                     }}>
-                        <p className="font-display" style={{ fontWeight: 800, fontSize: 20, color: 'var(--mint-dk)' }}>
+                        <p className="font-display" style={{ fontWeight: 800, fontSize: 20, color: 'var(--succes)' }}>
                             🔓 Table {nouveauPlafond} débloquée !
                         </p>
                         <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
@@ -1510,7 +1512,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                     marginTop: 20, padding: '12px 0',
                     borderTop: '1px solid rgba(255,255,255,0.15)',
                 }}>
-                    <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>
+                    <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--action-texte)' }}>
                         👥 {nbParticipants}
                     </span>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, marginTop: 4 }}>
@@ -1554,8 +1556,8 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
         }}>
             <div style={{
                 background: origine === 'prof'
-                    ? 'linear-gradient(135deg, var(--sky), var(--sky-dk))'
-                    : 'linear-gradient(135deg, var(--gold), var(--gold-dk, #8a6d10))',
+                    ? 'linear-gradient(135deg, var(--ciel), var(--action))'
+                    : 'linear-gradient(135deg, var(--orange), var(--orange-pale))',
                 borderRadius: 24, padding: '40px 32px',
                 width: '100%', maxWidth: 420,
             }}>
@@ -1570,7 +1572,7 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
                 </div>
                 {auteurNom && (
                     <h2 className="font-display" style={{
-                        fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8,
+                        fontSize: 22, fontWeight: 800, color: 'var(--action-texte)', marginBottom: 8,
                     }}>
                         Défi de {auteurNom}
                     </h2>
@@ -1652,9 +1654,9 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
                             fontSize: 12, fontWeight: 800,
                             padding: '3px 10px', borderRadius: 6,
                             background: origine === 'prof'
-                                ? 'rgba(77,168,218,0.12)' : 'rgba(201,162,39,0.12)',
+                                ? 'var(--ciel-pale)' : 'var(--orange-pale)',
                             color: origine === 'prof'
-                                ? 'var(--sky-dk)' : 'var(--gold-dk, #8a6d10)',
+                                ? 'var(--action)' : 'var(--orange)',
                         }}>
                             {origine === 'prof' ? '📚 Travail de classe' : '🎮 Défi amical'}
                         </span>

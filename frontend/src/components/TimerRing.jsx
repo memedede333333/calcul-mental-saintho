@@ -13,12 +13,12 @@ export default function TimerRing({ seconds, total, warn }) {
     return (
         <span className={`timer-ring${warn ? ' timer-ring--warn' : ''}`}>
             <svg width="56" height="56" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r={r} fill="none" stroke="#E8E2D8" strokeWidth="5" />
+                <circle cx="28" cy="28" r={r} fill="none" stroke="var(--bordure)" strokeWidth="5" />
                 <circle
                     className="timer-ring__fg"
                     cx="28" cy="28" r={r}
                     fill="none"
-                    stroke="var(--sky)"
+                    stroke="var(--action)"
                     strokeWidth="5"
                     strokeLinecap="round"
                     strokeDasharray={c}
