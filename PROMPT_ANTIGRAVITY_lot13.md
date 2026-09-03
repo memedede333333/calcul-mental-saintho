@@ -22,7 +22,18 @@ une base locale reconstruite depuis zéro. Tu ne l'écris pas, tu l'appliques.
 2. Applique-la sur le projet Supabase de **développement**
    (`calcul-mental-dev`, référence `lkukdlspcgqtiimvwlsd`).
 3. **Régénère `database.ts`** derrière.
-4. **N'écris jamais de SQL directement dans l'éditeur Supabase.** Tout passe par
+4. **Ne lance JAMAIS `supabase/tests/run.sh` contre Supabase.** Ce script
+   *détruit et recrée* une base, y applique `00_prelude_local.sql` (qui
+   simule un environnement Supabase) puis `seed.sql`. Il est fait pour un
+   PostgreSQL local, et pour rien d'autre. Sur le projet de développement il
+   effacerait les comptes de bêta réels. **Les 107 cas ont déjà été exécutés
+   et sont verts** — tu n'as pas à les rejouer.
+
+   Ce que tu vérifies après avoir appliqué la migration, et c'est tout :
+   `apercu_import_eleves(jsonb)` et `valider_lignes_import(jsonb)` existent,
+   `importer_eleves` renvoie maintenant `dont_reactivations`, et un appel à
+   `apercu_import_eleves('[]'::jsonb)` depuis un compte élève est refusé.
+5. **N'écris jamais de SQL directement dans l'éditeur Supabase.** Tout passe par
    un fichier de migration versionné, sinon la base de développement et celle de
    production divergeront sans un seul message d'erreur.
 
@@ -448,9 +459,14 @@ l'intérieur de sa propre page.
 iPad de 820 de large et sur un iPad mini de 744. Les valeurs en pixels de la
 maquette sont des *exemples*, pas la règle. La règle est au point 4.
 
-**c) Aucun `:hover`.** Un doigt ne survole pas, et sur iOS un état de survol
-reste collé après le relâchement. Tout retour visuel passe par `:active` ou par
-une classe posée en JavaScript. `tokens.css` neutralise déjà le halo de tap.
+**c) Aucun `:hover` sur ce que touche un élève.** Un doigt ne survole pas, et
+sur iOS un état de survol reste collé après le relâchement. Tout retour visuel
+passe par `:active` ou par une classe posée en JavaScript. `tokens.css`
+neutralise déjà le halo de tap.
+
+**Une exception, et une seule : l'écran d'administration.** Il s'utilise sur un
+Mac, avec une souris. Un survol discret sur une ligne de tableau y est utile.
+Ne l'éradique pas là-bas — mais il ne sort pas de cet écran.
 
 ---
 
@@ -462,6 +478,10 @@ doigt part du bord bas. D'où la disposition, qui n'est pas négociable :
 
 - **Le pavé occupe le bas, plein cadre**, et prend **44 % de la hauteur utile**
   (`var(--pave-part)`) — 4 rangées et 3 gouttières de 16 px.
+  **« Hauteur utile » = la hauteur de la fenêtre moins la barre du haut** (le
+  bouton « Quitter », le mode, la barre de progression et la série). Utilise
+  `100dvh` et non `100vh` : sur Safari iOS, `vh` compte une barre d'adresse qui
+  n'existe pas en mode plein écran, et le pavé se retrouverait coupé en bas.
 - **Ordre 1-2-3 en haut**, comme le pavé du téléphone et celui d'iOS : c'est
   déjà automatisé chez un collégien.
 - **Le 0 occupe deux colonnes**, au centre-bas. C'est le chiffre le plus tapé
@@ -703,6 +723,18 @@ Coche-les un par un, c'est la recette de ce lot.
       comptant les élèves avant et après l'aperçu.
 
 ---
+
+## Deux points d'étape, pas un seul rapport à la fin
+
+Ce lot est trop gros pour être relu d'un bloc. Commite et pousse à la fin de
+chaque section, et fais un point à deux moments :
+
+- **après la section 2** (migration, polices, tokens) : c'est visible tout de
+  suite à l'écran, et si la palette part de travers tout le reste part avec ;
+- **après la section 8** (l'import), avant la recette.
+
+À chaque point, dis ce qui est fait, ce qui a résisté, et ce que tu as dû
+décider seul.
 
 ## Ce que tu ne changes pas
 
