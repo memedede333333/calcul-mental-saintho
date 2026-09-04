@@ -113,7 +113,7 @@ export default function Practice({
         if (phase === 'setup') {
             return (
                 <>
-                    {showGrid && <MasteryGrid mastery={mastery} onClose={() => setShowGrid(false)} />}
+                    {showGrid && <MasteryGrid mastery={mastery} tables={Array.from({ length: plafond }, (_, i) => i + 1)} onClose={() => setShowGrid(false)} />}
                     <Setup
                         onBack={onBack}
                         picked={picked}

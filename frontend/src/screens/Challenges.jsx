@@ -5,7 +5,7 @@ import {
     enregistrerSession, enregistrerSessionProf,
     creerDefi, rejoindreDefi, terminerDefi,
     classementDefi, avancementDefi, suivreDefi,
-    listeClasses, apercuDefiClasse,
+    listeClasses, apercuDefiClasse, definirPlafondClasse,
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -51,8 +51,8 @@ const CHALLENGE_TYPES = [
 ];
 
 export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig }) {
-    const [phase, setPhase] = useState('select');
-    const [challengeType, setChallengeType] = useState(null);
+    const [phase, setPhase] = useState(() => (estProf ? 'config' : 'select'));
+    const [challengeType, setChallengeType] = useState(() => CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0]);
     const [joinCode, setJoinCode] = useState('');
     const [selectedTables, setSelectedTables] = useState([2, 3, 4, 5, 6, 7, 8, 9, 10]);
     const [result, setResult] = useState(null);
@@ -217,11 +217,12 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         return (
             <ChallengeConfig
                 type={challengeType}
+                setType={setChallengeType}
                 tables={selectedTables}
                 setTables={setSelectedTables}
                 plafond={plafond}
                 estProf={estProf}
-                onBack={() => { setPreSelectedClasse(null); setPhase('select'); }}
+                onBack={() => { setPreSelectedClasse(null); if (estProf) onBack?.(); else setPhase('select'); }}
                 onStart={(tables) => {
                     if (tables) setSelectedTables(tables);
                     setPhase('play');
@@ -446,73 +447,27 @@ function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onVi
 
 /* ===================== CONFIG ===================== */
 
-function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi, initialClasse }) {
+function ChallengeConfig({ type, setType, tables, setTables, plafond, estProf, onBack, onStart, onCreateDefi, initialClasse }) {
+    if (estProf) {
+        return (
+            <ChallengeConfigProf
+                type={type}
+                setType={setType}
+                tables={tables}
+                setTables={setTables}
+                onBack={onBack}
+                onCreateDefi={onCreateDefi}
+                initialClasse={initialClasse}
+            />
+        );
+    }
+
     const isClimb = type.id === 'climb';
-    const isShareable = type.shareable === true;
     const availableTables = ALL_TABLES.filter(t => t >= 2 && t <= Math.max(10, plafond));
-    const [creating, setCreating] = useState(false);
-    const [createError, setCreateError] = useState(null);
-    const [classes, setClasses] = useState([]);
-    const [selectedClasse, setSelectedClasse] = useState(initialClasse || null);
-    // Confirmation avant création quand des élèves sont hors plafond
-    const [confirmInfo, setConfirmInfo] = useState(null);
-
-    // Load classes for prof defi creation
-    useEffect(() => {
-        if (estProf && isShareable) {
-            listeClasses().then(res => {
-                if (res.ok && res.data) {
-                    setClasses(res.data);
-                    // Pré-sélection : initialClasse si fournie, sinon la première
-                    if (!selectedClasse && res.data.length > 0) {
-                        setSelectedClasse(res.data[0].classe);
-                    }
-                }
-            });
-        }
-    }, [estProf, isShareable]);
-
-    // Toute modification de tables ou de classe annule le consentement
-    // précédent : le prof repasse par la vérification.
-    useEffect(() => {
-        setConfirmInfo(null);
-    }, [tables, selectedClasse]);
 
     const toggle = (t) => {
         if (t > plafond) return;
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
-    };
-
-    // Étape 1 : vérifier si des élèves sont hors plafond (prof uniquement)
-    const handleCreate = async () => {
-        if (tables.length === 0) return;
-        setCreating(true);
-        setCreateError(null);
-        setConfirmInfo(null);
-
-        // Pour un prof avec une classe, vérifier le plafond
-        if (estProf && selectedClasse) {
-            const apercu = await apercuDefiClasse(selectedClasse, tables);
-            if (apercu.ok && apercu.data?.eleves_hors_plafond > 0) {
-                setConfirmInfo(apercu.data);
-                setCreating(false);
-                return;
-            }
-        }
-
-        // Pas de problème de plafond → créer directement
-        await doCreate();
-    };
-
-    // Étape 2 : créer le défi (appelé directement ou après confirmation)
-    const doCreate = async () => {
-        setCreating(true);
-        setConfirmInfo(null);
-        const res = await onCreateDefi(type, tables, estProf ? selectedClasse : null);
-        if (!res.ok) {
-            setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
-            setCreating(false);
-        }
     };
 
     return (
@@ -524,7 +479,7 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
                 <h2 className="font-display" style={{ fontSize: 26, fontWeight: 800, marginTop: 8 }}>
                     {type.name}
                 </h2>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                <p style={{ color: 'var(--gris)', fontWeight: 700, fontSize: 14 }}>
                     {type.desc}
                 </p>
             </div>
@@ -561,54 +516,34 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
                     <IconDocument size={18} color="var(--indigo)" /> Règles
                 </h3>
                 {type.id === 'sprint' && (
-                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
+                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--gris)' }}>
                         <li>20 questions, 3s par question</li>
                         <li>1er essai = 1 pt, rattrapé = ½ pt</li>
                         <li>Le plus rapide gagne — chaque erreur ajoute 3 secondes</li>
                     </ul>
                 )}
                 {type.id === 'flawless' && (
-                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
+                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--gris)' }}>
                         <li>Questions en flux continu</li>
                         <li>La première erreur t'arrête !</li>
                         <li>Pas de chrono par question</li>
                     </ul>
                 )}
                 {type.id === 'countdown' && (
-                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
+                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--gris)' }}>
                         <li>2 minutes chrono, 3s par question</li>
                         <li>1er essai = 1 pt, rattrapé = ½ pt</li>
                         <li>Maximum de points !</li>
                     </ul>
                 )}
                 {type.id === 'climb' && (
-                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--text-soft)' }}>
+                    <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--gris)' }}>
                         <li>Commence à la table 2, 3s par question</li>
                         <li>5 questions par palier, ≥4 justes pour passer</li>
                         <li>Débloque les tables supérieures !</li>
                     </ul>
                 )}
             </div>
-
-            {/* Classe selector for prof defi creation */}
-            {estProf && isShareable && classes.length > 0 && (
-                <div className="card" style={{ marginBottom: 14 }}>
-                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                        Classe du défi
-                    </h3>
-                    <div className="chips">
-                        {classes.map(c => (
-                            <button
-                                key={c.classe}
-                                className={`chip${selectedClasse === c.classe ? ' chip--navy' : ''}`}
-                                onClick={() => setSelectedClasse(c.classe)}
-                            >
-                                {c.classe}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             <button
                 className="btn btn--gold"
@@ -618,59 +553,346 @@ function ChallengeConfig({ type, tables, setTables, plafond, estProf, onBack, on
             >
                 Jouer seul ⚔️
             </button>
+        </div>
+    );
+}
 
-            {isShareable && (
-                <>
-                    {/* Message de confirmation si des élèves sont hors plafond */}
-                    {confirmInfo && (
-                        <div className="card" style={{
-                            marginTop: 10, padding: '16px 20px',
-                            border: '2px solid var(--sun)',
-                            background: 'rgba(201,162,39,0.08)',
-                        }}>
-                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)', marginBottom: 8 }}>
-                                ⚠️ La table {confirmInfo.table_max} dépasse le niveau atteint par {confirmInfo.eleves_hors_plafond} élève{confirmInfo.eleves_hors_plafond > 1 ? 's' : ''} sur {confirmInfo.eleves_classe}.
-                            </p>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginBottom: 12, lineHeight: 1.5 }}>
-                                {confirmInfo.plafond_commun ? `Le plus faible de la classe s'arrête à la table ${confirmInfo.plafond_commun}. ` : ''}Le défi reste jouable par tous et leur score sera enregistré — ils découvriront simplement une table qu'ils n'ont pas encore débloquée par la Montée des tables.
-                            </p>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <button
-                                    className="btn btn--gold"
-                                    style={{ flex: 1, fontSize: 14, padding: 12 }}
-                                    onClick={doCreate}
-                                    disabled={creating}
-                                >
-                                    {creating ? '⏳ Création…' : 'Lancer quand même'}
-                                </button>
-                                <button
-                                    className="btn btn--ghost"
-                                    style={{ flex: 1, fontSize: 14, padding: 12 }}
-                                    onClick={() => setConfirmInfo(null)}
-                                >
-                                    Annuler
-                                </button>
+function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreateDefi, initialClasse }) {
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState(null);
+    const [classes, setClasses] = useState([]);
+    const [selectedClasse, setSelectedClasse] = useState(initialClasse || null);
+    const [apercu, setApercu] = useState(null);
+    const [openingPlafond, setOpeningPlafond] = useState(false);
+
+    // Modes autorisés en défi : sprint et countdown
+    const currentModeId = type?.id === 'countdown' ? 'countdown' : 'sprint';
+
+    useEffect(() => {
+        listeClasses().then(res => {
+            if (res.ok && res.data) {
+                setClasses(res.data);
+                if (initialClasse) {
+                    setSelectedClasse(initialClasse);
+                } else if (res.data.length > 0 && selectedClasse === null) {
+                    setSelectedClasse(res.data[0].classe);
+                }
+            }
+        });
+    }, [initialClasse]);
+
+    // Recharger l'aperçu classe dès que classe ou tables changent
+    useEffect(() => {
+        let active = true;
+        if (selectedClasse && tables.length > 0) {
+            apercuDefiClasse(selectedClasse, tables).then(res => {
+                if (active && res.ok) {
+                    setApercu(res.data);
+                }
+            }).catch(() => {});
+        } else {
+            setApercu(null);
+        }
+        return () => { active = false; };
+    }, [selectedClasse, tables]);
+
+    const toggle = (t) => {
+        setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+    };
+
+    const highestTable = tables.length > 0 ? Math.max(...tables) : 2;
+
+    const handleOuvrirTableAClass = async () => {
+        if (!selectedClasse) return;
+        setOpeningPlafond(true);
+        const res = await definirPlafondClasse(selectedClasse, highestTable);
+        setOpeningPlafond(false);
+        if (res.ok) {
+            const fresh = await apercuDefiClasse(selectedClasse, tables);
+            if (fresh.ok) setApercu(fresh.data);
+        }
+    };
+
+    const handleCreate = async () => {
+        if (tables.length === 0 || creating) return;
+        setCreating(true);
+        setCreateError(null);
+        const currentType = CHALLENGE_TYPES.find(t => t.id === currentModeId) || CHALLENGE_TYPES[0];
+        const res = await onCreateDefi(currentType, tables, selectedClasse);
+        if (!res.ok) {
+            setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
+            setCreating(false);
+        }
+    };
+
+    // Tables disponibles (2 à 13)
+    const availableTables = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+
+    const modeLabel = currentModeId === 'sprint' ? 'Sprint' : 'Contre‑la‑montre';
+    const durationLabel = currentModeId === 'sprint' ? '20 questions' : '2 min';
+    const sortedTables = [...tables].sort((a, b) => a - b);
+    const summaryText = `${modeLabel} · table${sortedTables.length > 1 ? 's' : ''} ${sortedTables.join(', ')} · ${selectedClasse || 'Sans classe'} · ${durationLabel}`;
+
+    return (
+        <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 24 }}>
+            {/* 1. Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10 }}>
+                <button
+                    onClick={onBack}
+                    style={{
+                        background: 'none', border: 'none', padding: 0,
+                        fontFamily: 'var(--texte)', fontSize: 21, fontWeight: 700,
+                        color: 'var(--indigo-doux)', cursor: 'pointer',
+                    }}
+                >
+                    ‹ Accueil
+                </button>
+                <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--gris)' }}>
+                    Étape 3 sur 3
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <h2 className="font-display" style={{ margin: 0, fontSize: 40, fontWeight: 700, color: 'var(--indigo)' }}>
+                    Lancer un défi
+                </h2>
+                <div style={{ fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 600, color: 'var(--gris)' }}>
+                    Le code s'affichera en grand pour la classe.
+                </div>
+            </div>
+
+            {/* 2. Le mode */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{
+                    fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                    color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                }}>
+                    Le mode
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                    {/* Sprint */}
+                    <div
+                        onClick={() => setType?.(CHALLENGE_TYPES.find(t => t.id === 'sprint'))}
+                        style={{
+                            flex: 1, borderRadius: 22, padding: 20, display: 'flex',
+                            alignItems: 'center', gap: 14, cursor: 'pointer',
+                            background: currentModeId === 'sprint' ? 'var(--action)' : 'var(--surface)',
+                            boxShadow: currentModeId === 'sprint' ? 'none' : 'var(--ombre-carte)',
+                        }}
+                    >
+                        <IconSprint
+                            size={34}
+                            color={currentModeId === 'sprint' ? 'var(--action-texte)' : 'var(--indigo)'}
+                            actionColor={currentModeId === 'sprint' ? 'var(--action-texte)' : 'var(--action)'}
+                        />
+                        <div>
+                            <div className="font-display" style={{
+                                fontSize: 24, fontWeight: 700,
+                                color: currentModeId === 'sprint' ? 'var(--action-texte)' : 'var(--indigo)',
+                            }}>
+                                Sprint
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
+                                color: currentModeId === 'sprint' ? 'var(--ciel-pale)' : 'var(--gris)',
+                            }}>
+                                20 questions · 3 s
                             </div>
                         </div>
-                    )}
+                    </div>
 
-                    {!confirmInfo && (
-                        <button
-                            className="btn btn--navy"
-                            style={{ width: '100%', fontSize: 18, padding: 14, marginTop: 10 }}
-                            disabled={tables.length === 0 || creating}
-                            onClick={handleCreate}
-                        >
-                            {creating ? '⏳ Création…' : '👥 Créer un défi'}
-                        </button>
-                    )}
-                    {createError && (
-                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', marginTop: 8, textAlign: 'center' }}>
-                            {createError}
-                        </p>
-                    )}
-                </>
+                    {/* Contre-la-montre */}
+                    <div
+                        onClick={() => setType?.(CHALLENGE_TYPES.find(t => t.id === 'countdown'))}
+                        style={{
+                            flex: 1, borderRadius: 22, padding: 20, display: 'flex',
+                            alignItems: 'center', gap: 14, cursor: 'pointer',
+                            background: currentModeId === 'countdown' ? 'var(--action)' : 'var(--surface)',
+                            boxShadow: currentModeId === 'countdown' ? 'none' : 'var(--ombre-carte)',
+                        }}
+                    >
+                        <IconChrono
+                            size={34}
+                            color={currentModeId === 'countdown' ? 'var(--action-texte)' : 'var(--indigo)'}
+                            actionColor={currentModeId === 'countdown' ? 'var(--action-texte)' : 'var(--action)'}
+                        />
+                        <div>
+                            <div className="font-display" style={{
+                                fontSize: 24, fontWeight: 700,
+                                color: currentModeId === 'countdown' ? 'var(--action-texte)' : 'var(--indigo)',
+                            }}>
+                                Contre‑la‑montre
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
+                                color: currentModeId === 'countdown' ? 'var(--ciel-pale)' : 'var(--gris)',
+                            }}>
+                                2 minutes
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                    Sans faute et Montée ne sont pas proposés : les durées varient trop pour une classe entière.
+                </div>
+            </div>
+
+            {/* 3. Les tables */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{
+                    fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                    color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                }}>
+                    Les tables
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
+                    {availableTables.map(t => {
+                        const isSelected = tables.includes(t);
+                        return (
+                            <button
+                                key={t}
+                                onClick={() => toggle(t)}
+                                style={{
+                                    height: 76, borderRadius: 18, border: 'none', cursor: 'pointer',
+                                    background: isSelected ? 'var(--action)' : 'var(--surface)',
+                                    color: isSelected ? 'var(--action-texte)' : 'var(--indigo)',
+                                    boxShadow: isSelected ? 'none' : 'var(--ombre-carte)',
+                                    fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 32,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                {t}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 4. La classe */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{
+                    fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                    color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                }}>
+                    La classe
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    {classes.map(c => {
+                        const isSelected = selectedClasse === c.classe;
+                        return (
+                            <div
+                                key={c.classe}
+                                onClick={() => setSelectedClasse(c.classe)}
+                                style={{
+                                    flex: '1 1 calc(25% - 10px)', minWidth: 140, borderRadius: 20, padding: 18,
+                                    cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2,
+                                    background: isSelected ? 'var(--indigo)' : 'var(--surface)',
+                                    boxShadow: isSelected ? 'none' : 'var(--ombre-carte)',
+                                }}
+                            >
+                                <div className="font-display" style={{
+                                    fontSize: 26, fontWeight: 700,
+                                    color: isSelected ? 'var(--action-texte)' : 'var(--indigo)',
+                                }}>
+                                    {c.classe}
+                                </div>
+                                <div style={{
+                                    fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
+                                    color: isSelected ? 'var(--ciel-pale)' : 'var(--gris)',
+                                }}>
+                                    {c.eleves_count || c.effectif || 27} élèves
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {/* Option Sans classe */}
+                    <div
+                        onClick={() => setSelectedClasse(null)}
+                        style={{
+                            flex: '1 1 calc(25% - 10px)', minWidth: 140, borderRadius: 20, padding: 18,
+                            cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2,
+                            background: selectedClasse === null ? 'var(--indigo)' : 'var(--surface)',
+                            boxShadow: selectedClasse === null ? 'none' : 'var(--ombre-carte)',
+                        }}
+                    >
+                        <div className="font-display" style={{
+                            fontSize: 22, fontWeight: 700,
+                            color: selectedClasse === null ? 'var(--action-texte)' : 'var(--indigo-doux)',
+                        }}>
+                            Sans classe
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
+                            color: selectedClasse === null ? 'var(--ciel-pale)' : 'var(--gris)',
+                        }}>
+                            code seul
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 5. Avertissement si eleves_hors_plafond > 0 */}
+            {selectedClasse && apercu && apercu.eleves_hors_plafond > 0 && (
+                <div style={{
+                    background: 'var(--orange-pale)', borderRadius: 24, padding: '22px 24px',
+                    display: 'flex', alignItems: 'flex-start', gap: 16, marginTop: 6,
+                }}>
+                    <div style={{ width: 10, alignSelf: 'stretch', borderRadius: 5, background: 'var(--orange)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                        <div className="font-display" style={{ fontSize: 23, fontWeight: 700, color: 'var(--indigo-encre)' }}>
+                            {apercu.eleves_hors_plafond} élève{apercu.eleves_hors_plafond > 1 ? 's' : ''} de {selectedClasse} {apercu.eleves_hors_plafond > 1 ? "n'ont" : "n'a"} pas encore la table de {highestTable}
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--indigo-doux)' }}>
+                            {apercu.eleves_hors_plafond > 1 ? 'Ils pourront' : 'Il pourra'} jouer le défi — les questions au‑delà de {apercu.eleves_hors_plafond > 1 ? 'leur' : 'son'} plafond ne compteront pas contre {apercu.eleves_hors_plafond > 1 ? 'eux' : 'lui'}. Tu peux aussi retirer la table de {highestTable}, ou {apercu.eleves_hors_plafond > 1 ? 'leur' : 'lui'} ouvrir la {highestTable} en une action.
+                        </div>
+                        <div style={{ display: 'flex', gap: 18, paddingTop: 4 }}>
+                            <button
+                                onClick={handleOuvrirTableAClass}
+                                disabled={openingPlafond}
+                                style={{
+                                    background: 'none', border: 'none', padding: 0,
+                                    fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 700,
+                                    color: 'var(--indigo-encre)', cursor: 'pointer', textDecoration: 'underline',
+                                }}
+                            >
+                                {openingPlafond ? 'Ouverture en cours…' : `Ouvrir la table de ${highestTable} à toute la classe ›`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
+
+            <div style={{ flex: 1 }} />
+
+            {/* 6. Bas de page : Récapitulatif + Bouton de création */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{
+                    fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600,
+                    color: 'var(--gris)', textAlign: 'center',
+                }}>
+                    {summaryText}
+                </div>
+                {createError && (
+                    <div style={{
+                        fontSize: 14, fontWeight: 700, color: 'var(--rouge)', textAlign: 'center',
+                    }}>
+                        {createError}
+                    </div>
+                )}
+                <button
+                    onClick={handleCreate}
+                    disabled={tables.length === 0 || creating}
+                    style={{
+                        height: 104, borderRadius: 26, background: 'var(--action)',
+                        color: 'var(--action-texte)', fontFamily: 'var(--texte)',
+                        fontWeight: 700, fontSize: 26, border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        opacity: tables.length === 0 || creating ? 0.6 : 1,
+                    }}
+                >
+                    {creating ? 'Création en cours…' : 'Créer le défi et projeter le code'}
+                </button>
+            </div>
         </div>
     );
 }

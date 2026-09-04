@@ -11,7 +11,7 @@ export default function MasteryGrid({ mastery, tables, onClose }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="card" style={{ maxWidth: 460, width: '100%' }} onClick={e => e.stopPropagation()}>
+            <div className="card" style={{ maxWidth: range.length > 10 ? 560 : 460, width: '100%' }} onClick={e => e.stopPropagation()}>
                 <h3 className="font-display" style={{ fontWeight: 800, fontSize: 20, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Grille de maîtrise
                 </h3>
