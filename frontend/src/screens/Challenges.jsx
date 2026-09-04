@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { newQuestion, PRAISE, makeHint, ALL_TABLES } from '../logic/questions';
-import { buildWeights, construireErreurs, construireMaitrise, cleFait } from '../logic/mastery';
+import { buildWeights, construireErreurs, construireFaits, cleFait } from '../logic/mastery';
 import {
     enregistrerSession, enregistrerSessionProf,
     creerDefi, rejoindreDefi, terminerDefi,
@@ -94,7 +94,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         setPhase('results');
 
         const mode = challengeType?.id || 'sprint';
-        const maitrise = construireMaitrise(r.resultats || []);
+        const faits = construireFaits(r.resultats || []);
         const erreurs = construireErreurs(r.resultats || []);
 
         let tables = selectedTables;
@@ -115,7 +115,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             serieMax: r.maxStreak || 0,
             sansFauteMax: mode === 'flawless' ? (r.maxStreak || 0) : (r.maxStreak || 0),
             plusHauteTable: mode === 'climb' ? (r.highestTable || null) : null,
-            maitrise,
+            faits,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
@@ -147,13 +147,13 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         setResult(r);
         setPhase('defi-results');
 
-        const maitrise = construireMaitrise(r.resultats || []);
+        const faits = construireFaits(r.resultats || []);
         const payload = {
             defiId: defiInfo.defi_id,
             score: r.score || 0,
             tempsS: Math.round(r.time || 0),
             erreurs: (r.answered || 0) - (r.score || 0),
-            maitrise,
+            faits,
             scorePremierEssai: r.scorePremierEssai ?? null,
         };
         envoyerDefi(payload);
@@ -1008,6 +1008,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
     const lockRef = useRef(false);
     const resultatsRef = useRef([]);
     const qTimerRef = useRef(null);
+    const questionStartTimeRef = useRef(performance.now());
 
     // ── Compteurs : refs pour la logique, état pour l'affichage ──
     // Une closure capturée par un setTimeout lit l'état du rendu
@@ -1042,6 +1043,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
         setPremierEssai(true);
         setQTimerActive(false); setQTimerExpired(false);
         clearTimeout(qTimerRef.current);
+        questionStartTimeRef.current = performance.now();
         setQ(newQ);
         setDigits(Array(String(newQ.answer).length).fill(''));
     }, []);
@@ -1049,7 +1051,8 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
     /** Enregistre le résultat d'une question. Met à jour refs ET état.
      *  Retourne les valeurs à jour (post-incrément) pour la logique appelante. */
     const recordResult = useCallback((result) => {
-        resultatsRef.current.push({ a: q.a, b: q.b, result });
+        const temps_ms = Math.round(performance.now() - questionStartTimeRef.current);
+        resultatsRef.current.push({ a: q.a, b: q.b, result, temps_ms });
         answeredRef.current += 1;
         setAnswered(a => a + 1);
 

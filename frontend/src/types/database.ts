@@ -273,28 +273,34 @@ export type Database = {
       }
       maitrise: {
         Row: {
+          dernier_temps_ms: number | null
           derniere_vue: string
           eleve_id: string
           fait: string
           nb_reussites: number
           nb_vues: number
           niveau: number
+          serie_rapide: number
         }
         Insert: {
+          dernier_temps_ms?: number | null
           derniere_vue?: string
           eleve_id: string
           fait: string
           nb_reussites?: number
           nb_vues?: number
           niveau?: number
+          serie_rapide?: number
         }
         Update: {
+          dernier_temps_ms?: number | null
           derniere_vue?: string
           eleve_id?: string
           fait?: string
           nb_reussites?: number
           nb_vues?: number
           niveau?: number
+          serie_rapide?: number
         }
         Relationships: [
           {
@@ -619,6 +625,7 @@ export type Database = {
           p_defi_id?: string
           p_duree_s?: number
           p_erreurs?: Json
+          p_faits?: Json
           p_maitrise?: Json
           p_mode: string
           p_nb_questions: number
@@ -791,11 +798,13 @@ export type Database = {
       reactiver_eleve: { Args: { p_eleve_id: string }; Returns: Json }
       rejoindre_defi: { Args: { p_code: string }; Returns: Json }
       reparer_rattachements: { Args: never; Returns: Json }
+      seuil_reponse_rapide: { Args: never; Returns: number }
       terminer_defi: {
         Args: {
           p_defi_id: string
           p_detail?: Json
           p_erreurs?: number
+          p_faits?: Json
           p_maitrise?: Json
           p_score: number
           p_score_premier_essai?: number

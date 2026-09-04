@@ -60,6 +60,9 @@ export default function MasteryGrid({ mastery, tables, onClose }) {
                         Pas testé
                     </span>
                 </div>
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: 'var(--indigo-doux)', lineHeight: 1.45 }}>
+                    Une case devient verte quand tu réponds juste <strong>deux fois de suite, sans hésiter</strong>.
+                </div>
                 <button className="btn btn--ghost" style={{ width: '100%', marginTop: 14 }} onClick={onClose}>
                     Fermer
                 </button>

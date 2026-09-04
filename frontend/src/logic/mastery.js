@@ -5,8 +5,8 @@
  *   undefined = jamais vu · 1 = rouge · 2 = jaune · 3 = vert
  *
  * La base stocke ces valeurs dans `maitrise.niveau`,
- * `construireMaitrise()` les produit, et `masteryColor()`
- * les affiche. Pas de deuxième grille locale.
+ * `construireFaits()` transmet les faits bruts au serveur (migration 26),
+ * et `masteryColor()` les affiche. Pas de deuxième grille locale.
  */
 
 /** Clé normalisée : le plus petit d'abord. */
@@ -68,41 +68,16 @@ export function construireErreurs(resultats) {
 }
 
 /**
- * Construit la map de maîtrise pour le serveur.
- *
- * Règle (migration 12, 28/08) :
- *   - premier coup → 3 (vert)
- *   - rattrapé     → 2 (jaune)
- *   - jamais trouvé → 1 (rouge)
- *
- * Si un fait apparaît plusieurs fois, on garde le pire résultat.
+ * Construit le tableau ordonné des faits bruts pour le serveur (migration 26).
+ * Une entrée par question répondue, dans l'ordre chronologique :
+ *   { fait: "7_8", juste: boolean, premier: boolean, temps_ms?: number }
  */
-export function construireMaitrise(resultats) {
-    const m = {};
-    const niveauDe = { premier: 3, rattrape: 2, jamais: 1 };
-    for (const r of resultats) {
-        const key = cleFait(r.a, r.b);
-        const n = niveauDe[r.result] || 1;
-        // Garder le pire (le plus bas)
-        if (m[key] === undefined || n < m[key]) {
-            m[key] = n;
-        }
-    }
-    return m;
-}
-
-/**
- * Met à jour la maîtrise locale en session (après chaque question).
- * Écrit directement le niveau serveur : 3/2/1.
- */
-export function updateMastery(prev, a, b, result) {
-    const key = cleFait(a, b);
-    const niveauDe = { premier: 3, rattrape: 2, jamais: 1 };
-    const n = niveauDe[result] || 1;
-    const existing = prev[key];
-    // Garder le pire résultat de la session
-    if (existing === undefined || n < existing) {
-        return { ...prev, [key]: n };
-    }
-    return prev;
+export function construireFaits(resultats) {
+    if (!Array.isArray(resultats)) return [];
+    return resultats.map(r => ({
+        fait: cleFait(r.a, r.b),
+        juste: r.result === 'premier' || r.result === 'rattrape',
+        premier: r.result === 'premier',
+        ...(typeof r.temps_ms === 'number' ? { temps_ms: r.temps_ms } : {}),
+    }));
 }

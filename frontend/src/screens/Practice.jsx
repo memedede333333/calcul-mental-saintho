@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ALL_TABLES, PRAISE, newQuestion, makeHint } from '../logic/questions';
-import { updateMastery, buildWeights, construireErreurs, construireMaitrise, cleFait, masteryColor } from '../logic/mastery';
+import { buildWeights, construireErreurs, construireFaits, cleFait, masteryColor } from '../logic/mastery';
 import { enregistrerSession, enregistrerSessionProf } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -62,8 +62,7 @@ export default function Practice({
             return;
         }
 
-        const maitriseSortie = construireMaitrise(r.resultats);
-        setMastery(prev => ({ ...prev, ...maitriseSortie }));
+        const faits = construireFaits(r.resultats || []);
         setResult(r);
         setServerResult(null);
         setPhase(isLibre ? 'libre-results' : 'results');
@@ -82,7 +81,7 @@ export default function Practice({
             serieMax: r.maxStreak,
             sansFauteMax: r.maxStreak,
             plusHauteTable: null,
-            maitrise: maitriseSortie,
+            faits,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
@@ -892,7 +891,7 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
         const finalResults = [...resultatsRef.current];
         // Si l'élève interrompt en plein milieu d'une question ratée sans jamais l'avoir trouvée
         if (!premierEssaiRef.current) {
-            finalResults.push({ a: q.a, b: q.b, result: 'jamais' });
+            finalResults.push({ a: q.a, b: q.b, result: 'jamais', temps_ms: Math.round(performance.now() - questionStartTime) });
         }
         onDone({
             score: scoreRef.current,
@@ -912,6 +911,7 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
         if (lockRef.current) return;
         const now = performance.now();
         const durationSec = Math.max(0.1, (now - questionStartTime) / 1000);
+        const timeTakenMs = Math.round(now - questionStartTime);
         const ok = val === q.answer;
         const factKey = cleFait(q.a, q.b);
 
@@ -938,9 +938,9 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
             if (isFirstTry) {
                 scorePremierRef.current += 1;
                 setScorePremierEssai(s => s + 1);
-                resultatsRef.current.push({ a: q.a, b: q.b, result: 'premier' });
+                resultatsRef.current.push({ a: q.a, b: q.b, result: 'premier', temps_ms: timeTakenMs });
             } else {
-                resultatsRef.current.push({ a: q.a, b: q.b, result: 'rattrape' });
+                resultatsRef.current.push({ a: q.a, b: q.b, result: 'rattrape', temps_ms: timeTakenMs });
                 // Si réussi lors d'une reprise step 1 -> reprogrammer vers la fin (step 2)
                 const pending = scheduledQueue.current.find(item => cleFait(item.q.a, item.q.b) === factKey);
                 if (!pending) {
@@ -1634,6 +1634,7 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
     const lockRef = useRef(false);
     const resultatsRef = useRef([]);
     const startRef = useRef(Date.now());
+    const questionStartTimeRef = useRef(performance.now());
     const scoreRef = useRef(0);
     const scorePremierRef = useRef(0);
     const answeredRef = useRef(0);
@@ -1710,13 +1711,15 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
         setShowHint(false);
         setPremierEssai(true);
         setAttempts(0);
+        questionStartTimeRef.current = performance.now();
         const newQ = newQuestion(tables, q, sessionWeights);
         setQ(newQ);
         setDigits(Array(String(newQ.answer).length).fill(''));
     }, [tables, q, sessionWeights]);
 
     const recordAndAdvance = useCallback((res) => {
-        resultatsRef.current.push({ a: q.a, b: q.b, result: res });
+        const temps_ms = Math.round(performance.now() - questionStartTimeRef.current);
+        resultatsRef.current.push({ a: q.a, b: q.b, result: res, temps_ms });
         answeredRef.current += 1;
         setAnswered(a => a + 1);
 

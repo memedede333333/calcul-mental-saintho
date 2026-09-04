@@ -38,6 +38,40 @@ entrée **en haut** de la section « Entrées », sur ce modèle :
 
 ---
 
+## 2026-09-04 — Lot 18 : La maîtrise devient une règle de temps (Migration 26 appliquée)
+
+**Fait** —
+- **Migration 26 appliquée** sur `calcul-mental-dev` via MCP Supabase (`supabase/migrations/20260904140000_maitrise_au_temps.sql`). Suppression préalable des anciennes signatures pour éviter l'erreur d'unicité `function ... is not unique`. Contrôle SQL vérifié : `seuil_ms = 3000`, `colonnes = 2` (`serie_rapide`, `dernier_temps_ms`), `sig_session = 1`, `sig_defi = 1`.
+- **Relais de `p_faits` dans `terminer_defi`** intégré directement dans la migration 26 (suite au point soulevé en relecture par Antigravity). Les défis bénéficient ainsi de la même règle de temps que les modes solos sans rupture de traçabilité. Scénario complet : **132 cas verts**.
+- **Types TypeScript régénérés** dans `frontend/src/types/database.ts` intégrant `p_faits` sur `enregistrer_session` et `terminer_defi`.
+- **Client API mis à jour** dans `frontend/src/api.js` : transmission de `p_faits` dans `enregistrerSession()` et dans `terminerDefi()`.
+- **Logique de maîtrise mise à niveau** dans `frontend/src/logic/mastery.js` : suppression de `construireMaitrise()` et `updateMastery()`, remplacées par `construireFaits(resultats)` qui extrait la liste chronologique des faits bruts `{ fait, juste, premier, temps_ms }`.
+- **Chronomètre par question instrumenté** dans l'ensemble des quiz :
+  - `Challenges.jsx` (`useQuizEngine`) : horodatage `questionStartTimeRef` posé à l'affichage de chaque question (y compris la première et via `resetQuestion`), lecture de `temps_ms` à la validation, couvrant Sprint, Sans faute, Contre-la-montre, Montée des tables et Défi.
+  - `Practice.jsx` (`LibreQuiz` & `Quiz`) : horodatage à l'affichage et transmission de `temps_ms` lors de l'enregistrement du résultat.
+- **Information élève ajoutée** dans `MasteryGrid.jsx` : phrase sous la légende « Une case devient verte quand tu réponds juste **deux fois de suite, sans hésiter**. » (sans mentionner le seuil technique de 3 secondes).
+- **Vérifications et compilation** : `check-tokens.mjs` (88 tokens actifs, 0 couleur en dur hors tokens) et `npm run build` 100 % verts.
+
+**Décidé** —
+- `terminer_defi` a été mis à jour directement dans la migration 26 (et non dans une migration 27 séparée) pour garantir l'indivisibilité du contrat d'API entre modes solo et défis.
+- La règle du seuil de 3 000 ms reste exclusivement dans le serveur (`seuil_reponse_rapide()`), aucun écran ne la duplique.
+- Les faits déjà verts en base ont démarré avec une `serie_rapide = 2` afin de préserver les acquis antérieurs des élèves.
+- Une réponse juste mais lente (> 3 000 ms) ou rattrapée remet la série rapide à zéro et redescend une case verte en orange (comportement pédagogique validé).
+
+**Constaté** —
+- Test SQL d'enchaînement de réponses sur `calcul-mental-dev` :
+  - 1re réponse rapide (< 3 000 ms) -> niveau 2 (orange), série 1.
+  - 2e réponse rapide (< 3 000 ms) -> niveau 3 (vert), série 2.
+  - 3e réponse lente (> 3 000 ms) -> niveau 2 (orange), série 0 (redescente confirmée).
+  - 4e réponse fausse -> niveau 1 (rouge), série 0.
+- Test SQL sur `terminer_defi` : le relais de `p_faits` par `terminer_defi` à `enregistrer_session` a bien validé la case `5_6` au vert (niveau 3) après deux réussites rapides.
+- Dans le modal de la grille élève (`MasteryGrid`), la légende est complétée par la nouvelle phrase explicative, lisible et parfaitement intégrée.
+
+**Ensuite** —
+- Écrans sans maquette (Ma classe, Accueil professeur, Administration).
+
+---
+
 ## 2026-09-04 — La refonte est dans le code, et la migration 25
 
 **Fait** — Lots 13 à 16 bis livrés par Antigravity et relus dans le code, pas

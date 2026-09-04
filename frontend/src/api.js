@@ -292,6 +292,7 @@ export async function enregistrerSession(s) {
         p_maitrise: s.maitrise ?? {},
         p_defi_id: s.defiId ?? null,
         p_score_premier_essai: s.scorePremierEssai ?? null,
+        p_faits: s.faits ?? null,
     };
 
     const r = await rpc('enregistrer_session', params);
@@ -435,7 +436,9 @@ export async function rejoindreDefi(code) {
     return rpc('rejoindre_defi', { p_code: code.trim().toUpperCase() });
 }
 
-export async function terminerDefi({ defiId, score, tempsS, erreurs = 0, detail = {}, maitrise = {}, scorePremierEssai = null }) {
+export async function terminerDefi({ defiId, score, tempsS, erreurs = 0,
+                                     detail = {}, maitrise = {},
+                                     scorePremierEssai = null, faits = null }) {
     return rpc('terminer_defi', {
         p_defi_id: defiId,
         p_score: score,
@@ -444,6 +447,7 @@ export async function terminerDefi({ defiId, score, tempsS, erreurs = 0, detail 
         p_detail: detail,
         p_maitrise: maitrise,
         p_score_premier_essai: scorePremierEssai,
+        p_faits: faits,
     });
 }
 
