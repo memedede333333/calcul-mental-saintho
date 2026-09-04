@@ -25,13 +25,29 @@ Sous le prénom, avant tout le reste :
 
 Le bouton « Ma grille » du bas disparaît : ce lien le remplace.
 
-**Le dénominateur suit le plafond de l'élève.** `MasteryGrid.jsx` l. 10 dessine
-une grille **carrée** : un plafond de 10 fait 100 cases, un plafond de 15 en
-fait 225. Aucun 100 ni 144 en dur.
+**Le dénominateur suit le plafond de l'élève, et la grille est symétrique.**
+Corrigé le 4 septembre — la première version de ce paragraphe était fausse, lis
+celle-ci.
 
-Le comptage se fait dans la clé `maitrise` que `monProfil()` renvoie déjà —
-niveau 3 = vert, 1 = rouge. C'est la grille complète, pas un échantillon :
-compter dedans est légitime.
+`MasteryGrid.jsx` dessine une grille **carrée** de `plafond × plafond` cases
+(l. 19), mais la clé qu'elle lit est `min(r,c)_max(r,c)` (l. 29) : **4×7 et 7×4
+sont la même entrée**. Conséquence : au plafond 10, la grille montre **100
+cases** et la clé `maitrise` contient au plus **55 entrées**. Compter les
+entrées et diviser par 100, c'est diviser le score de l'élève par deux, tous
+les jours, sans que personne s'en aperçoive.
+
+La règle, donc : **on compte les cases affichées, pas les entrées.** Pour chaque
+couple (r, c) de `1..plafond`, on lit `maitrise[min_max]` et on compte. Le
+dénominateur est `plafond × plafond`. Le nombre annoncé est alors exactement ce
+que l'élève voit quand il ouvre la grille juste à côté — c'est tout l'intérêt de
+la phrase.
+
+Niveau 3 = vert, 2 = orange, 1 = rouge, absent = jamais vue.
+
+**Et il faut passer `tables` à `MasteryGrid`.** Personne ne le fait aujourd'hui :
+`Practice.jsx` l. 86 l'appelle sans, donc `range` retombe sur le `[1..10]` par
+défaut de la l. 9. Un élève au plafond 15 voit une grille de 10 — c'est un défaut
+existant, corrige-le au passage aux deux endroits.
 
 ### b) Six modes, pas quatre
 
@@ -98,9 +114,19 @@ session n'existe.
   changer toi-même. » C'est exact — `changerAvatar` est la seule écriture
   autorisée à un élève sur sa propre fiche (RLS, `eleves_maj_avatar`).
 
-**Le déverrouillage** se fait après **une partie terminée**, quel qu'en soit le
-score. Écris-le en une seule condition, à un seul endroit : on pourrait vouloir
-l'enlever après observation en classe, et ça doit tenir en une ligne.
+**Le déclenchement de cet écran est UNE condition, pas deux** :
+`monProfil().records.nb_sessions === 0`. Rien d'autre.
+
+Ne le croise pas avec « `maitrise` vide » : deux conditions sur la même question,
+ce sont deux conditions qui finiront par se contredire — une partie restée dans
+la file hors-ligne, une session vide enregistrée avant la migration 25, et
+l'élève se retrouve devant un écran qui ne correspond ni à l'un ni à l'autre.
+Une seule source, `nb_sessions`, qui répond à la vraie question : as-tu déjà
+joué ?
+
+**Le déverrouillage** est la même condition passée à 1 : après **une partie
+terminée**, quel qu'en soit le score. Écris-la à un seul endroit : on pourrait
+vouloir l'enlever après observation en classe, et ça doit tenir en une ligne.
 
 ---
 
@@ -116,7 +142,15 @@ pas montré au professeur. La maquette le met **juste au-dessus du bouton** :
 > Ils pourront jouer le défi — les questions au-delà de leur plafond ne
 > compteront pas contre eux. Tu peux aussi retirer la table de 9, ou leur ouvrir
 > la 9 en une action.
-> **Ouvrir la table de 9 à toute la classe ›**   ·   *Voir qui ›*
+> **Ouvrir la table de 9 à toute la classe ›**
+
+**Pas de bouton « Voir qui » dans ce lot.** La maquette le propose, et il est
+juste — mais `apercu_defi_classe` ne renvoie que quatre compteurs, aucun nom.
+Le reconstituer avec `listeEleves` donnerait une liste fausse : cette fonction
+est ouverte à `est_prof()`, c'est-à-dire à **tous** les professeurs et **toutes**
+les classes, alors que le compteur juste au-dessus est filtré par
+`prof_voit_classe`. On afficherait des noms sous un compteur qui dit zéro.
+J'écris la fonction serveur dans la migration 25 ; le bouton arrivera avec.
 
 **Les deux nombres viennent tous les deux du serveur** : `eleves_hors_plafond`
 et `eleves_classe`. Ne calcule ni l'un ni l'autre, et ne les rapproche jamais en
@@ -153,6 +187,10 @@ chercher.
 
 - [ ] Le compte de cases change selon le plafond : teste avec un compte au
       plafond 10 puis au plafond 15, le total doit passer de 100 à 225.
+- [ ] **La symétrie** : ouvre la grille en grand, compte les vertes à l'oeil,
+      compare au nombre annoncé au-dessus. Ils doivent être égaux. S'ils sont
+      dans un rapport de 1 à 2, tu comptes les entrées au lieu des cases.
+- [ ] Un compte au plafond 15 voit une grille de 15 lignes, pas de 10.
 - [ ] Les six modes sont présents, et « Libre » n'est plus une carte à part.
 - [ ] L'action du jour vient de `mesTablesFaibles(1)` — pas d'un comptage local.
 - [ ] Coupe le wifi, joue une partie, rebranche : la ligne « 1 partie en attente
@@ -171,5 +209,6 @@ chercher.
 ## Ce que tu ne fais pas
 
 - **La maquette 9** (code projeté) : elle attend la migration 25.
+- **Le bouton « Voir qui »** de l'écran 17 : il attend la migration 25 aussi.
 - **`logic/mastery.js`** : la règle de maîtrise ne change pas dans ce lot.
 - Aucun nouvel appel serveur : les cinq fonctions utilisées ici existent toutes.
