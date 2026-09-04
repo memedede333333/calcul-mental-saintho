@@ -456,6 +456,10 @@ export async function avancementDefi(defiId) {
     return rpc('avancement_defi', { p_defi_id: defiId });
 }
 
+export async function presentsDefi(defiId) {
+    return rpc('presents_defi', { p_defi_id: defiId });
+}
+
 /**
  * Le classement se remplit tout seul pendant que les autres terminent.
  * C'est ce qui donne l'impression du direct — sans qu'aucun mécanisme
@@ -542,6 +546,10 @@ export async function listeClasses() {
 /** Avant de créer un défi : combien d'élèves n'ont pas la plus haute table choisie. */
 export async function apercuDefiClasse(classe, tables) {
     return rpc('apercu_defi_classe', { p_classe: classe, p_tables: tables });
+}
+
+export async function elevesHorsPlafond(classe, tables) {
+    return rpc('eleves_hors_plafond', { p_classe: classe, p_tables: tables });
 }
 
 /** Mes classes habituelles — un raccourci d'affichage, aucun effet sur les droits. */

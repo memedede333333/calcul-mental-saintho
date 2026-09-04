@@ -148,6 +148,39 @@ export type Database = {
           },
         ]
       }
+      defis_presences: {
+        Row: {
+          defi_id: string
+          eleve_id: string
+          rejoint_le: string
+        }
+        Insert: {
+          defi_id: string
+          eleve_id: string
+          rejoint_le?: string
+        }
+        Update: {
+          defi_id?: string
+          eleve_id?: string
+          rejoint_le?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defis_presences_defi_id_fkey"
+            columns: ["defi_id"]
+            isOneToOne: false
+            referencedRelation: "defis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "defis_presences_eleve_id_fkey"
+            columns: ["eleve_id"]
+            isOneToOne: false
+            referencedRelation: "eleves"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       difficulte_operande: {
         Row: {
           n: number
@@ -561,6 +594,15 @@ export type Database = {
       }
       desactiver_prof: { Args: { p_prof_id: string }; Returns: Json }
       eleve_courant: { Args: never; Returns: string }
+      eleves_hors_plafond: {
+        Args: { p_classe: string; p_tables: number[] }
+        Returns: {
+          eleve_id: string
+          nom: string
+          plafond_tables: number
+          prenom: string
+        }[]
+      }
       eleves_sans_connexion: {
         Args: { p_classe?: string }
         Returns: {
@@ -718,6 +760,18 @@ export type Database = {
       points_session: {
         Args: { p_score: number; p_score_premier: number; p_tables: number[] }
         Returns: number
+      }
+      presents_defi: {
+        Args: { p_defi_id: string }
+        Returns: {
+          a_termine: boolean
+          avatar_emoji: string
+          classe: string
+          eleve_id: string
+          est_moi: boolean
+          prenom: string
+          rejoint_le: string
+        }[]
       }
       prof_courant: { Args: never; Returns: string }
       prof_voit_classe: { Args: { p_classe: string }; Returns: boolean }

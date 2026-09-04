@@ -6,6 +6,7 @@ import {
     creerDefi, rejoindreDefi, terminerDefi,
     classementDefi, avancementDefi, suivreDefi,
     listeClasses, apercuDefiClasse, definirPlafondClasse,
+    presentsDefi, elevesHorsPlafond,
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -564,6 +565,9 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     const [selectedClasse, setSelectedClasse] = useState(initialClasse || null);
     const [apercu, setApercu] = useState(null);
     const [openingPlafond, setOpeningPlafond] = useState(false);
+    const [showNoms, setShowNoms] = useState(false);
+    const [nomsHorsPlafond, setNomsHorsPlafond] = useState([]);
+    const [loadingNoms, setLoadingNoms] = useState(false);
 
     // Modes autorisés en défi : sprint et countdown
     const currentModeId = type?.id === 'countdown' ? 'countdown' : 'sprint';
@@ -596,11 +600,42 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
         return () => { active = false; };
     }, [selectedClasse, tables]);
 
+    // Recharger les noms hors plafond dès que classe ou tables changent si le panneau est ouvert
+    useEffect(() => {
+        let active = true;
+        if (showNoms && selectedClasse && tables.length > 0) {
+            setLoadingNoms(true);
+            elevesHorsPlafond(selectedClasse, tables).then(res => {
+                if (active && res.ok && res.data) {
+                    setNomsHorsPlafond(res.data);
+                }
+                if (active) setLoadingNoms(false);
+            }).catch(() => {
+                if (active) setLoadingNoms(false);
+            });
+        }
+        return () => { active = false; };
+    }, [showNoms, selectedClasse, tables]);
+
     const toggle = (t) => {
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
     };
 
     const highestTable = tables.length > 0 ? Math.max(...tables) : 2;
+
+    const handleToggleVoirQui = async () => {
+        if (!showNoms) {
+            setShowNoms(true);
+            setLoadingNoms(true);
+            const res = await elevesHorsPlafond(selectedClasse, tables);
+            if (res.ok && res.data) {
+                setNomsHorsPlafond(res.data);
+            }
+            setLoadingNoms(false);
+        } else {
+            setShowNoms(false);
+        }
+    };
 
     const handleOuvrirTableAClass = async () => {
         if (!selectedClasse) return;
@@ -610,6 +645,10 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
         if (res.ok) {
             const fresh = await apercuDefiClasse(selectedClasse, tables);
             if (fresh.ok) setApercu(fresh.data);
+            if (showNoms) {
+                const freshNoms = await elevesHorsPlafond(selectedClasse, tables);
+                if (freshNoms.ok && freshNoms.data) setNomsHorsPlafond(freshNoms.data);
+            }
         }
     };
 
@@ -845,7 +884,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                         <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--indigo-doux)' }}>
                             {apercu.eleves_hors_plafond > 1 ? 'Ils pourront' : 'Il pourra'} jouer le défi — les questions au‑delà de {apercu.eleves_hors_plafond > 1 ? 'leur' : 'son'} plafond ne compteront pas contre {apercu.eleves_hors_plafond > 1 ? 'eux' : 'lui'}. Tu peux aussi retirer la table de {highestTable}, ou {apercu.eleves_hors_plafond > 1 ? 'leur' : 'lui'} ouvrir la {highestTable} en une action.
                         </div>
-                        <div style={{ display: 'flex', gap: 18, paddingTop: 4 }}>
+                        <div style={{ display: 'flex', gap: 18, paddingTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                             <button
                                 onClick={handleOuvrirTableAClass}
                                 disabled={openingPlafond}
@@ -857,7 +896,39 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                             >
                                 {openingPlafond ? 'Ouverture en cours…' : `Ouvrir la table de ${highestTable} à toute la classe ›`}
                             </button>
+                            <button
+                                onClick={handleToggleVoirQui}
+                                style={{
+                                    background: 'none', border: 'none', padding: 0,
+                                    fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 700,
+                                    color: 'var(--indigo-encre)', cursor: 'pointer', textDecoration: 'underline',
+                                }}
+                            >
+                                {showNoms ? 'Masquer ‹' : 'Voir qui ›'}
+                            </button>
                         </div>
+                        {showNoms && (
+                            <div style={{
+                                marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(32,34,107,0.12)',
+                                fontFamily: 'var(--texte)', fontSize: 15, lineHeight: 1.5, color: 'var(--indigo-doux)',
+                            }}>
+                                {loadingNoms ? (
+                                    <span>Chargement des noms…</span>
+                                ) : nomsHorsPlafond.length === 0 ? (
+                                    <span>Aucun élève hors plafond.</span>
+                                ) : (
+                                    nomsHorsPlafond.map((e, idx) => (
+                                        <React.Fragment key={e.eleve_id || idx}>
+                                            {idx > 0 && ' · '}
+                                            <strong style={{ color: 'var(--indigo-encre)', fontWeight: 700 }}>
+                                                {e.prenom} {e.nom}
+                                            </strong>{' '}
+                                            <span style={{ color: 'var(--gris)' }}>(jusqu'à {e.plafond_tables})</span>
+                                        </React.Fragment>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -1708,81 +1779,268 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
     );
 }
 
-/* ===================== DEFI CODE SCREEN ===================== */
+/* ===================== DEFI CODE SCREEN (Maquette 9) ===================== */
+/* Le code projeté au tableau — lu du fond de la salle, 1280 × 720.
+   Rafraîchissement live des présents toutes les 3,5s et écoute temps réel.
+   Compteur rejoints, avatars grisés à la fin, prénom d'arrivée. */
 
 function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
     const [avancement, setAvancement] = useState(null);
+    const [presents, setPresents] = useState([]);
 
-    // Compteur de participants en temps réel
+    const defiId = defiInfo?.defi_id;
+
+    // Rafraîchissement régulier toutes les 3 à 5 secondes + temps réel
     useEffect(() => {
-        if (!defiInfo?.defi_id) return;
+        if (!defiId) return;
+        let actif = true;
 
-        // Charger une première fois
-        avancementDefi(defiInfo.defi_id).then(res => {
-            if (res.ok) setAvancement(res.data);
+        const rafraichir = async () => {
+            try {
+                const [resAvance, resPresents] = await Promise.all([
+                    avancementDefi(defiId),
+                    presentsDefi(defiId),
+                ]);
+                if (actif && resAvance.ok) setAvancement(resAvance.data);
+                if (actif && resPresents.ok && resPresents.data) setPresents(resPresents.data);
+            } catch (e) {
+                console.error('Erreur rafraîchissement défi:', e);
+            }
+        };
+
+        rafraichir();
+        const interval = setInterval(rafraichir, 3500);
+        const unsub = suivreDefi(defiId, () => {
+            if (actif) rafraichir();
         });
 
-        // S'abonner aux changements
-        const unsub = suivreDefi(defiInfo.defi_id, () => {
-            avancementDefi(defiInfo.defi_id).then(res => {
-                if (res.ok) setAvancement(res.data);
-            });
-        });
+        return () => {
+            actif = false;
+            clearInterval(interval);
+            if (typeof unsub === 'function') unsub();
+        };
+    }, [defiId]);
 
-        return unsub;
-    }, [defiInfo?.defi_id]);
+    // Formatage du code en 5 caractères
+    const codeLetters = (defiInfo?.code || '?????').toUpperCase().slice(0, 5).split('');
 
-    const nbParticipants = avancement?.termines || 0;
+    // Données d'en-tête
+    const auteur = avancement?.auteur_nom || defiInfo?.auteur_nom || (estProf ? 'mon professeur' : 'Défi');
+    const classe = avancement?.classe || defiInfo?.classe || null;
+    const modeKey = defiInfo?.type || 'sprint';
+    const modeLabel = modeKey === 'countdown' ? 'Contre‑la‑montre' : 'Sprint';
+
+    const formatTablesLabel = (tbls) => {
+        if (!tbls || !tbls.length) return 'toutes les tables';
+        const sorted = [...tbls].sort((a, b) => a - b);
+        if (sorted.length > 2) {
+            const isContiguous = sorted.every((t, i) => i === 0 || t === sorted[i - 1] + 1);
+            if (isContiguous) {
+                return `tables ${sorted[0]} à ${sorted[sorted.length - 1]}`;
+            }
+        }
+        return `table${sorted.length > 1 ? 's' : ''} ${sorted.join(', ')}`;
+    };
+    const tablesLabel = formatTablesLabel(defiInfo?.tables);
+
+    // Compteur de présents : vient de rejoints (jamais négatif)
+    const rejoints = avancement?.rejoints ?? 0;
+
+    // Débordement d'affichage des prénoms
+    const maxVisible = 6;
+    const visiblePresents = presents.slice(0, maxVisible);
+    const nbAutres = Math.max(0, rejoints - visiblePresents.length);
 
     return (
         <div className="screen-enter" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', minHeight: '70vh', textAlign: 'center',
+            justifyContent: 'center', width: '100%', minHeight: '80vh',
+            boxSizing: 'border-box',
         }}>
-            <button className="btn-back" style={{ alignSelf: 'flex-start' }} onClick={onBack}>
-                ‹ Retour
-            </button>
-
             <div style={{
-                background: 'var(--indigo)',
-                borderRadius: 24, padding: estProf ? '48px 32px' : '32px 24px',
-                width: '100%', maxWidth: 500, marginTop: 24,
+                width: '100%', maxWidth: 1280, minHeight: 720,
+                background: 'var(--indigo)', borderRadius: 20,
+                overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                position: 'relative', boxShadow: '0 16px 40px rgba(32, 34, 107, 0.28)',
+                boxSizing: 'border-box',
             }}>
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: estProf ? 20 : 16, marginBottom: 12 }}>
-                    {estProf ? 'Saisissez ce code dans Défis' : 'Donne ce code à tes copains'}
-                </p>
 
-                <div className="font-display" style={{
-                    fontSize: estProf ? 80 : 56, fontWeight: 900, color: 'var(--gold)',
-                    letterSpacing: 12, userSelect: 'all',
+                {/* En-tête : Logo matHo avec mosaïque + Métadonnées + Compteur connectés */}
+                <div style={{
+                    padding: '40px clamp(20px, 4vw, 60px) 0px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    zIndex: 2, flexWrap: 'wrap', gap: 20,
                 }}>
-                    {defiInfo?.code || '?????'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                        {/* Décoration mosaïque 3x3 */}
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(3, 26px)', gap: 8, opacity: 0.9,
+                            flexShrink: 0,
+                        }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--rouge)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--orange)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--vert)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--orange)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--ciel)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--rouge)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--vert)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--ciel)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--action-texte)', opacity: 0.25 }} />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <div style={{
+                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 34,
+                                color: 'var(--action-texte)',
+                            }}>
+                                matHo
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 20,
+                                color: 'var(--indigo-clair)',
+                            }}>
+                                Défi de {auteur} · {classe ? `${classe} · ` : ''}{modeLabel}, {tablesLabel}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            background: 'rgba(255, 255, 255, 0.12)', padding: '14px 26px',
+                            borderRadius: 999,
+                        }}>
+                            <div style={{ width: 14, height: 14, borderRadius: 4, background: 'var(--vert)' }} />
+                            <span style={{
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 24,
+                                color: 'var(--action-texte)',
+                            }}>
+                                {rejoints} connecté{rejoints > 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <button
+                            onClick={onBack}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.08)', border: 'none',
+                                borderRadius: 999, padding: '12px 18px', cursor: 'pointer',
+                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 16,
+                                color: 'var(--indigo-clair)',
+                            }}
+                            title="Quitter la projection"
+                        >
+                            ‹ Quitter
+                        </button>
+                    </div>
                 </div>
 
+                {/* Centre : « Rejoindre avec le code » + 5 cases géantes */}
                 <div style={{
-                    marginTop: 20, padding: '12px 0',
-                    borderTop: '1px solid rgba(255,255,255,0.15)',
+                    flex: '1 1 0%', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 20,
+                    padding: '30px 20px', zIndex: 2,
                 }}>
-                    <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--action-texte)' }}>
-                        {nbParticipants}
-                    </span>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 14, marginTop: 4 }}>
-                        participant{nbParticipants !== 1 ? 's' : ''} {nbParticipants > 0 ? '' : 'pour le moment'}
-                    </p>
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 'clamp(20px, 2.4vw, 30px)',
+                        color: 'var(--indigo-clair)', letterSpacing: '0.22em', textTransform: 'uppercase',
+                    }}>
+                        Rejoindre avec le code
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 'clamp(10px, 1.8vw, 22px)', justifyContent: 'center' }}>
+                        {codeLetters.map((char, i) => (
+                            <div
+                                key={i}
+                                className="font-display"
+                                style={{
+                                    width: 'clamp(64px, 11vw, 150px)',
+                                    height: 'clamp(84px, 14vw, 190px)',
+                                    borderRadius: 'clamp(14px, 2vw, 26px)',
+                                    background: 'var(--surface)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 'clamp(56px, 9vw, 130px)',
+                                    fontWeight: 700, color: 'var(--indigo)',
+                                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.18)',
+                                    userSelect: 'all',
+                                }}
+                            >
+                                {char}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(16px, 2vw, 26px)',
+                        color: 'var(--indigo-clair)',
+                    }}>
+                        Accueil › Défi de classe › saisir le code
+                    </div>
+                </div>
+
+                {/* Bas : Avatars + Prénoms arrivés + Indication classement */}
+                <div style={{
+                    padding: '0px clamp(20px, 4vw, 60px) clamp(24px, 4vw, 46px)',
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    zIndex: 2, flexWrap: 'wrap',
+                }}>
+                    {visiblePresents.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            {visiblePresents.map((p) => (
+                                <span
+                                    key={p.eleve_id}
+                                    style={{
+                                        fontSize: 38,
+                                        filter: p.a_termine ? 'grayscale(1) opacity(0.35)' : 'none',
+                                        transition: 'filter 0.3s ease',
+                                    }}
+                                    title={`${p.prenom}${p.a_termine ? ' (a terminé)' : ''}`}
+                                >
+                                    {p.avatar_emoji || '👤'}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(16px, 1.8vw, 22px)',
+                        color: 'var(--indigo-clair)',
+                    }}>
+                        {visiblePresents.length > 0 ? (
+                            <>
+                                {visiblePresents.map((p) => p.prenom).join(', ')}
+                                {nbAutres > 0 && (
+                                    <span style={{ color: 'var(--action-texte)' }}> + {nbAutres} autre{nbAutres > 1 ? 's' : ''}</span>
+                                )}
+                            </>
+                        ) : (
+                            <span style={{ fontStyle: 'italic' }}>En attente des premiers élèves…</span>
+                        )}
+                    </div>
+
+                    <div style={{
+                        marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16,
+                    }}>
+                        <span style={{
+                            fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(15px, 1.6vw, 22px)',
+                            color: 'var(--indigo-clair)', fontStyle: 'italic',
+                        }}>
+                            Le classement s'affichera ici à la fin
+                        </span>
+                        <button
+                            onClick={onStart}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.14)',
+                                border: '1px solid rgba(255, 255, 255, 0.25)',
+                                borderRadius: 999, padding: '10px 22px',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                color: 'var(--action-texte)', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 8,
+                            }}
+                        >
+                            <IconClassements size={18} color="var(--action-texte)" /> Classement
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            <button
-                className="btn btn--gold"
-                style={{ width: '100%', maxWidth: 500, fontSize: 20, padding: 16, marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                onClick={onStart}
-            >
-                <IconClassements size={20} color="var(--indigo)" /> Voir le classement
-            </button>
-
-            <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginTop: 12 }}>
-                {estProf ? 'Le défi expire dans 7 jours.' : 'Le défi expire dans 24 heures.'}
-            </p>
         </div>
     );
 }

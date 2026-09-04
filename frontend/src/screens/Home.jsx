@@ -118,11 +118,13 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 setUserData(res.data);
                 setLoadingProfile(false);
             } else {
-                setProfileError(res.error || res.message || 'Impossible de charger ton profil.');
+                console.error('Erreur monProfil:', res.error || res.message);
+                setProfileError('Connexion perdue. Appuie sur Réessayer.');
                 setLoadingProfile(false);
             }
-        }).catch(() => {
-            setProfileError('Connexion perdue — vérifie ton accès au réseau.');
+        }).catch((err) => {
+            console.error('Exception monProfil:', err);
+            setProfileError('Connexion perdue. Appuie sur Réessayer.');
             setLoadingProfile(false);
         });
 

@@ -4,13 +4,15 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **3 septembre 2026, matin** — 24 migrations, 107 cas de
-> test verts. **L'application s'appelle `matHo`**, le logo et les icônes sont en
-> place. **La refonte visuelle est arrêtée** : dix maquettes validées, la palette
-> du logo, `frontend/src/styles/tokens.css` extrait, et **le lot 13 est prêt à
-> partir chez Antigravity** (`PROMPT_ANTIGRAVITY_lot13.md`). La migration 24
-> attend d'être appliquée dans Supabase. Le chemin critique reste entier chez
-> Aymeri — base de production, import des 350 élèves, Jamf, RGPD.
+> Dernière mise à jour : **4 septembre 2026, matin** — **25 migrations, 121 cas
+> de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
+> appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
+> (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
+> **Le lot 17 est prêt à partir** (`PROMPT_ANTIGRAVITY_lot17.md`) : maquette 9,
+> bouton « Voir qui », deux finitions. Il attend que la **migration 25** soit
+> appliquée dans Supabase — elle est écrite et testée
+> (`supabase/migrations/20260904090000_presences_defi.sql`).
+> La mise en service reste entière chez Aymeri.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -38,7 +40,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **24 migrations**, 107 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **25 migrations**, 121 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -68,8 +70,10 @@ d'interface se juge à cette aune.
 | ✅ **Le nom : `matHo`** — casse exacte, m minuscule, H majuscule, o minuscule | tranché par Aymeri le 02/09 |
 | ✅ Logo et icônes (180, 192, 512, favicon) dans `frontend/public/` | fait le 02/09 |
 | ✅ **Passe visuelle avec Claude Design** — 10 maquettes, palette du logo, 36 icônes SVG | fait le 03/09 |
-| ⬜ **Appliquer la migration 24** dans Supabase (aperçu d'import) | Aymeri |
-| ⬜ **Transmettre le lot 13** à Antigravity (`PROMPT_ANTIGRAVITY_lot13.md`) | Aymeri |
+| ✅ **Migration 24** appliquée (aperçu d'import) | fait le 03/09 |
+| ✅ **Lots 13 à 16 bis** livrés par Antigravity et relus dans le code | fait le 04/09 |
+| ✅ **Migration 25** appliquée (présences aux défis, sessions vides, élèves hors plafond) | fait le 04/09 |
+| ✅ **Lot 17** livré (maquette 9 code projeté, bouton « Voir qui », finitions) | fait le 04/09 |
 | ⬜ Base de **production** (projet Supabase séparé, région EU) | migrations seules, **aucun seed** |
 | ⬜ Import de rentrée des 350 élèves | onglet Import, format `email, nom, prénom, classe` |
 | ⬜ `*.supabase.co` autorisé dans Jamf | Aymeri |
@@ -513,6 +517,62 @@ Design a écrit « e-mail déjà présent ligne 88 ». Vérification faite,
 même e-mail, et les comptait deux fois. Corrigé. Un dessin peut trouver un bug
 de serveur : il suffit qu'il dise ce qu'un humain attendrait.
 
+### Migration 25 et lots 13 à 17 — 4 septembre
+
+**Trois populations pour un défi, jamais deux.** `avancement_defi()` renvoie
+maintenant `rejoints` (ont saisi le code), `termines` (ont fini) et `en_cours`
+(ont rejoint sans finir), plus les deux compteurs de classe et `attendus`.
+`rejoindre_defi()` n'écrivait rien : un élève qui saisissait le code n'existait
+nulle part tant qu'il n'avait pas fini, et l'écran du code projeté ne pouvait
+afficher qu'un seul nombre. La table `defis_presences` comble ce trou sans
+toucher à `defis_participants` — rendre `score` et `temps_s` nullables aurait
+fragilisé `classement_defi()`, qui trie dessus.
+
+**`en_cours` est compté, jamais soustrait.** Sur un défi créé avant la
+migration 25, les présences sont vides et les participants existent :
+`rejoints - termines` donne **-1**. Le serveur compte les présents sans
+participation. C'est le cas de test 114.
+
+**Une partie à zéro question ne s'enregistre plus.** `progression_detail`
+accorde 100 points par jour actif : ouvrir l'application et quitter aussitôt
+valait +100 points par jour. Le front avait été corrigé, mais une règle de
+points ne se garde pas dans un écran.
+
+**« En cours de chargement » n'est pas « zéro partie jouée ».** *(4 septembre,
+lot 16 bis.)* L'accueil élève lisait `nb_sessions = 0` tant que `monProfil()`
+n'avait pas répondu, et affichait donc l'écran du tout premier jour à chaque
+ouverture — et **définitivement** si l'appel échouait, le `.catch` étant vide.
+Un élève qui joue depuis un mois se retrouvait devant « Ta grille est vide »,
+Sprint et Contre-la-montre grisés, pour une coupure de deux secondes. C'est la
+famille des bugs de population appliquée au temps : **une réponse absente n'est
+pas une valeur.** Il faut trois états — chargement, erreur, chargé — et un
+message d'erreur lisible, jamais un état par défaut qui ressemble à une donnée.
+
+**La grille de maîtrise est symétrique, et c'est un piège de comptage.**
+*(4 septembre.)* `MasteryGrid` dessine `plafond × plafond` cases, mais la clé de
+`maitrise` est `min_max` : 4×7 et 7×4 sont la même entrée. Au plafond 10, la
+grille montre **100 cases** et la table contient au plus **55 entrées**. Compter
+les entrées et diviser par 100 divisait le score de chaque élève par deux, sans
+que rien ne le signale. On compte les **cases affichées** : le nombre annoncé
+est alors exactement ce que l'élève voit quand il ouvre sa grille. Et
+`MasteryGrid` doit recevoir `tables` — sans quoi elle retombe sur `[1..10]` et
+un élève au plafond 15 voit une grille de 10.
+
+**L'écran du premier jour et le verrouillage des modes chronométrés viennent de
+Claude Design**, pas d'une décision de conception prise ici : le texte « Les
+autres modes s'ouvrent après cette partie — ils ont besoin de savoir ce que tu
+sais » est dans la maquette 16. À revoir après la première séance en classe, pas
+avant : c'est l'usage qui tranchera.
+
+**Ce qui a été bloqué pour rien.** *(4 septembre — écrit ici pour ne pas le
+refaire.)* Le bouton « Voir qui » de l'écran 17 a été retiré du lot 16 au motif
+que `liste_eleves` et `apercu_defi_classe` n'auraient pas le même verrou
+d'accès. C'est faux : depuis la migration `20260827090000`, `prof_voit_classe()`
+appelle simplement `est_prof()`, conformément à la décision « un enseignant voit
+toutes les classes » écrite plus haut dans ce même document. Un lot de retard
+pour une contrainte inventée, sur une décision déjà prise et déjà écrite.
+**La règle qui en découle : avant d'objecter, relire le §3.**
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -522,7 +582,7 @@ mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
 avant la mise en service.
 
 **`./supabase/tests/run.sh` passe avant chaque commit.**
-107 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
+121 cas, dont une quinzaine de tentatives de contournement qui doivent toutes
 échouer. Toute ligne `ECHEC` est une régression de sécurité.
 
 **Aucune donnée en dur qui simule du vrai contenu.**
@@ -631,8 +691,8 @@ existantes**, jamais de couleurs en dur.
 ### Pour l'agent
 
 **Les quatre lots de construction sont terminés** (`ANTIGRAVITY_BRIEF.md` §6 :
-fondations, modes solo, défis, finitions). **Et depuis le 1er septembre, les corrections
-aussi.** Il ne reste, pour l'agent, que la passe visuelle — qui attend le nom.
+fondations, modes solo, défis, finitions), les corrections aussi, **et la passe
+visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
 
 1. ✅ **« Mes défis »** et **la salle des profs** — livrés le 31 août.
 2. ✅ **Origine du défi à l'écran** et ratio de classe corrigé — livrés le
@@ -654,8 +714,22 @@ aussi.** Il ne reste, pour l'agent, que la passe visuelle — qui attend le nom.
 6. ✅ **Polices servies localement** — `frontend/public/fonts/`. Plus aucune
    requête hors Supabase. La règle du §3 existait depuis le début et n'avait
    jamais été appliquée.
-7. Passe visuelle, **après** le choix du nom. **Seul point encore ouvert
-   pour l'agent**, et il attend une décision d'Aymeri.
+7. ✅ **Passe visuelle — lots 13 à 16 bis**, livrés du 3 au 4 septembre.
+   `tokens.css` est la seule source des couleurs, avec un pont de
+   compatibilité pour les 21 anciennes variables. Écrans refaits sur les
+   maquettes : accueil élève, tout premier jour, création de défi, mode
+   libre (4 écrans), pavé numérique. Le pavé occupe 38 % de la hauteur
+   utile, ses quatre rangées visibles — la classe `.game-zone` qu'il portait
+   lui imposait `min-height: 100dvh` (commit `124b857`).
+8. ✅ **Lot 17** — migration 25 appliquée en base, maquette 9 (code projeté
+   au tableau), bouton « Voir qui » de l'écran 17, finitions message erreur
+   et types TypeScript régénérés. Fait le 04/09.
+9. ⬜ **Les écrans sans maquette** : Ma classe, accueil professeur,
+   administration, et les quatre écrans que Claude Design n'a pas dessinés.
+10. ⬜ **La règle de maîtrise** — remplacer « juste du premier coup = vert »
+    par « deux réussites d'affilée sous trois secondes ». Décidé, pas
+    commencé. Touche le serveur ET le front en même temps, et chaque lot
+    ajoute un écran qui lit `maitrise` : le coût monte avec l'attente.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
