@@ -390,3 +390,102 @@ comment on function public.enregistrer_session(
   text, smallint[], integer, integer, jsonb, numeric, integer, integer,
   smallint, jsonb, uuid, integer, jsonb) is
   'Enregistre une partie d''eleve. LA REGLE DE MAITRISE EST ICI, plus dans l''ecran (migration 26) : le front envoie `p_faits`, un tableau de reponses brutes dans l''ordre — {fait, juste, premier, temps_ms} — et le serveur en deduit le niveau. Deux reponses justes du premier coup sous seuil_reponse_rapide() d''affilee = vert ; juste mais lent ou rattrape = orange, serie remise a zero ; faux = rouge. Un fait vert repondu lentement redescend en orange, c''est voulu. `p_maitrise` reste accepte pour un front pas encore deploye et n''affecte alors pas la serie. Refuse par ailleurs une partie a zero question (migration 25), un score superieur au nombre de questions, un score de premier essai superieur au score, une seconde session sur le meme defi, et des tables au-dela du plafond — sauf defi dont l''eleve est deja participant et dont les tables correspondent exactement (migration 21).';
+
+
+-- ---------------------------------------------------------------------
+-- 4. `terminer_defi` — le chemin des defis passe par ici, PAS par
+--    `enregistrer_session` directement
+--
+-- CE DEFAUT A ETE TROUVE PAR ANTIGRAVITY, en confrontant le texte du
+-- lot 18 au SQL reel. Il est ecrit ici parce qu'il est instructif.
+--
+-- Les cinq modes solo appellent `enregistrer_session()` directement. Un
+-- defi, lui, appelle `terminer_defi()`, qui insere la participation puis
+-- appelle `enregistrer_session()` a son tour. Ajouter `p_faits` a la
+-- seconde sans l'ajouter a la premiere aurait donne, en defi :
+--   — `p_faits` toujours null, donc la branche de repli, donc jamais de
+--     serie rapide et jamais de vert ;
+--   — et surtout, une fois `construireMaitrise()` retiree du front,
+--     `p_maitrise` vide : **un defi n'aurait plus rien enregistre du
+--     tout**. Aucune erreur, aucun message : la grille cesse simplement
+--     d'avancer quand on joue en classe.
+--
+-- La lecon, pour la prochaine fois : quand on ajoute un parametre a une
+-- fonction, on cherche QUI L'APPELLE avant de tester. Les 129 cas de la
+-- section 3 appellent tous `enregistrer_session` directement — aucun ne
+-- passait par `terminer_defi`. Un test vert sur le mauvais chemin ne
+-- prouve rien. Les cas 130 a 132 comblent ce trou.
+--
+-- Comme pour `enregistrer_session`, on SUPPRIME d'abord l'ancienne
+-- signature : sinon PostgreSQL en garde deux et refuse tout appel par
+-- noms d'arguments, ce que fait `rpc()`.
+-- ---------------------------------------------------------------------
+drop function if exists public.terminer_defi(
+  uuid, integer, numeric, integer, jsonb, jsonb, integer);
+
+create or replace function public.terminer_defi(
+  p_defi_id  uuid,
+  p_score    integer,
+  p_temps_s  numeric,
+  p_erreurs  integer default 0,
+  p_detail   jsonb   default '{}',
+  p_maitrise jsonb   default '{}',
+  p_score_premier_essai integer default null,
+  p_faits    jsonb   default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_eleve uuid := public.eleve_courant();
+  v_defi  public.defis%rowtype;
+begin
+  if v_eleve is null then
+    raise exception 'Compte non reconnu.' using errcode = '42501';
+  end if;
+
+  select * into v_defi from public.defis where id = p_defi_id;
+  if not found then
+    raise exception 'Défi introuvable.';
+  end if;
+
+  if v_defi.statut = 'ferme' or v_defi.expire_le < now() then
+    raise exception 'Ce défi est déjà terminé.';
+  end if;
+
+  begin
+    insert into public.defis_participants (
+      defi_id, eleve_id, score, temps_s, erreurs, detail)
+    values (p_defi_id, v_eleve, p_score, p_temps_s, p_erreurs, p_detail);
+  exception when unique_violation then
+    raise exception 'Tu as déjà participé à ce défi.';
+  end;
+
+  perform public.enregistrer_session(
+    p_mode           => v_defi.type,
+    p_tables         => v_defi.tables,
+    p_nb_questions   => p_score + p_erreurs,
+    p_score          => p_score,
+    p_duree_s        => p_temps_s,
+    p_sans_faute_max => 0,
+    p_maitrise       => p_maitrise,
+    p_defi_id        => p_defi_id,
+    p_score_premier_essai => p_score_premier_essai,
+    -- MIGRATION 26 : sans cette ligne, un defi n'alimente plus la
+    -- maitrise du tout. Voir le commentaire de la section 4.
+    p_faits          => p_faits
+  );
+
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+grant execute on function
+  public.terminer_defi(uuid, integer, numeric, integer, jsonb, jsonb, integer, jsonb)
+to authenticated;
+
+comment on function public.terminer_defi(
+  uuid, integer, numeric, integer, jsonb, jsonb, integer, jsonb) is
+  'Enregistre la participation a un defi, puis delegue a enregistrer_session(). Relaie `p_faits` depuis la migration 26 : sans ce relais, un defi n''alimenterait plus la maitrise une fois construireMaitrise() retiree du front. Les modes solo appellent enregistrer_session() directement ; les defis passent par ici. Toute modification du contrat de l''un doit etre repercutee sur l''autre.';

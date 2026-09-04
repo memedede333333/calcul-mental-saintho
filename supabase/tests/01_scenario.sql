@@ -1208,3 +1208,46 @@ select case when (select niveau from public.maitrise
             then 'OK : l ancien format est toujours accepte'
             else 'ECHEC : un front pas encore deploye casserait' end as verdict;
 reset role;
+
+\echo '=== 130. UN DEFI passe par terminer_defi : la serie doit avancer ==='
+-- Le trou trouve par Antigravity : les cas 122 a 129 appellent tous
+-- enregistrer_session DIRECTEMENT. Un defi ne prend pas ce chemin.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{5}'::smallint[], 20, null, '6A')->>'code' as code_m26 \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select (rejoindre_defi(:'code_m26')->>'defi_id') as did26 \gset
+select terminer_defi(:'did26'::uuid, 2, 4.0, 0, '{}'::jsonb, '{}'::jsonb, 2,
+         '[{"fait":"5_6","juste":true,"premier":true,"temps_ms":900},
+           {"fait":"5_6","juste":true,"premier":true,"temps_ms":800}]'::jsonb)->>'ok' as termine;
+select case when (select niveau from public.maitrise
+                   where eleve_id = (select id from public.eleves where email='bob.martin@demo.saintho.fr')
+                     and fait='5_6') = 3
+            then 'OK : un defi alimente la maitrise et fait passer au vert'
+            else 'ECHEC : terminer_defi ne relaie pas p_faits' end as verdict;
+
+\echo '=== 131. Un defi SANS p_faits n enregistre plus rien de faux ==='
+-- Une fois construireMaitrise() retiree du front, p_maitrise vaut {}.
+-- Le fait ne doit pas exister, mais rien ne doit planter non plus.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{5}'::smallint[], 20, null, '6A')->>'code' as code_m26b \gset
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select (rejoindre_defi(:'code_m26b')->>'defi_id') as did26b \gset
+select terminer_defi(:'did26b'::uuid, 1, 3.0, 0, '{}'::jsonb, '{}'::jsonb, 1)->>'ok' as termine_sans_faits;
+select case when (select count(*) from public.maitrise
+                   where eleve_id = (select id from public.eleves where email='alice.dupont@demo.saintho.fr')
+                     and fait='5_11') = 0
+            then 'OK : sans p_faits, aucune maitrise inventee'
+            else 'ECHEC : une maitrise apparait sans donnee' end as verdict;
+
+\echo '=== 132. terminer_defi n a qu une seule signature ==='
+-- Sans le drop, PostgreSQL en garderait deux et refuserait tout appel
+-- par noms d arguments — ce que fait rpc() dans toute l application.
+select case when (select count(*) from pg_proc p
+                    join pg_namespace n on n.oid = p.pronamespace
+                   where n.nspname='public' and p.proname='terminer_defi') = 1
+             and (select count(*) from pg_proc p
+                    join pg_namespace n on n.oid = p.pronamespace
+                   where n.nspname='public' and p.proname='enregistrer_session') = 1
+            then 'OK : une seule signature pour chacune'
+            else 'ECHEC : signature en double, les appels par noms echouent' end as verdict;
+reset role;

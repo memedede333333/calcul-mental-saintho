@@ -9,8 +9,18 @@ Lis tout avant de commencer.
 ## 1. D'abord : appliquer la migration 26
 
 Le fichier : **`supabase/migrations/20260904140000_maitrise_au_temps.sql`**.
-Écrit et testé — scénario complet vert, **129 cas**, aucune ligne « ECHEC ».
+Écrit et testé — scénario complet vert, **132 cas**, aucune ligne « ECHEC ».
 Tu ne le modifies pas.
+
+**Corrigée le 4 septembre après ta relecture.** Tu avais raison : la première
+version ajoutait `p_faits` à `enregistrer_session` sans le relayer par
+`terminer_defi`, donc un défi n'aurait plus rien enregistré du tout une fois
+`construireMaitrise()` retirée du front. C'est ton **option A**, et elle est
+dans la migration 26 — pas dans une 27 : les deux ne doivent jamais pouvoir
+être appliquées séparément. La section 4 du fichier explique le défaut et
+pourquoi mes 129 cas ne l'attrapaient pas (ils appelaient tous
+`enregistrer_session` directement, jamais `terminer_defi`). Trois cas ajoutés,
+130 à 132.
 
 Applique-le sur `calcul-mental-dev` avec le moyen dont tu disposes (connecteur
 MCP Supabase, CLI liée, `psql`). Si tu n'as accès à aucun, dis-le et arrête-toi
@@ -41,13 +51,17 @@ select
     where table_schema='public' and table_name='maitrise'
       and column_name in ('serie_rapide','dernier_temps_ms')) as colonnes,
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname='public' and p.proname='enregistrer_session') as nb_signatures;
+    where n.nspname='public' and p.proname='enregistrer_session') as sig_session,
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname='public' and p.proname='terminer_defi') as sig_defi;
 ```
 
-Attendu : **`seuil_ms = 3000`**, **`colonnes = 2`**, **`nb_signatures = 1`**.
+Attendu : **`seuil_ms = 3000`**, **`colonnes = 2`**, **`sig_session = 1`**,
+**`sig_defi = 1`**.
 
-Si `nb_signatures` vaut 2, le `drop` n'est pas passé : arrête-toi et remonte-le,
-l'application ne fonctionnera pas.
+Si l'un des deux compteurs de signature vaut 2, un `drop` n'est pas passé :
+arrête-toi et remonte-le. PostgreSQL refuserait alors tout appel par noms
+d'arguments, ce que fait `rpc()` partout — plus rien ne s'enregistrerait.
 
 Puis **régénère `frontend/src/types/database.ts`**.
 
@@ -123,6 +137,32 @@ Si un composant ne peut vraiment pas mesurer le temps, **n'envoie pas
 `temps_ms` du tout pour ces entrées** : le serveur les traitera comme lentes,
 c'est-à-dire orange. Ne mets jamais une valeur inventée.
 
+### Les défis passent par un autre chemin
+
+Un défi n'appelle pas `enregistrerSession()` : il appelle `terminerDefi()`, qui
+appelle `enregistrer_session()` côté serveur. La migration 26 ajoute donc
+`p_faits` **aux deux**. L'enveloppe d'`api.js` doit suivre :
+
+```js
+export async function terminerDefi({ defiId, score, tempsS, erreurs = 0,
+                                     detail = {}, maitrise = {},
+                                     scorePremierEssai = null, faits = null }) {
+    return rpc('terminer_defi', {
+        p_defi_id: defiId,
+        p_score: score,
+        p_temps_s: tempsS,
+        p_erreurs: erreurs,
+        p_detail: detail,
+        p_maitrise: maitrise,
+        p_score_premier_essai: scorePremierEssai,
+        p_faits: faits,
+    });
+}
+```
+
+Et le quiz de défi doit passer `faits`, exactement comme les modes solo. Sans
+ça, jouer un défi n'alimente plus la grille — silencieusement.
+
 ### Ce qui disparaît et ce qui reste
 
 - `construireMaitrise()` : **supprimée**.
@@ -155,7 +195,7 @@ question se pose.
 ## 5. Ce qu'il faut voir à l'écran
 
 - [ ] La requête de vérification du §1 renvoie `seuil_ms = 3000`,
-      `colonnes = 2`, **`nb_signatures = 1`**.
+      `colonnes = 2`, **`sig_session = 1`** et **`sig_defi = 1`**.
 - [ ] Joue une partie libre, réponds **vite et juste** sur la même table deux
       fois : la case passe au vert. Une seule fois : elle est orange.
 - [ ] Réponds **juste mais lentement** sur une case verte : elle redescend en
@@ -165,6 +205,10 @@ question se pose.
       Contre-la-montre, Montée, Libre, et un défi. Un mode qui n'envoie pas
       `temps_ms` ne fera jamais de vert : c'est le défaut le plus probable de ce
       lot, et il est invisible sans ce test.
+- [ ] **Le défi en particulier** : joue-en un, réponds vite et juste deux fois
+      sur la même table, et vérifie que la case passe au vert. C'est le chemin
+      que les 129 premiers cas de test ne couvraient pas.
+- [ ] `ETAT.md` annonce **26 migrations, 132 cas**.
 - [ ] La légende de la grille porte la phrase du §4.
 - [ ] `npm run build` vert, `check-tokens` vert.
 
@@ -200,5 +244,5 @@ pas un détail :
 - **`JOURNAL.md`** : une entrée **en haut** du fichier (fait / décidé /
   constaté / ensuite). En haut, pas au milieu.
 - **`ETAT.md`** : la ligne « Dernière mise à jour » **d'abord** — 26 migrations,
-  129 cas — puis le §3, où tu ajoutes la nouvelle règle de maîtrise et sa
+  132 cas — puis le §3, où tu ajoutes la nouvelle règle de maîtrise et sa
   raison, et le §5, où tu coches la ligne correspondante.
