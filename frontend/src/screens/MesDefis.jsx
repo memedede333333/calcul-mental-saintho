@@ -56,6 +56,7 @@ export default function MesDefis({ onBack, estProf }) {
         return (
             <DefiLeaderboard
                 defiId={selectedDefi.defi_id}
+                defiInfo={selectedDefi}
                 result={null}
                 type={null}
                 estProf={estProf}

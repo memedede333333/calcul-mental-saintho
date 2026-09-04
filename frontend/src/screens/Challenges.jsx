@@ -9,7 +9,10 @@ import {
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
-import { ModeIcon, IconDefisPasses, IconCadenas, IconDocument, IconClassements } from '../components/Icons';
+import {
+    ModeIcon, IconDefisPasses, IconCadenas, IconDocument, IconClassements,
+    IconSprint, IconChrono, IconSansFaute, IconMontee, IconApprendre,
+} from '../components/Icons';
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 
 /**
@@ -281,6 +284,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         return (
             <DefiLeaderboard
                 defiId={defiInfo?.defi_id}
+                defiInfo={defiInfo}
                 result={result}
                 type={challengeType}
                 estProf={estProf}
@@ -288,6 +292,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 onRetry={() => envoiDefi?.payload && envoyerDefi(envoiDefi.payload)}
                 onHome={() => { setDefiInfo(null); setEnvoiDefi(null); setPhase('select'); }}
                 onBack={onBack}
+                onOpenGrid={() => onGo?.('profile')}
             />
         );
     }
@@ -1565,78 +1570,174 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
    travail prescrit comme un jeu entre copains — c'est le seul moment
    où on peut le lui dire. */
 
+/* ===================== DEFI INTRO (Maquette 8) ===================== */
+/* Écran d'annonce : juste avant la première question du défi */
 function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
-    const origine = defiInfo?.origine || null;
+    const origine = defiInfo?.origine || 'prof';
     const auteurNom = defiInfo?.auteur_nom || null;
     const classeDefi = defiInfo?.classe || null;
-    const typeLabel = challengeType?.name || defiInfo?.type || '';
-    const typeEmoji = challengeType?.emoji || '⚔️';
+    const tables = defiInfo?.tables || [2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const modeKey = challengeType?.id || defiInfo?.type || 'sprint';
+
+    const modeLabels = {
+        sprint: { name: 'Sprint', desc: '20 questions · 3 secondes chacune' },
+        countdown: { name: 'Contre-la-montre', desc: '2 minutes · max de bonnes réponses' },
+        flawless: { name: 'Sans faute', desc: 'Zéro erreur · la première te stoppe' },
+        climb: { name: 'Montée', desc: 'Palier par palier' },
+    };
+    const modeInfo = modeLabels[modeKey] || { name: challengeType?.name || 'Défi', desc: challengeType?.desc || '' };
+
+    const formatTables = (tbls) => {
+        if (!tbls || !tbls.length) return 'Toutes les tables';
+        const sorted = [...tbls].sort((a, b) => a - b);
+        if (sorted.length > 2) {
+            const isContiguous = sorted.every((t, i) => i === 0 || t === sorted[i - 1] + 1);
+            if (isContiguous) {
+                return `Tables ${sorted[0]} à ${sorted[sorted.length - 1]}`;
+            }
+        }
+        return `Tables ${sorted.join(', ')}`;
+    };
 
     return (
         <div className="screen-enter" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', minHeight: '70vh', textAlign: 'center',
-            padding: '0 24px',
+            minHeight: '80vh', boxSizing: 'border-box',
         }}>
             <div style={{
-                background: origine === 'prof'
-                    ? 'var(--action)'
-                    : 'var(--orange)',
-                borderRadius: 24, padding: '40px 32px',
-                width: '100%', maxWidth: 420,
+                background: 'var(--indigo)', borderRadius: 36,
+                padding: 'clamp(28px, 5vh, 52px) clamp(20px, 4vw, 36px)',
+                width: '100%', maxWidth: 540, position: 'relative', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                boxShadow: '0 12px 32px rgba(32,34,107,.20)',
             }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>
-                    {origine === 'prof' ? '📚' : '🎮'}
-                </div>
+                {/* Pastilles confettis tournantes en fond */}
+                <div style={{ position: 'absolute', top: 22, left: 24, width: 22, height: 22, borderRadius: 5, background: 'var(--rouge)', transform: 'rotate(14deg)', opacity: 0.85, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: 72, left: 54, width: 15, height: 15, borderRadius: 4, background: 'var(--orange)', transform: 'rotate(-18deg)', opacity: 0.85, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: 28, right: 28, width: 20, height: 20, borderRadius: 5, background: 'var(--ciel)', transform: 'rotate(22deg)', opacity: 0.85, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: 82, right: 58, width: 14, height: 14, borderRadius: 4, background: 'var(--vert)', transform: 'rotate(-8deg)', opacity: 0.85, pointerEvents: 'none' }} />
+
+                {/* Badge d'origine */}
                 <div style={{
-                    fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,0.8)',
-                    textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8,
+                    display: 'inline-flex', alignItems: 'center', gap: 10,
+                    background: 'rgba(255,255,255,.12)', padding: '10px 22px', borderRadius: 999,
+                    marginBottom: 18,
                 }}>
-                    {origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
-                </div>
-                {auteurNom && (
-                    <h2 className="font-display" style={{
-                        fontSize: 22, fontWeight: 800, color: 'var(--action-texte)', marginBottom: 8,
+                    <IconApprendre size={22} color="#FFFFFF" actionColor="var(--ciel)" />
+                    <span style={{
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                        color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase',
                     }}>
-                        Défi de {auteurNom}
-                    </h2>
-                )}
-                {classeDefi && origine === 'prof' && (
-                    <p style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
-                        {classeDefi}
-                    </p>
-                )}
-                <p style={{
-                    fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)',
-                    marginTop: 12,
+                        {origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
+                    </span>
+                </div>
+
+                {/* Titre & sous-titre */}
+                <h1 className="font-display" style={{
+                    fontSize: 'clamp(28px, 5vw, 42px)', lineHeight: 1.15, fontWeight: 700,
+                    color: '#FFFFFF', margin: 0,
                 }}>
-                    {typeEmoji} {typeLabel}
-                </p>
+                    {auteurNom ? `Défi de ${auteurNom}` : (origine === 'prof' ? 'Défi de classe' : 'Défi entre élèves')}
+                </h1>
+                <div style={{
+                    fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(17px, 2.8vw, 22px)',
+                    color: '#A9AFDE', marginTop: 8,
+                }}>
+                    {classeDefi ? `${classeDefi} · ` : ''}aujourd'hui
+                </div>
+
+                {/* Fiche récapitulative des paramètres */}
+                <div style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: 'rgba(255,255,255,.08)', borderRadius: 24,
+                    padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16,
+                    marginTop: 28, textAlign: 'left',
+                }}>
+                    {/* Ligne Mode */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <IconSprint size={34} color="var(--ciel)" actionColor="var(--ciel)" />
+                        <div>
+                            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: '#FFFFFF' }}>
+                                {modeInfo.name}
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 15, color: '#A9AFDE' }}>
+                                {modeInfo.desc}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ height: 1, background: 'rgba(255,255,255,.14)' }} />
+
+                    {/* Ligne Tables */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(2, 13px)', gap: 4, flexShrink: 0,
+                        }}>
+                            <div style={{ width: 13, height: 13, borderRadius: 3, background: 'var(--rouge)' }} />
+                            <div style={{ width: 13, height: 13, borderRadius: 3, background: 'var(--orange)' }} />
+                            <div style={{ width: 13, height: 13, borderRadius: 3, background: 'var(--vert)' }} />
+                            <div style={{ width: 13, height: 13, borderRadius: 3, background: 'var(--ciel)' }} />
+                        </div>
+                        <div>
+                            <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: '#FFFFFF' }}>
+                                {formatTables(tables)}
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 15, color: '#A9AFDE' }}>
+                                {origine === 'prof' ? 'Choisies par ton professeur' : 'Choisies par ton camarade'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Consigne pédagogique */}
+                <div style={{
+                    fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 16, lineHeight: 1.5,
+                    color: '#A9AFDE', marginTop: 24,
+                }}>
+                    Ton résultat apparaîtra dans le classement de la classe.<br />
+                    Tu peux le rejouer, seul le premier essai compte.
+                </div>
+
+                {/* Boutons d'action */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 32 }}>
+                    <button
+                        onClick={onStart}
+                        style={{
+                            width: '100%', height: 72, borderRadius: 22,
+                            background: 'var(--action)', color: '#FFFFFF',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 22,
+                            border: 'none', cursor: 'pointer',
+                            boxShadow: '0 4px 14px rgba(35,164,217,0.35)',
+                        }}
+                    >
+                        Commencer
+                    </button>
+                    <button
+                        onClick={onBack}
+                        style={{
+                            width: '100%', height: 48, borderRadius: 16,
+                            background: 'none', color: '#A9AFDE',
+                            fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 17,
+                            border: 'none', cursor: 'pointer',
+                        }}
+                    >
+                        Plus tard
+                    </button>
+                </div>
             </div>
-
-            <button
-                className="btn btn--gold"
-                style={{ width: '100%', maxWidth: 420, fontSize: 20, padding: 16, marginTop: 24 }}
-                onClick={onStart}
-            >
-                C'est parti !
-            </button>
-
-            <button className="btn-back" style={{ marginTop: 12 }} onClick={onBack}>
-                ‹ Retour
-            </button>
         </div>
     );
 }
 
-/* ===================== DEFI LEADERBOARD ===================== */
-
-export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRetry, onHome, onBack }) {
+/* ===================== DEFI LEADERBOARD (Maquette 4) ===================== */
+/* Classement d'un défi : podium en direct, progression et liste */
+export function DefiLeaderboard({ defiId, defiInfo, result, type, estProf, envoiDefi, onRetry, onHome, onBack, onOpenGrid }) {
     const [classement, setClassement] = useState([]);
     const [avancement, setAvancement] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const charger = useCallback(async () => {
+        if (!defiId) return;
         const [cls, adv] = await Promise.all([
             classementDefi(defiId),
             avancementDefi(defiId),
@@ -1648,101 +1749,135 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
 
     useEffect(() => {
         charger();
-
-        // Temps réel : recharger le classement à chaque nouveau participant
         const unsub = suivreDefi(defiId, charger);
-        return unsub; // Désabonnement propre — pas d'accumulation de canaux
+        return unsub;
     }, [defiId, charger]);
 
-    const termines = avancement?.termines || classement.length;
-    const terminesClasse = avancement?.termines_classe ?? null;
+    const code = defiInfo?.code || avancement?.code || 'DÉFI';
+    const termines = avancement?.termines ?? classement.length;
+    const terminesClasse = avancement?.termines_classe ?? termines;
     const attendus = avancement?.attendus ?? null;
-    const origine = avancement?.origine || null;
-    const auteurNom = avancement?.auteur_nom || null;
-    const classeDefi = avancement?.classe || null;
+    const classeDefi = avancement?.classe || defiInfo?.classe || null;
+    const tables = defiInfo?.tables || avancement?.tables || [];
+    const modeName = type?.name || defiInfo?.type || avancement?.type || 'Sprint';
+
+    const formatTables = (tbls) => {
+        if (!tbls || !tbls.length) return 'tables 2 à 10';
+        const sorted = [...tbls].sort((a, b) => a - b);
+        if (sorted.length > 2) {
+            const isContiguous = sorted.every((t, i) => i === 0 || t === sorted[i - 1] + 1);
+            if (isContiguous) {
+                return `tables ${sorted[0]} à ${sorted[sorted.length - 1]}`;
+            }
+        }
+        return `tables ${sorted.join(', ')}`;
+    };
+
+    const formatTemps = (s) => {
+        if (s == null) return '';
+        const total = Math.round(Number(s));
+        const m = Math.floor(total / 60);
+        const sec = total % 60;
+        if (m > 0) return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+        return `${sec} s`;
+    };
+
+    const enCours = attendus != null ? Math.max(0, attendus - terminesClasse) : 0;
+    const pct = attendus != null && attendus > 0 ? Math.min(100, Math.round((terminesClasse / attendus) * 100)) : 100;
+
+    const top1 = classement[0] || null;
+    const top2 = classement[1] || null;
+    const top3 = classement[2] || null;
+    const rest = classement.slice(3);
 
     return (
-        <div className="screen-enter">
-            <button className="btn-back" onClick={onHome}>‹ Défis</button>
-
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 48 }}>🏆</div>
-                <h2 className="font-display" style={{ fontSize: 24, fontWeight: 800 }}>
-                    Classement du défi
-                </h2>
-
-                {/* Origine + auteur */}
-                {origine && (
-                    <div style={{ marginBottom: 8 }}>
-                        <span style={{
-                            fontSize: 12, fontWeight: 800,
-                            padding: '3px 10px', borderRadius: 6,
-                            background: origine === 'prof'
-                                ? 'var(--ciel-pale)' : 'var(--orange-pale)',
-                            color: origine === 'prof'
-                                ? 'var(--action)' : 'var(--orange)',
-                        }}>
-                            {origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
+        <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* 1. Header sombre (Navy) */}
+            <div style={{
+                background: 'var(--indigo)', borderRadius: 32, padding: '24px 28px 28px',
+                display: 'flex', flexDirection: 'column', gap: 16, color: '#FFFFFF',
+                boxShadow: '0 8px 24px rgba(32,34,107,.15)',
+            }}>
+                {/* Ligne haute : Retour + En direct */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button
+                        onClick={onHome || onBack}
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                            color: '#B9C6DD', padding: 0,
+                        }}
+                    >
+                        ‹ Accueil
+                    </button>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(255,255,255,.12)', padding: '6px 14px', borderRadius: 999,
+                    }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 3, background: 'var(--vert)' }} />
+                        <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14, color: '#FFFFFF' }}>
+                            En direct
                         </span>
-                        {auteurNom && (
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-soft)', marginTop: 4 }}>
-                                Défi de {auteurNom}{classeDefi ? ` — ${classeDefi}` : ''}
-                            </div>
-                        )}
                     </div>
-                )}
+                </div>
 
-                {/* Avancement */}
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
-                    {attendus != null
-                        ? `${terminesClasse ?? 0} / ${attendus} de la ${classeDefi} ont terminé`
-                        : `${termines} participant${termines !== 1 ? 's' : ''}`
-                    }
-                </p>
-                {attendus != null && termines > (terminesClasse ?? 0) && (
-                    <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 12 }}>
-                        + {termines - (terminesClasse ?? 0)} d'autres classes
-                    </p>
+                {/* Ligne centrale : Code & mode à gauche, compteurs à droite */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div className="font-display" style={{
+                            fontSize: 40, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.18em', lineHeight: 1.1,
+                        }}>
+                            {code}
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 16, color: '#B9C6DD',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                        }}>
+                            <IconSprint size={18} color="#FFFFFF" actionColor="var(--ciel)" />
+                            {modeName} · {formatTables(tables)}{classeDefi ? ` · ${classeDefi}` : ''}
+                        </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div className="font-display" style={{ fontSize: 28, fontWeight: 700, color: 'var(--ciel)', lineHeight: 1.1 }}>
+                            {attendus != null ? `${terminesClasse} / ${attendus}` : `${termines}`}
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14, color: '#B9C6DD' }}>
+                            ont terminé
+                        </div>
+                    </div>
+                </div>
+
+                {/* Barre de progression */}
+                {attendus != null && (
+                    <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,.16)', overflow: 'hidden' }}>
+                        <div style={{
+                            width: `${pct}%`, height: '100%', background: 'var(--ciel)',
+                            borderRadius: 999, transition: 'width 0.3s ease',
+                        }} />
+                    </div>
                 )}
             </div>
 
-            {/* Résultat personnel si vient de jouer */}
-            {result && (
-                <div className="card" style={{ marginBottom: 14, textAlign: 'center' }}>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--gold)' }}>
-                        {result.score || 0} {type?.id === 'sprint' ? 'pts' : 'pts'}
-                    </div>
-                    {type?.id === 'sprint' && (
-                        <div style={{ fontSize: 14, color: 'var(--text-soft)', fontWeight: 600 }}>
-                            en {result.time?.toFixed(1)}s
-                        </div>
-                    )}
-                    <div style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginTop: 4 }}>
-                        {result.scorePremierEssai ?? result.score} / {result.answered} du premier coup
-                    </div>
-                </div>
-            )}
-
-            {/* État d'envoi du résultat */}
+            {/* Statut d'envoi du résultat si en cours / échec */}
             {envoiDefi?.etat === 'en_cours' && (
                 <div className="card" style={{
-                    marginBottom: 14, textAlign: 'center', padding: '14px 16px',
+                    textAlign: 'center', padding: '14px 16px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 }}>
                     <div className="spinner" style={{ width: 18, height: 18 }} />
-                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-soft)' }}>
+                    <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14, color: 'var(--gris)' }}>
                         Enregistrement de ta partie…
                     </span>
                 </div>
             )}
             {envoiDefi?.etat === 'echec' && (
                 <div style={{
-                    background: 'rgba(255,90,95,0.08)', border: '2px solid var(--coral)',
-                    borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 14,
-                    textAlign: 'center',
+                    background: 'var(--rouge-pale)', border: '2px solid var(--rouge-doux)',
+                    borderRadius: 18, padding: '14px 16px', textAlign: 'center',
                 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--coral-dk)', marginBottom: 8 }}>
-                        Ta partie n'a pas été enregistrée — {envoiDefi.message || 'erreur inconnue'}
+                    <p style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14, color: 'var(--rouge)', marginBottom: 8 }}>
+                        Ta partie n'a pas été enregistrée — {envoiDefi.message || 'erreur de connexion'}
                     </p>
                     <button className="btn btn--coral" style={{ fontSize: 14, padding: '8px 20px' }} onClick={onRetry}>
                         Réessayer
@@ -1750,72 +1885,226 @@ export function DefiLeaderboard({ defiId, result, type, estProf, envoiDefi, onRe
                 </div>
             )}
 
+            {/* Résultat personnel si vient de jouer */}
+            {result && (
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 24, padding: '16px 20px',
+                    boxShadow: 'var(--ombre-douce)', border: '1px solid var(--bordure)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 44, height: 44, borderRadius: 12, background: 'var(--orange-pale)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                        }}>
+                            ⚡
+                        </div>
+                        <div>
+                            <div style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16, color: 'var(--indigo)' }}>
+                                Ton score : {result.score} pts
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontWeight: 600 }}>
+                                {result.scorePremierEssai ?? result.score} / {result.answered} du premier coup
+                            </div>
+                        </div>
+                    </div>
+                    {result.time != null && (
+                        <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {formatTemps(result.time)}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40 }}>
+                <div style={{ textAlign: 'center', padding: 48 }}>
                     <div className="spinner" />
                 </div>
             ) : classement.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-                    <p style={{ fontSize: 48 }}>🏜</p>
-                    <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 28, padding: 36, textAlign: 'center',
+                    boxShadow: 'var(--ombre-douce)', border: '1px solid var(--bordure)',
+                }}>
+                    <p style={{ fontSize: 44, margin: '0 0 12px' }}>🏜</p>
+                    <p style={{ fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 700, fontSize: 16, margin: 0 }}>
                         Personne n'a encore terminé — le classement se remplira tout seul.
                     </p>
                 </div>
             ) : (
-                <div className="card">
-                    {classement.map((entry, i) => {
-                        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-                        return (
-                            <div
-                                key={entry.eleve_id || i}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: 12,
-                                    padding: '12px 8px',
-                                    borderBottom: i < classement.length - 1 ? '1px solid var(--border)' : 'none',
-                                    background: entry.est_moi ? 'rgba(201,162,39,0.08)' : 'transparent',
-                                    borderRadius: entry.est_moi ? 10 : 0,
-                                }}
-                            >
-                                <span style={{
-                                    fontSize: medal ? 22 : 16, fontWeight: 800, minWidth: 32, textAlign: 'center',
-                                    color: entry.est_moi ? 'var(--gold)' : 'var(--text-soft)',
-                                }}>
-                                    {medal || entry.rang || i + 1}
-                                </span>
-                                <span style={{ fontSize: 20 }}>{entry.avatar || '🦊'}</span>
-                                <div style={{ flex: 1 }}>
+                <>
+                    {/* 2. Podium des 3 premiers (2 - 1 - 3) */}
+                    <div style={{
+                        display: 'flex', alignItems: 'flex-end', gap: 10,
+                        padding: '12px 10px 0',
+                    }}>
+                        {/* Marche 2 */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            {top2 ? (
+                                <>
                                     <div style={{
-                                        fontWeight: entry.est_moi ? 800 : 700, fontSize: 15,
-                                        color: entry.est_moi ? 'var(--navy)' : 'var(--text)',
+                                        width: 66, height: 66, borderRadius: 20, background: 'var(--ciel-pale)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
                                     }}>
-                                        {entry.nom_affiche || 'Anonyme'}
-                                        {entry.est_moi && ' (toi)'}
+                                        {top2.avatar || '🐼'}
                                     </div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>
-                                        {entry.classe || ''}
+                                    <div style={{
+                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16, color: 'var(--indigo)',
+                                        textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>
+                                        {top2.nom_affiche}{top2.est_moi ? ' (toi)' : ''}
                                     </div>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--gold)' }}>
+                                    <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
+                                        {formatTemps(top2.temps_s)}
+                                    </div>
+                                </>
+                            ) : <div style={{ height: 110 }} />}
+                            <div style={{
+                                width: '100%', height: 104, borderRadius: '20px 20px 0 0', background: '#DCD4C6',
+                                display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 12,
+                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 32, color: '#FFFFFF',
+                            }}>
+                                2
+                            </div>
+                        </div>
+
+                        {/* Marche 1 */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            <div style={{ fontSize: 26, lineHeight: 1, marginBottom: -2 }}>👑</div>
+                            <div style={{
+                                width: 80, height: 80, borderRadius: 24, background: 'var(--orange-pale)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
+                            }}>
+                                {top1.avatar || '🦊'}
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17, color: 'var(--indigo)',
+                                textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                                {top1.nom_affiche} {top1.est_moi && <span style={{ color: 'var(--podium)' }}>(toi)</span>}
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15, color: 'var(--podium)' }}>
+                                {formatTemps(top1.temps_s)}
+                            </div>
+                            <div style={{
+                                width: '100%', height: 148, borderRadius: '22px 22px 0 0', background: 'var(--podium)',
+                                display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 14,
+                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40, color: '#FFFFFF',
+                            }}>
+                                1
+                            </div>
+                        </div>
+
+                        {/* Marche 3 */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            {top3 ? (
+                                <>
+                                    <div style={{
+                                        width: 66, height: 66, borderRadius: 20, background: 'var(--vert-pale)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
+                                    }}>
+                                        {top3.avatar || '🐢'}
+                                    </div>
+                                    <div style={{
+                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16, color: 'var(--indigo)',
+                                        textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>
+                                        {top3.nom_affiche}{top3.est_moi ? ' (toi)' : ''}
+                                    </div>
+                                    <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
+                                        {formatTemps(top3.temps_s)}
+                                    </div>
+                                </>
+                            ) : <div style={{ height: 110 }} />}
+                            <div style={{
+                                width: '100%', height: 80, borderRadius: '20px 20px 0 0', background: '#E3D8C0',
+                                display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 10,
+                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 28, color: '#FFFFFF',
+                            }}>
+                                3
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Liste des participants à partir du 4ᵉ */}
+                    {rest.length > 0 && (
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 26, padding: '10px 22px',
+                            boxShadow: '0 8px 20px rgba(32,34,107,.10)', border: '1px solid var(--bordure)',
+                        }}>
+                            {rest.map((entry, idx) => (
+                                <div
+                                    key={entry.eleve_id || idx}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0',
+                                        borderBottom: idx < rest.length - 1 ? '1px solid var(--bordure)' : 'none',
+                                    }}
+                                >
+                                    <span className="font-display" style={{ width: 32, fontSize: 18, fontWeight: 700, color: 'var(--gris)' }}>
+                                        {entry.rang || idx + 4}
+                                    </span>
+                                    <span style={{ fontSize: 26 }}>{entry.avatar || '🦊'}</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17, color: 'var(--indigo)',
+                                        }}>
+                                            {entry.nom_affiche} {entry.est_moi && <span style={{ color: 'var(--podium)' }}>(toi)</span>}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 15, color: 'var(--gris)' }}>
                                         {entry.score} pts
                                     </div>
-                                    {entry.temps_s != null && (
-                                        <div style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600 }}>
-                                            {Number(entry.temps_s).toFixed(1)}s
-                                        </div>
-                                    )}
+                                    <div className="font-display" style={{
+                                        fontSize: 17, fontWeight: 700, color: 'var(--indigo)', minWidth: 50, textAlign: 'right',
+                                    }}>
+                                        {formatTemps(entry.temps_s)}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* 4. Bandeau d'état en direct */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        background: 'var(--ciel-pale)', borderRadius: 20, padding: '16px 20px',
+                    }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--action)', flexShrink: 0 }} />
+                        <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 15, color: 'var(--indigo)' }}>
+                            {attendus != null && enCours > 0
+                                ? `${enCours} camarade${enCours > 1 ? 's jouent' : ' joue'} encore — la liste se complète toute seule.`
+                                : 'La liste se complète toute seule dès qu\'un camarade termine.'
+                            }
+                        </div>
+                    </div>
+                </>
             )}
 
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button className="btn btn--ghost" style={{ width: '100%' }} onClick={onHome}>
-                    Autres défis
+            {/* 5. Boutons d'action inférieurs */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 24 }}>
+                <button
+                    onClick={onOpenGrid}
+                    style={{
+                        flex: 1, height: 72, borderRadius: 22,
+                        background: 'var(--surface)', color: 'var(--indigo)',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20,
+                        border: '1px solid var(--bordure)', boxShadow: '0 4px 14px rgba(32,34,107,.08)',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Ma grille
                 </button>
-                <button className="btn-back" onClick={onBack}>‹ Accueil</button>
+                <button
+                    onClick={onHome || onBack}
+                    style={{
+                        flex: 1, height: 72, borderRadius: 22,
+                        background: 'var(--indigo)', color: '#FFFFFF',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20,
+                        border: 'none', cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(32,34,107,.15)',
+                    }}
+                >
+                    Accueil
+                </button>
             </div>
         </div>
     );
