@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     rejoindreDefi, monProfil, mesTablesFaibles, changerAvatar,
     partiesEnAttente, surFileChangee,
@@ -66,6 +66,15 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     const profil = identite?.profil;
     const idUtilisateur = profil?.id;
 
+    // Aperçus de développement : STRICTEMENT réservés aux professeurs et administrateurs
+    // Un élève ne doit JAMAIS voir de fausses données même s'il injecte ?preview= dans l'URL
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const canPreview = Boolean(estProf || estAdmin);
+    const isStudentPreview = canPreview && urlParams?.get('preview') === 'eleve';
+    const isPlafond15Preview = canPreview && urlParams?.get('preview') === 'plafond15';
+    const isPremierJourPreview = canPreview && urlParams?.get('preview') === 'premier_jour';
+    const isDevPreview = isStudentPreview || isPlafond15Preview || isPremierJourPreview;
+
     // Reprise défi
     const [defiEnCours, setDefiEnCours] = useState(() => {
         return (!estProf && idUtilisateur) ? lireDefiEnCours(idUtilisateur) : null;
@@ -73,8 +82,10 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     const [loadingReprise, setLoadingReprise] = useState(false);
     const [erreurReprise, setErreurReprise] = useState(null);
 
-    // Données élève
+    // Données élève : 3 états (chargement, erreur, chargé)
     const [userData, setUserData] = useState(null);
+    const [loadingProfile, setLoadingProfile] = useState(!estProf && !isDevPreview);
+    const [profileError, setProfileError] = useState(null);
     const [weakTable, setWeakTable] = useState(null);
     const [enAttente, setEnAttente] = useState(() => partiesEnAttente());
     const [showGrid, setShowGrid] = useState(false);
@@ -95,21 +106,42 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
         setErreurReprise(null);
     }, [idUtilisateur, estProf]);
 
-    useEffect(() => {
-        if (!estProf && idUtilisateur) {
-            monProfil().then(res => {
-                if (res.ok && res.data) {
-                    setUserData(res.data);
-                }
-            }).catch(() => {});
+    const chargerDonneesEleve = useCallback(() => {
+        if (estProf && !isDevPreview) return;
+        if (!idUtilisateur && !isDevPreview) return;
 
-            mesTablesFaibles(1).then(res => {
-                if (res.ok && res.data && res.data.length > 0) {
-                    setWeakTable(res.data[0]);
-                }
-            }).catch(() => {});
+        setLoadingProfile(true);
+        setProfileError(null);
+
+        monProfil().then(res => {
+            if (res.ok && res.data) {
+                setUserData(res.data);
+                setLoadingProfile(false);
+            } else {
+                setProfileError(res.error || res.message || 'Impossible de charger ton profil.');
+                setLoadingProfile(false);
+            }
+        }).catch(() => {
+            setProfileError('Connexion perdue — vérifie ton accès au réseau.');
+            setLoadingProfile(false);
+        });
+
+        mesTablesFaibles(1).then(res => {
+            if (res.ok && res.data && res.data.length > 0) {
+                setWeakTable(res.data[0]);
+            } else {
+                setWeakTable(null);
+            }
+        }).catch(() => {
+            setWeakTable(null);
+        });
+    }, [estProf, idUtilisateur, isDevPreview]);
+
+    useEffect(() => {
+        if (!estProf && idUtilisateur && !isDevPreview) {
+            chargerDonneesEleve();
         }
-    }, [estProf, idUtilisateur]);
+    }, [estProf, idUtilisateur, isDevPreview, chargerDonneesEleve]);
 
     useEffect(() => {
         setEnAttente(partiesEnAttente());
@@ -171,13 +203,8 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
         await changerAvatar(emoji);
     };
 
-    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    const isStudentPreview = urlParams?.get('preview') === 'eleve';
-    const isPlafond15Preview = urlParams?.get('preview') === 'plafond15';
-    const isPremierJourPreview = urlParams?.get('preview') === 'premier_jour';
-
     // ==================== ACCUEIL PROFESSEUR ====================
-    if (estProf && !isStudentPreview && !isPlafond15Preview && !isPremierJourPreview) {
+    if (estProf && !isDevPreview) {
         return (
             <div className="screen-enter">
                 <div className="card" style={{
@@ -283,18 +310,176 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     }
 
     // ==================== ACCUEIL ÉLÈVE ====================
-    const studentProfil = userData?.profil || (isStudentPreview || isPlafond15Preview
-        ? { prenom: 'Lou', classe: '6ᵉA', avatar_emoji: '🦊', plafond_tables: isPlafond15Preview ? 15 : 10 }
-        : (isPremierJourPreview ? { prenom: 'Malo', classe: '6ᵉB', avatar_emoji: '?', plafond_tables: 10 } : profil));
+
+    // État 1 : En cours de chargement (pas d'écran 15 ni 16, squelette sobre avec données déjà connues)
+    if (!isDevPreview && loadingProfile && !userData && !profileError) {
+        return (
+            <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 10 }}>
+                    <div
+                        style={{
+                            width: 74, height: 74, borderRadius: 24,
+                            background: 'var(--bordure)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontSize: 40, flexShrink: 0,
+                        }}
+                    >
+                        {profil?.avatar_emoji || '🦊'}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <div className="font-display" style={{ fontSize: 33, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {profil?.prenom || 'Bonjour'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 600, color: 'var(--gris)' }}>
+                            {profil?.classe ? `${profil.classe} · ` : ''}Chargement…
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 26, padding: '36px 24px',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 16, textAlign: 'center',
+                }}>
+                    <div style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        border: '4px solid var(--bordure)',
+                        borderTopColor: 'var(--action)',
+                        animation: 'spin 1s linear infinite',
+                    }} />
+                    <div className="font-display" style={{ fontSize: 21, fontWeight: 700, color: 'var(--indigo)' }}>
+                        Chargement de ta progression…
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        Récupération de ta grille et de tes scores
+                    </div>
+                </div>
+
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 24, padding: '16px 20px',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', alignItems: 'center',
+                    gap: 14, minHeight: 96, opacity: 0.6,
+                }}>
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                        color: 'var(--indigo-doux)', whiteSpace: 'nowrap',
+                    }}>
+                        Défi de classe
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+                        {[0, 1, 2, 3, 4].map(idx => (
+                            <div
+                                key={idx}
+                                style={{
+                                    flex: 1, height: 64, borderRadius: 14,
+                                    border: '3px dashed var(--bordure)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 26,
+                                    color: 'var(--gris-inerte)', background: 'var(--surface)',
+                                }}
+                            >
+                                ·
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{
+                        height: 64, padding: '0 26px', borderRadius: 14,
+                        background: 'var(--bordure)', color: 'var(--gris)',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 19,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        Rejoindre
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // État 2 : Erreur de connexion (réseau coupé ou échec serveur)
+    if (!isDevPreview && profileError && !userData) {
+        return (
+            <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div
+                        style={{
+                            width: 74, height: 74, borderRadius: 24,
+                            background: 'var(--ciel-pale)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontSize: 40, flexShrink: 0,
+                        }}
+                    >
+                        {profil?.avatar_emoji || '🦊'}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <div className="font-display" style={{ fontSize: 33, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {profil?.prenom || 'Bonjour'}
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 600, color: 'var(--gris)' }}>
+                            {profil?.classe || ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 26, padding: '36px 24px',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: 16, textAlign: 'center',
+                }}>
+                    <div style={{
+                        width: 64, height: 64, borderRadius: 20, background: 'var(--orange-pale)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
+                    }}>
+                        ⚠️
+                    </div>
+                    <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--indigo)' }}>
+                        Connexion perdue
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--gris)', maxWidth: 360 }}>
+                        {profileError}
+                    </div>
+                    <button
+                        onClick={chargerDonneesEleve}
+                        style={{
+                            marginTop: 8, height: 56, padding: '0 32px', borderRadius: 18,
+                            background: 'var(--action)', color: 'var(--action-texte)',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                        }}
+                    >
+                        Réessayer
+                    </button>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            background: 'none', border: 'none', color: 'var(--gris)',
+                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+                        }}
+                    >
+                        Se déconnecter
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // État 3 : Données élève chargées (ou prévisualisation prof autorisée)
+    const studentProfil = (canPreview && isDevPreview)
+        ? (isPremierJourPreview
+            ? { prenom: 'Malo', classe: '6ᵉB', avatar_emoji: '?', plafond_tables: 10 }
+            : { prenom: 'Lou', classe: '6ᵉA', avatar_emoji: '🦊', plafond_tables: isPlafond15Preview ? 15 : 10 })
+        : (userData?.profil || profil);
 
     const currentAvatar = selectedAvatar || studentProfil?.avatar_emoji || (isPremierJourPreview ? '?' : '🦊');
     const plafond = studentProfil?.plafond_tables || (isPlafond15Preview ? 15 : 10);
     const palierLabel = plafond <= 5 ? 'Découverte' : plafond <= 10 ? 'Confirmé' : 'Expert';
-    const studentPoints = userData?.records?.points_total ?? (userData?.progression?.total ?? (isStudentPreview || isPlafond15Preview ? 1240 : 0));
+    const studentPoints = userData?.records?.points_total ?? (userData?.progression?.total ?? (canPreview && isDevPreview ? 1240 : 0));
 
     // Déclenchement de l'écran 16 (premier jour) sur une seule condition : monProfil().records.nb_sessions === 0
-    const nbSessions = isPremierJourPreview ? 0 : (userData ? (userData.records?.nb_sessions ?? 0) : (isStudentPreview || isPlafond15Preview ? 14 : 0));
-    const estPremierJour = isPremierJourPreview || (!estProf && (nbSessions === 0));
+    const nbSessions = (canPreview && isPremierJourPreview) ? 0 : (userData ? (userData.records?.nb_sessions ?? 0) : (canPreview && isDevPreview ? 14 : 0));
+    const estPremierJour = (canPreview && isPremierJourPreview) || (!estProf && (nbSessions === 0));
 
     const typeLabels = {
         sprint: 'Sprint',
@@ -510,7 +695,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     }
 
     // ==================== ÉCRAN 15 : ACCUEIL ÉLÈVE CORRIGÉ ====================
-    const maitrise = userData?.maitrise || (isStudentPreview || isPlafond15Preview ? getMockMaitrise(plafond) : {});
+    const maitrise = userData?.maitrise || (canPreview && (isStudentPreview || isPlafond15Preview) ? getMockMaitrise(plafond) : {});
     const totalCases = plafond * plafond;
     let nbVertes = 0;
     let nbRouges = 0;
@@ -547,8 +732,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     const cellSize = plafond <= 10 ? 16 : plafond <= 12 ? 13 : 10;
     const cellGap = plafond <= 10 ? 3 : 2;
 
-    // Action du jour : issue de mesTablesFaibles(1)
-    const tableActionJour = weakTable || (isStudentPreview ? 9 : (tablesRouges[0] || plafond));
+    // Action du jour : UNIQUEMENT issue de mesTablesFaibles(1)
+    // Aucun repli local si le serveur n'a pas répondu ou ne renvoie rien
+    const tableActionJour = weakTable || (canPreview && isStudentPreview ? 9 : null);
 
     return (
         <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -767,50 +953,52 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 )}
             </div>
 
-            {/* 4. Aujourd'hui / Action du jour */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{
-                    fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
-                    color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
-                }}>
-                    Aujourd'hui
+            {/* 4. Aujourd'hui / Action du jour (uniquement si mesTablesFaibles a répondu) */}
+            {tableActionJour && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                        color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                    }}>
+                        Aujourd'hui
+                    </div>
+                    <button
+                        onClick={() => onGo('play', { mode: 'flawless', tables: [tableActionJour], length: 20, timer: 0 })}
+                        style={{
+                            background: 'var(--action)', borderRadius: 26, padding: '24px 26px',
+                            display: 'flex', alignItems: 'center', gap: 20, border: 'none',
+                            cursor: 'pointer', textAlign: 'left', width: '100%',
+                        }}
+                    >
+                        <div style={{
+                            width: 78, height: 78, borderRadius: 22,
+                            background: 'rgba(255, 255, 255, 0.18)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
+                            color: 'var(--action-texte)', flexShrink: 0,
+                        }}>
+                            {tableActionJour}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                            <div className="font-display" style={{ fontSize: 28, fontWeight: 700, color: 'var(--action-texte)' }}>
+                                Reprendre la table de {tableActionJour}
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--ciel-pale)' }}>
+                                Ta table la plus faible · Sans faute · 20 questions
+                            </div>
+                        </div>
+                        <div style={{
+                            width: 66, height: 66, borderRadius: 20,
+                            background: 'var(--surface)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                <path d="M8.5 5 17 12l-8.5 7" stroke="var(--action)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                    </button>
                 </div>
-                <button
-                    onClick={() => onGo('play', { mode: 'flawless', tables: [tableActionJour], length: 20, timer: 0 })}
-                    style={{
-                        background: 'var(--action)', borderRadius: 26, padding: '24px 26px',
-                        display: 'flex', alignItems: 'center', gap: 20, border: 'none',
-                        cursor: 'pointer', textAlign: 'left', width: '100%',
-                    }}
-                >
-                    <div style={{
-                        width: 78, height: 78, borderRadius: 22,
-                        background: 'rgba(255, 255, 255, 0.18)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
-                        color: 'var(--action-texte)', flexShrink: 0,
-                    }}>
-                        {tableActionJour}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
-                        <div className="font-display" style={{ fontSize: 28, fontWeight: 700, color: 'var(--action-texte)' }}>
-                            Reprendre la table de {tableActionJour}
-                        </div>
-                        <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--ciel-pale)' }}>
-                            Ta table la plus faible · Sans faute · 20 questions
-                        </div>
-                    </div>
-                    <div style={{
-                        width: 66, height: 66, borderRadius: 20,
-                        background: 'var(--surface)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    }}>
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                            <path d="M8.5 5 17 12l-8.5 7" stroke="var(--action)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </div>
-                </button>
-            </div>
+            )}
 
             {/* 5. Grille des 6 modes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -818,7 +1006,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                     fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
                     color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
                 }}>
-                    Ou choisis ton mode
+                    {tableActionJour ? 'Ou choisis ton mode' : 'Choisis ton mode'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                     {/* Sprint */}
