@@ -8,11 +8,12 @@
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
-> **Le lot 17 est prêt à partir** (`PROMPT_ANTIGRAVITY_lot17.md`) : maquette 9,
-> bouton « Voir qui », deux finitions. Il attend que la **migration 25** soit
-> appliquée dans Supabase — elle est écrite et testée
-> (`supabase/migrations/20260904090000_presences_defi.sql`).
-> La mise en service reste entière chez Aymeri.
+> **Le lot 17 est livré** (commit `951d531`) : la **migration 25 est appliquée**
+> sur `calcul-mental-dev`, la maquette 9 (code projeté au tableau) affiche les
+> arrivées en direct, et le bouton « Voir qui » nomme les élèves hors plafond.
+> **Aucun lot en attente.** Prochaines étapes : les écrans sans maquette (Ma
+> classe, accueil professeur, administration), puis la règle de maîtrise au
+> temps de réponse. La mise en service reste entière chez Aymeri.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat

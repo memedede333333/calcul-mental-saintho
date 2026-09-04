@@ -11,6 +11,33 @@
 entrée **en haut** de la section « Entrées », sur ce modèle :
 
 ```markdown
+## 2026-09-04 — Lot 17 : Migration 25 appliquée, maquette 9 (code projeté) et bouton « Voir qui »
+
+**Fait** —
+- **Migration 25 appliquée** sur la base de développement `calcul-mental-dev` via MCP Supabase (`defis_presences`, `presents_defi()`, `eleves_hors_plafond()`, `avancement_defi()` avec six compteurs, `enregistrer_session()` refusant les parties à 0 question). Contrôle SQL réussi : `table_creee = 1`, `fonctions_creees = 2`.
+- **Types TypeScript régénérés** dans `frontend/src/types/database.ts`.
+- **Enveloppes d'API ajoutées** dans `frontend/src/api.js` : `presentsDefi(defiId)` et `elevesHorsPlafond(classe, tables)`.
+- **Maquette 9 (Code projeté au tableau)** entièrement réalisée dans `Challenges.jsx` (`DefiCodeScreen`) : format 1280 × 720 lisible du fond de la salle, cinq cases géantes pour le code, affichage dynamique des arrivées en direct via `presentsDefi` et `suivreDefi`, rafraîchissement toutes les 3,5 s (avec arrêt au démontage), décompte du débordement (« + X autres »), avatar grisé quand l'élève a terminé (`a_termine`), pas de nombre négatif pour les anciens défis (`rejoints` et `en_cours` comptés).
+- **Écran 17 (Bouton « Voir qui › »)** implémenté dans `ChallengeConfigProf` : bascule affichant la liste exacte des élèves hors plafond (prénom, nom et jusqu'à quelle table), décompte strictement identique à `eleves_hors_plafond` (1 élève sur la classe 31, Lou Audran jusqu'à 10 pour un défi avec la table 12), aucun emploi du mot « travail ».
+- **Finition sur l'accueil élève (`Home.jsx`)** : message fixe en français « Connexion perdue. Appuie sur Réessayer. » en cas d'erreur de profil ou coupure réseau, détail technique consigné dans `console.error`.
+- **Jeton de style ajouté** dans `tokens.css` : `--indigo-clair: #A9AFDE` pour les textes secondaires sur fond sombre. `check-tokens.mjs` et `npm run build` 100 % verts.
+
+**Décidé** —
+- La mosaïque décorative 3x3 de Maquette 9 est intégrée dans le flux flex de l'en-tête pour éviter tout chevauchement avec le logo ou le titre quel que soit le ratio d'écran ou la fenêtre.
+- Le bouton « Voir qui › » charge les noms à la demande ou rafraîchit la liste si le panneau est déjà déployé quand les tables changent.
+
+**Constaté** —
+- Le polling de 3,5 s et l'abonnement en direct Supabase sur `defis_participants` répercutent instantanément l'arrivée d'un élève (passage de « 0 connecté » à « 1 connecté » et apparition de son avatar/prénom) et la fin de sa partie (avatar grisé, `en_cours` retombant à 0).
+- Sur un défi antérieur à la migration 25, `rejoints` et `en_cours` valent bien 0 sans aucun nombre négatif.
+
+**Ensuite** —
+- Les écrans sans maquette (Ma classe, accueil professeur, administration).
+- La règle de maîtrise au temps de réponse.
+
+---
+
+---
+
 ## 2026-09-04 — La refonte est dans le code, et la migration 25
 
 **Fait** — Lots 13 à 16 bis livrés par Antigravity et relus dans le code, pas
@@ -104,31 +131,6 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 ---
 
 # Entrées
-
-## 2026-09-04 — Lot 17 : Migration 25 appliquée, maquette 9 (code projeté) et bouton « Voir qui »
-
-**Fait** —
-- **Migration 25 appliquée** sur la base de développement `calcul-mental-dev` via MCP Supabase (`defis_presences`, `presents_defi()`, `eleves_hors_plafond()`, `avancement_defi()` avec six compteurs, `enregistrer_session()` refusant les parties à 0 question). Contrôle SQL réussi : `table_creee = 1`, `fonctions_creees = 2`.
-- **Types TypeScript régénérés** dans `frontend/src/types/database.ts`.
-- **Enveloppes d'API ajoutées** dans `frontend/src/api.js` : `presentsDefi(defiId)` et `elevesHorsPlafond(classe, tables)`.
-- **Maquette 9 (Code projeté au tableau)** entièrement réalisée dans `Challenges.jsx` (`DefiCodeScreen`) : format 1280 × 720 lisible du fond de la salle, cinq cases géantes pour le code, affichage dynamique des arrivées en direct via `presentsDefi` et `suivreDefi`, rafraîchissement toutes les 3,5 s (avec arrêt au démontage), décompte du débordement (« + X autres »), avatar grisé quand l'élève a terminé (`a_termine`), pas de nombre négatif pour les anciens défis (`rejoints` et `en_cours` comptés).
-- **Écran 17 (Bouton « Voir qui › »)** implémenté dans `ChallengeConfigProf` : bascule affichant la liste exacte des élèves hors plafond (prénom, nom et jusqu'à quelle table), décompte strictement identique à `eleves_hors_plafond` (1 élève sur la classe 31, Lou Audran jusqu'à 10 pour un défi avec la table 12), aucun emploi du mot « travail ».
-- **Finition sur l'accueil élève (`Home.jsx`)** : message fixe en français « Connexion perdue. Appuie sur Réessayer. » en cas d'erreur de profil ou coupure réseau, détail technique consigné dans `console.error`.
-- **Jeton de style ajouté** dans `tokens.css` : `--indigo-clair: #A9AFDE` pour les textes secondaires sur fond sombre. `check-tokens.mjs` et `npm run build` 100 % verts.
-
-**Décidé** —
-- La mosaïque décorative 3x3 de Maquette 9 est intégrée dans le flux flex de l'en-tête pour éviter tout chevauchement avec le logo ou le titre quel que soit le ratio d'écran ou la fenêtre.
-- Le bouton « Voir qui › » charge les noms à la demande ou rafraîchit la liste si le panneau est déjà déployé quand les tables changent.
-
-**Constaté** —
-- Le polling de 3,5 s et l'abonnement en direct Supabase sur `defis_participants` répercutent instantanément l'arrivée d'un élève (passage de « 0 connecté » à « 1 connecté » et apparition de son avatar/prénom) et la fin de sa partie (avatar grisé, `en_cours` retombant à 0).
-- Sur un défi antérieur à la migration 25, `rejoints` et `en_cours` valent bien 0 sans aucun nombre négatif.
-
-**Ensuite** —
-- Les écrans sans maquette (Ma classe, accueil professeur, administration).
-- La règle de maîtrise au temps de réponse.
-
----
 
 ## 2026-09-03 — La refonte visuelle est arrêtée, et elle a produit une migration
 
