@@ -406,7 +406,7 @@ export default function App() {
                 />
             )}
             {screen === 'mes-defis' && (
-                <MesDefis onBack={goHome} estProf={estProf} />
+                <MesDefis onBack={goHome} estProf={estProf} onGo={handleGo} />
             )}
             {screen === 'classe' && (
                 <MaClasse

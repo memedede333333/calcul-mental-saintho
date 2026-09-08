@@ -315,6 +315,7 @@ export type Database = {
       profs: {
         Row: {
           actif: boolean
+          avatar_emoji: string | null
           classes: string[]
           cree_le: string
           email: string
@@ -325,6 +326,7 @@ export type Database = {
         }
         Insert: {
           actif?: boolean
+          avatar_emoji?: string | null
           classes?: string[]
           cree_le?: string
           email: string
@@ -335,6 +337,7 @@ export type Database = {
         }
         Update: {
           actif?: boolean
+          avatar_emoji?: string | null
           classes?: string[]
           cree_le?: string
           email?: string
@@ -500,6 +503,7 @@ export type Database = {
         }[]
       }
       avancement_defi: { Args: { p_defi_id: string }; Returns: Json }
+      changer_avatar_prof: { Args: { p_emoji: string }; Returns: Json }
       classement_classes: {
         Args: { p_niveau?: string; p_periode?: string }
         Returns: {
@@ -529,9 +533,13 @@ export type Database = {
           avatar: string
           classe: string
           est_moi: boolean
+          initiales: string
+          meilleur_sprint: number
           nom_affiche: string
           parties: number
+          points: number
           rang: number
+          role: string
           valeur: number
         }[]
       }
@@ -656,10 +664,12 @@ export type Database = {
         Args: { p_classe: string; p_periode?: string }
         Returns: Json
       }
+      entete_salle_des_profs: { Args: { p_periode?: string }; Returns: Json }
       est_admin: { Args: never; Returns: boolean }
       est_prof: { Args: never; Returns: boolean }
       generer_code_defi: { Args: never; Returns: string }
       importer_eleves: { Args: { p_eleves: Json }; Returns: Json }
+      initiales_de: { Args: { p_nom: string }; Returns: string }
       journaliser: {
         Args: { p_action: string; p_cible: string; p_detail?: Json }
         Returns: undefined
@@ -714,6 +724,22 @@ export type Database = {
           rang_au_dessus: number
         }[]
       }
+      ma_place_records: {
+        Args: {
+          p_categorie?: string
+          p_palier?: string
+          p_periode?: string
+          p_portee?: string
+        }
+        Returns: {
+          classes_total: number
+          ecart_au_dessus: number
+          rang: number
+          rang_au_dessus: number
+          valeur: number
+          valeur_au_dessus: number
+        }[]
+      }
       maitrise_classe: {
         Args: { p_classe: string }
         Returns: {
@@ -744,6 +770,7 @@ export type Database = {
           origine: string
           participants: number
           participants_classe: number
+          rejoints: number
           tables: number[]
           type: string
         }[]

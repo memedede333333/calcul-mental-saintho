@@ -1,16 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { mesDefis } from '../api';
 import { DefiLeaderboard } from './Challenges';
-import { IconDefisPasses, ModeIcon } from '../components/Icons';
 
 /**
- * MesDefis — La porte de retour vers les défis passés.
+ * MesDefis — Écran 28 : Mes défis passés
  *
- * Un prof crée un défi, note le code, quitte l'écran — et n'a plus
- * AUCUN moyen d'y revenir. Cet écran liste les défis créés, et un
- * clic ouvre DefiLeaderboard pour voir le classement en temps réel.
- *
- * Accessible côté prof (accueil) ET côté élève (écran Défis).
+ * Affichage selon la maquette v10 (Écran 28) :
+ * - En-tête avec bouton retour, titre « Mes défis » et badge du nombre total.
+ * - Filtre par onglets : « En cours · X » et « Terminés · Y ».
+ * - Pour chaque carte :
+ *   - Code en grand lettrage espacé (34px display).
+ *   - Statut : « En cours · expire dans X h » ou « Terminé ».
+ *   - Chips : Mode / questions, Tables, Classe, Date relative.
+ *   - Double population : « X ont rejoint · Y ont terminé » (jamais l'un sans l'autre).
+ *   - Jauge bicolore (terminés en vert, rejoints seuls en ciel).
+ *   - Boutons : « Voir le podium » et « Projeter au tableau ».
+ * - État vide : grille de 9 pastilles colorées, texte et bouton « Lancer un défi ».
  */
 
 const TYPE_LABELS = {
@@ -20,19 +25,44 @@ const TYPE_LABELS = {
     climb: { label: 'Montée' },
 };
 
-function formatDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const jour = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-    const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${jour} à ${heure}`;
+function formatTempsRestant(expireLe) {
+    if (!expireLe) return 'bientôt';
+    const diffMs = new Date(expireLe).getTime() - Date.now();
+    if (diffMs <= 0) return '0 min';
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH >= 1) return `${diffH} h`;
+    const diffMin = Math.max(1, Math.floor(diffMs / 60000));
+    return `${diffMin} min`;
 }
 
-export default function MesDefis({ onBack, estProf }) {
+function formatDateRelative(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const estAujourdhui = d.toDateString() === now.toDateString();
+    const hier = new Date(now);
+    hier.setDate(now.getDate() - 1);
+    const estHier = d.toDateString() === hier.toDateString();
+    const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    if (estAujourdhui) return `Aujourd'hui à ${heure}`;
+    if (estHier) return `Hier à ${heure}`;
+    return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${heure}`;
+}
+
+function formatTables(tables) {
+    if (!tables || !tables.length) return 'Toutes tables';
+    if (tables.length === 1) return `Table de ${tables[0]}`;
+    if (tables.length > 4 && tables.every((t, i) => i === 0 || t === tables[i - 1] + 1)) {
+        return `Tables ${tables[0]} à ${tables[tables.length - 1]}`;
+    }
+    return `Tables ${tables.join(', ')}`;
+}
+
+export default function MesDefis({ onBack, estProf, onGo }) {
     const [loading, setLoading] = useState(true);
     const [erreur, setErreur] = useState(null);
     const [defis, setDefis] = useState([]);
-    // Quand on ouvre le classement d'un défi
+    const [tab, setTab] = useState('en_cours'); // 'en_cours' | 'termines'
     const [selectedDefi, setSelectedDefi] = useState(null);
 
     const charger = useCallback(async () => {
@@ -51,7 +81,14 @@ export default function MesDefis({ onBack, estProf }) {
         charger();
     }, [charger]);
 
-    // Si on regarde le classement d'un défi
+    const nbEnCours = useMemo(() => defis.filter(d => d.encore_ouvert).length, [defis]);
+    const nbTermines = useMemo(() => defis.filter(d => !d.encore_ouvert).length, [defis]);
+
+    const defisAffiches = useMemo(() => {
+        return defis.filter(d => tab === 'en_cours' ? d.encore_ouvert : !d.encore_ouvert);
+    }, [defis, tab]);
+
+    // Affichage du podium / classement d'un défi
     if (selectedDefi) {
         return (
             <DefiLeaderboard
@@ -75,8 +112,8 @@ export default function MesDefis({ onBack, estProf }) {
                 justifyContent: 'center', minHeight: '50vh', gap: 16,
             }}>
                 <div className="spinner" />
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
-                    Chargement des défis…
+                <p style={{ color: 'var(--gris)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>
+                    Chargement de vos défis…
                 </p>
             </div>
         );
@@ -85,151 +122,266 @@ export default function MesDefis({ onBack, estProf }) {
     if (erreur) {
         return (
             <div className="screen-enter" style={{ textAlign: 'center', padding: 40 }}>
-                <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 16 }}>{erreur}</p>
-                <button className="btn btn--ghost" style={{ marginTop: 16 }} onClick={charger}>
-                    Réessayer
-                </button>
-                <button className="btn-back" style={{ marginTop: 12 }} onClick={onBack}>
-                    ‹ Retour
-                </button>
+                <p style={{ color: 'var(--rouge)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>
+                    {erreur}
+                </p>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+                    <button
+                        onClick={charger}
+                        style={{
+                            height: 48, padding: '0 20px', borderRadius: 14,
+                            background: 'var(--action)', color: 'var(--action-texte)',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                            border: 'none', cursor: 'pointer',
+                        }}
+                    >
+                        Réessayer
+                    </button>
+                    <button
+                        onClick={onBack}
+                        style={{
+                            height: 48, padding: '0 20px', borderRadius: 14,
+                            background: 'var(--surface)', border: '2px solid var(--bordure)',
+                            color: 'var(--indigo)', fontFamily: 'var(--texte)',
+                            fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                        }}
+                    >
+                        ‹ Retour
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="screen-enter">
-            <button className="btn-back" onClick={onBack}>‹ Retour</button>
-
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-                    <IconDefisPasses size={40} color="var(--indigo)" actionColor="var(--ciel)" />
-                </div>
-                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--navy)' }}>
+        <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* 1. Header (Écran 28) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 8 }}>
+                <button
+                    type="button"
+                    onClick={onBack}
+                    style={{
+                        width: 52, height: 52, borderRadius: 16,
+                        background: 'var(--surface)',
+                        boxShadow: '0 4px 12px rgba(32, 34, 107, 0.08)',
+                        border: 'none', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                    }}
+                >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 5L8 12l7 7" stroke="var(--indigo)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+                <h2 className="font-display" style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--indigo)' }}>
                     Mes défis
                 </h2>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 13 }}>
-                    {defis.length === 0
-                        ? 'Tu n\'as pas encore créé de défi.'
-                        : `${defis.length} défi${defis.length > 1 ? 's' : ''}`
-                    }
-                </p>
+                <div className="font-display" style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 700, color: 'var(--gris)' }}>
+                    {defis.length}
+                </div>
             </div>
 
-            {defis.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-                    <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
-                        Aucun défi créé pour le moment.
-                    </p>
+            {/* 2. Onglets En cours / Terminés */}
+            <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                    type="button"
+                    onClick={() => setTab('en_cours')}
+                    style={{
+                        padding: '11px 20px', borderRadius: 999,
+                        background: tab === 'en_cours' ? 'var(--indigo)' : 'var(--surface)',
+                        color: tab === 'en_cours' ? 'var(--action-texte)' : 'var(--gris)',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17,
+                        border: 'none', cursor: 'pointer',
+                        boxShadow: tab === 'en_cours' ? 'none' : '0 3px 10px rgba(32, 34, 107, 0.07)',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    En cours · {nbEnCours}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setTab('termines')}
+                    style={{
+                        padding: '11px 20px', borderRadius: 999,
+                        background: tab === 'termines' ? 'var(--indigo)' : 'var(--surface)',
+                        color: tab === 'termines' ? 'var(--action-texte)' : 'var(--gris)',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17,
+                        border: 'none', cursor: 'pointer',
+                        boxShadow: tab === 'termines' ? 'none' : '0 3px 10px rgba(32, 34, 107, 0.07)',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    Terminés · {nbTermines}
+                </button>
+            </div>
+
+            {/* 3. Liste des défis ou État vide */}
+            {defisAffiches.length === 0 ? (
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 24,
+                    boxShadow: 'var(--ombre-carte)', padding: '36px 24px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 14, textAlign: 'center', marginTop: 8,
+                }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 20px)', gap: 6, flexShrink: 0 }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--rouge)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--orange)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--vert)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--orange)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--ciel)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--rouge)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--vert)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--ciel)' }} />
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--orange)' }} />
+                    </div>
+                    <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {tab === 'en_cours' ? 'Aucun défi en cours' : 'Aucun défi terminé'}
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 17, lineHeight: 1.45, fontWeight: 600, color: 'var(--gris)', maxWidth: 520 }}>
+                        Lance un défi à ta classe ou à tes amis pour commencer.
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onGo ? onGo('challenges') : onBack?.()}
+                        style={{
+                            height: 64, padding: '0 32px', borderRadius: 20,
+                            background: 'var(--action)', color: 'var(--action-texte)',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 19,
+                            border: 'none', cursor: 'pointer', marginTop: 8,
+                            boxShadow: '0 4px 14px rgba(35, 164, 217, 0.25)',
+                        }}
+                    >
+                        Lancer un défi
+                    </button>
                 </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {defis.map(d => {
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {defisAffiches.map(d => {
                         const typeInfo = TYPE_LABELS[d.type] || { label: d.type };
-                        const ouvert = d.encore_ouvert;
+                        const rejoints = d.rejoints || 0;
+                        const participants = d.participants || 0;
+                        const attendus = d.attendus || Math.max(rejoints, participants, 1);
+                        const pctTermine = Math.min(100, Math.round((participants / attendus) * 100));
+                        const pctRejointsSeuls = Math.min(100 - pctTermine, Math.max(0, Math.round(((rejoints - participants) / attendus) * 100)));
+
                         return (
-                            <button
+                            <div
                                 key={d.defi_id}
-                                className="card"
-                                onClick={() => setSelectedDefi(d)}
                                 style={{
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    border: ouvert ? '2px solid var(--mint)' : '2px solid var(--border)',
-                                    opacity: ouvert ? 1 : 0.6,
-                                    padding: '14px 16px',
-                                    transition: 'transform 0.1s',
+                                    background: 'var(--surface)', borderRadius: 24,
+                                    boxShadow: 'var(--ombre-carte)', padding: 24,
+                                    display: 'flex', flexDirection: 'column', gap: 16,
                                 }}
                             >
-                                {/* Code en gros, display, lettrage espacé */}
-                                <div style={{
-                                    fontFamily: 'var(--font-display)',
-                                    fontSize: 26,
-                                    fontWeight: 900,
-                                    letterSpacing: '0.2em',
-                                    color: ouvert ? 'var(--navy)' : 'var(--text-soft)',
-                                    marginBottom: 6,
-                                }}>
-                                    {d.code}
+                                {/* Ligne supérieure : Code & Statut */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                                    <div
+                                        className="font-display"
+                                        style={{
+                                            fontSize: 34, fontWeight: 700, color: 'var(--indigo)',
+                                            letterSpacing: '0.2em',
+                                        }}
+                                    >
+                                        {d.code}
+                                    </div>
+                                    <div style={{
+                                        marginLeft: 'auto', display: 'flex', alignItems: 'center',
+                                        gap: 8, padding: '8px 16px', borderRadius: 999,
+                                        background: d.encore_ouvert ? 'var(--vert-pale)' : 'var(--surface-alt)',
+                                    }}>
+                                        <div style={{
+                                            width: 11, height: 11, borderRadius: 4,
+                                            background: d.encore_ouvert ? 'var(--vert)' : 'var(--gris-inerte)',
+                                        }} />
+                                        <span style={{
+                                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 700,
+                                            color: d.encore_ouvert ? 'var(--vert)' : 'var(--gris)',
+                                        }}>
+                                            {d.encore_ouvert ? `En cours · expire dans ${formatTempsRestant(d.expire_le)}` : 'Terminé'}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                {/* Type + classe + date */}
-                                <div style={{
-                                    display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
-                                    fontSize: 13, fontWeight: 600, color: 'var(--text-soft)',
-                                    marginBottom: 6,
-                                }}>
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        <ModeIcon mode={d.type} size={16} color="var(--indigo)" /> {typeInfo.label}
+                                {/* Ligne des tags / chips */}
+                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
+                                        fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
+                                    }}>
+                                        {typeInfo.label} · {d.type === 'countdown' ? '2 min' : '20 questions'}
+                                    </span>
+                                    <span style={{
+                                        background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
+                                        fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
+                                    }}>
+                                        {formatTables(d.tables)}
                                     </span>
                                     {d.classe && (
-                                        <span className="chip" style={{
-                                            fontSize: 11, padding: '2px 8px', height: 'auto',
+                                        <span style={{
+                                            background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
+                                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
                                         }}>
-                                            {d.classe}
+                                            Classe {d.classe}
                                         </span>
                                     )}
-                                    <span>· {formatDate(d.cree_le)}</span>
-                                </div>
-
-                                {/* Origine */}
-                                <div style={{ marginBottom: 6 }}>
                                     <span style={{
-                                        fontSize: 11, fontWeight: 800,
-                                        padding: '2px 8px', borderRadius: 6,
-                                        background: d.origine === 'prof'
-                                            ? 'var(--ciel-pale)' : 'var(--orange-pale)',
-                                        color: d.origine === 'prof'
-                                            ? 'var(--action)' : 'var(--orange)',
+                                        background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
+                                        fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
                                     }}>
-                                        {d.origine === 'prof' ? 'Travail de classe' : 'Défi amical'}
+                                        {formatDateRelative(d.cree_le)}
                                     </span>
-                                    {d.auteur_nom && (
-                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--gris)', marginLeft: 6 }}>
-                                            Défi de {d.auteur_nom}
-                                        </span>
-                                    )}
                                 </div>
 
-                                {/* Participants + état */}
-                                <div style={{
-                                    display: 'flex', justifyContent: 'space-between',
-                                    alignItems: 'flex-start',
-                                }}>
-                                    <div>
-                                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                                            {d.attendus != null
-                                                ? `${d.participants_classe ?? 0} / ${d.attendus} de la ${d.classe} ont joué`
-                                                : `${d.participants} ${d.participants === 1 ? 'a joué' : 'ont joué'}`
-                                            }
-                                        </span>
-                                        {d.attendus != null && d.participants > (d.participants_classe ?? 0) && (
-                                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)' }}>
-                                                + {d.participants - (d.participants_classe ?? 0)} d'autres classes
-                                            </div>
-                                        )}
+                                {/* Populations : rejoints et participants (DEUX POPULATIONS, DEUX VERBES) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                                    <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--indigo)' }}>
+                                        {rejoints} ont rejoint · <b>{participants} ont terminé</b>
                                     </div>
-                                    {!ouvert && (
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 800,
-                                            color: 'var(--text-soft)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
-                                        }}>
-                                            terminé
-                                        </span>
-                                    )}
-                                    {ouvert && (
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 800,
-                                            color: 'var(--mint-dk)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.05em',
-                                        }}>
-                                            en cours
-                                        </span>
-                                    )}
+                                    <div style={{
+                                        height: 8, borderRadius: 999, background: 'var(--surface-alt)',
+                                        overflow: 'hidden', display: 'flex',
+                                    }}>
+                                        <div style={{ width: `${pctTermine}%`, background: 'var(--vert)', transition: 'width 0.3s ease' }} />
+                                        <div style={{ width: `${pctRejointsSeuls}%`, background: 'var(--ciel)', transition: 'width 0.3s ease' }} />
+                                    </div>
                                 </div>
-                            </button>
+
+                                {/* Boutons d'action : Voir le podium / Projeter au tableau */}
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedDefi(d)}
+                                        style={{
+                                            flex: 1, height: 66, borderRadius: 18,
+                                            background: 'var(--surface)', border: '2px solid var(--bordure)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                            color: 'var(--indigo)', cursor: 'pointer',
+                                        }}
+                                    >
+                                        Voir le podium
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (onGo) {
+                                                onGo('challenges', { projecteurDefi: d });
+                                            } else {
+                                                setSelectedDefi(d);
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1, height: 66, borderRadius: 18,
+                                            background: 'var(--action)', border: 'none',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                            color: 'var(--action-texte)', cursor: 'pointer',
+                                            boxShadow: '0 4px 14px rgba(35, 164, 217, 0.25)',
+                                        }}
+                                    >
+                                        Projeter au tableau
+                                    </button>
+                                </div>
+                            </div>
                         );
                     })}
                 </div>

@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **9 septembre 2026** — **28 migrations, 146 cas
+> Dernière mise à jour : **9 septembre 2026** — **30 migrations, 167 cas
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
@@ -20,7 +20,8 @@
 > **Le lot 21 est livré** : la **migration 28 est appliquée** (`populations_classements`), les maquettes 22
 > (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) sont refaites sur les maquettes Claude Design.
 > **Le lot 22 est livré** : **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur).
-> **Prochaine étape** : Lot 23 (Migration 29 : salle des profs, avatars/initiales enseignants, compteurs de défi ; écrans 28, 29, 30, 31, 32).
+> **Le lot 23 est livré** : migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées, types TypeScript régénérés, écrans 28 (Mes défis passés), 29 (Profil élève), 30 (Profil enseignant), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales), correction du dénominateur `/20` dans `JoinChallenge.jsx`.
+> **Prochaine étape** : Lot 24 (Écran 35 Apprendre, Écran 36 Modales).
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -48,7 +49,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **25 migrations**, 121 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **30 migrations**, 167 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
@@ -307,6 +308,14 @@ une identité qui n'existe plus.
 visible d'eux seuls. Deux tables sans intersection : un professeur ne peut pas
 apparaître dans un classement d'élèves, même par erreur de filtre.
 
+**L'avatar de l'enseignant est optionnel — null signifie initiales, pas un trou.**
+*(9 septembre 2026, migration 29.)* Un professeur peut choisir un emoji ou
+conserver ses initiales. `profs.avatar_emoji` est nullable. Quand il vaut `null`,
+l'interface affiche le badge d'initiales calculé par `initiales_de()` et jamais
+un emoji par défaut.
+
+
+
 ### Contrat des fonctions
 
 **Toutes les fonctions de classement renvoient les mêmes colonnes** —
@@ -337,6 +346,25 @@ sur les tables les plus faibles » les proposait en premier. Un professeur
 croyait faire du rattrapage et lançait une découverte sur des tables hors de
 portée. Une liste que l'écran devine est une population inventée : elle vient
 du serveur, ou elle n'existe pas.
+
+**L'écart au joueur du dessus est toujours positif et calculé par le serveur.**
+*(9 septembre 2026, migration 30.)* Sur la ligne épinglée de records
+(`ma_place_records`), le sens de tri varie (temps croissant en Sprint, score ou
+série décroissante ailleurs). Une soustraction dans le front afficherait un
+nombre négatif dans un cas sur deux. `ecart_au_dessus` est calculé côté base en
+valeur absolue (« ce qu'il te manque ») : X secondes de moins ou X points de plus.
+
+**La date de déblocage de Montée est déduite, pas inventée.** *(9 septembre 2026,
+migration 30.)* Aucune date de déblocage n'est enregistrée dans `eleves`. Elle
+est déduite de la première session de Montée ayant atteint le plafond actuel.
+Si elle vaut `null`, l'élève est au palier d'origine et l'écran n'affiche aucune
+date au lieu d'en inventer une.
+
+**Mes défis passés distingue strictement rejoints et terminés.** *(9 septembre
+2026, migration 29.)* `rejoints` correspond aux présences (code saisi),
+`participants` à ceux ayant achevé l'épreuve. On ne les soustrait jamais pour
+éviter des différences négatives sur les défis antérieurs à la migration 25.
+
 
 **Le rattachement d'un compte ne peut pas dépendre d'un événement unique.**
 *(1er septembre 2026, migration 22 — trouvé par Aymeri en recette.)*
@@ -778,6 +806,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     la légende de la grille. Fait le 04/09.
 11. ✅ **Lot 21** : Migration 28 (`populations_classements`) appliquée en base (146 cas verts), types TypeScript régénérés, écrans 22 (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) refaits sur les maquettes Claude Design. Mot « actif » banni pour qualifier les joueurs, ligne sticky avec rang et écart calculé au serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe (`entete_classe`), tables fragiles triées par part de classe en difficulté, ouverture collective de plafond. Fait le 08/09.
 12. ✅ **Lot 22** : Code projeté plein écran, accueil professeur et rejoindre un défi. **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur). Fait le 09/09.
+13. ✅ **Lot 23** : Migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées en base (167 cas de test verts). Types TypeScript régénérés (`database.ts`). Écrans 28 (Mes défis passés avec distinction rejoints/terminés et bi-jauge), 29 (Profil élève avec 4 comptes de grille = `plafond × plafond`, jours d'entraînement all-time et date déduite de Montée), 30 (Profil enseignant avec avatar emoji ou initiales, classes favorites et stats ce mois), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales). Correction du dénominateur `/20` dans `JoinChallenge.jsx`. Fait le 09/09.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

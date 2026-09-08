@@ -253,7 +253,7 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                         </div>
                         <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)' }}>
                             {moiResult
-                                ? `Ton résultat est enregistré : ${moiResult.score} sur ${moiResult.questions || 20} en ${formaterTemps(moiResult.temps_s)}.`
+                                ? `Ton résultat est enregistré : ${moiResult.score} point${moiResult.score > 1 ? 's' : ''}, en ${formaterTemps(moiResult.temps_s)}.`
                                 : 'Ton résultat est déjà enregistré pour ce défi.'}
                         </div>
                     </div>

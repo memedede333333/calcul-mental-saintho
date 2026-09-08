@@ -78,6 +78,14 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             setSelectedTables(d.tables || [2, 3, 4, 5]);
             setPhase('defi-intro');
             clearPreConfig?.();
+        } else if (defiPreConfig?.projecteurDefi) {
+            const d = defiPreConfig.projecteurDefi;
+            const type = CHALLENGE_TYPES.find(t => t.id === d.type) || CHALLENGE_TYPES[0];
+            setDefiInfo(d);
+            setChallengeType(type);
+            setSelectedTables(d.tables || [2, 3, 4, 5]);
+            setPhase('defi-code');
+            clearPreConfig?.();
         } else if (defiPreConfig?.mode === 'join') {
             setPhase('join');
             clearPreConfig?.();

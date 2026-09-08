@@ -1,33 +1,40 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { monProfil, monProfilProf, mesTablesFaibles, changerAvatar, listeClasses, definirMesClasses } from '../api';
-import { masteryColor, cleFait } from '../logic/mastery';
-import { IconSansFaute, IconMaGrille } from '../components/Icons';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { monProfil, monProfilProf, changerAvatar, listeClasses, definirMesClasses } from '../api';
+import { cleFait } from '../logic/mastery';
+import MasteryGrid from '../components/MasteryGrid';
+import { IconSprint, IconChrono, IconSansFaute, IconMontee } from '../components/Icons';
 
 /**
- * Profile — Aiguille vers ProfileEleve ou ProfileProf selon identite.type
+ * Profile — Aiguille vers ProfileEleve (Écran 29) ou ProfileProf (Écran 30)
  */
-export default function Profile({ onBack, identite, estProf, onLogout, onReviser, onGo }) {
+export default function Profile({ onBack, identite, estProf, onLogout, onGo }) {
     const isProf = estProf || identite?.type === 'prof';
     if (isProf) {
         return <ProfileProf onBack={onBack} onLogout={onLogout} onGo={onGo} />;
     }
-    return <ProfileEleve onBack={onBack} identite={identite} onLogout={onLogout} onReviser={onReviser} />;
+    return <ProfileEleve onBack={onBack} identite={identite} onLogout={onLogout} onGo={onGo} />;
+}
+
+const AVATAR_OPTIONS = ['🦊', '🦁', '🐼', '🐨', '🐢', '🐙', '🦉', '🐝'];
+
+function formaterDateSimple(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 }
 
 /* ===================================================================
- * PROFIL ENSEIGNANT
+ * ÉCRAN 30 — PROFIL ENSEIGNANT
  * ================================================================= */
 function ProfileProf({ onBack, onLogout, onGo }) {
     const [loading, setLoading] = useState(true);
     const [erreur, setErreur] = useState(null);
     const [profil, setProfil] = useState(null);
     const [records, setRecords] = useState(null);
-    const [rang, setRang] = useState(null);
     const [allClasses, setAllClasses] = useState([]);
     const [editingClasses, setEditingClasses] = useState(false);
     const [selectedClasses, setSelectedClasses] = useState([]);
     const [savingClasses, setSavingClasses] = useState(false);
-    const [msgClasses, setMsgClasses] = useState('');
 
     const charger = useCallback(async () => {
         setLoading(true);
@@ -41,7 +48,6 @@ function ProfileProf({ onBack, onLogout, onGo }) {
         const d = res.data;
         setProfil(d.profil);
         setRecords(d.records);
-        setRang(d.rang_salle_des_profs);
         setSelectedClasses(d.profil?.classes || []);
 
         const cRes = await listeClasses();
@@ -57,15 +63,10 @@ function ProfileProf({ onBack, onLogout, onGo }) {
 
     const handleSaveClasses = async () => {
         setSavingClasses(true);
-        setMsgClasses('');
         const res = await definirMesClasses(selectedClasses);
         if (res.ok) {
             setProfil(prev => ({ ...prev, classes: selectedClasses }));
             setEditingClasses(false);
-            setMsgClasses('✅ Classes enregistrées');
-            setTimeout(() => setMsgClasses(''), 3000);
-        } else {
-            setMsgClasses(`❌ ${res.error || "Erreur d'enregistrement"}`);
         }
         setSavingClasses(false);
     };
@@ -83,7 +84,7 @@ function ProfileProf({ onBack, onLogout, onGo }) {
                 justifyContent: 'center', minHeight: '50vh', gap: 16,
             }}>
                 <div className="spinner" />
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                <p style={{ color: 'var(--gris)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>
                     Chargement du profil…
                 </p>
             </div>
@@ -93,211 +94,197 @@ function ProfileProf({ onBack, onLogout, onGo }) {
     if (erreur) {
         return (
             <div className="screen-enter" style={{ textAlign: 'center', padding: 40 }}>
-                <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 16 }}>{erreur}</p>
-                <button className="btn btn--ghost" style={{ marginTop: 16 }} onClick={onBack}>
+                <p style={{ color: 'var(--rouge)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>{erreur}</p>
+                <button
+                    onClick={onBack}
+                    style={{
+                        marginTop: 16, height: 48, padding: '0 20px', borderRadius: 14,
+                        background: 'var(--surface)', border: '2px solid var(--bordure)',
+                        color: 'var(--indigo)', fontFamily: 'var(--texte)',
+                        fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                    }}
+                >
                     ‹ Retour
                 </button>
             </div>
         );
     }
 
-    const nbSessions = records?.nb_sessions || 0;
+    const mesClasses = profil?.classes || [];
 
     return (
-        <div className="screen-enter">
-            <button className="btn-back" onClick={onBack}>‹ Accueil</button>
-
-            {/* 1. Identité */}
-            <div className="card" style={{ textAlign: 'center', marginBottom: 14, padding: '20px 16px' }}>
-                <div style={{ fontSize: 56, marginBottom: 8 }}>
-                    👨‍🏫
-                </div>
-                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--navy)', marginBottom: 4 }}>
-                    {profil?.nom || 'Professeur'}
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                    {profil?.email || ''}
-                </p>
-                <span
-                    className={`chip${profil?.est_admin ? ' chip--gold' : ''}`}
-                    style={{ fontSize: 12, height: 28, padding: '0 14px' }}
+        <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 24 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 8 }}>
+                <button
+                    type="button"
+                    onClick={onBack}
+                    style={{
+                        width: 52, height: 52, borderRadius: 16,
+                        background: 'var(--surface)',
+                        boxShadow: '0 4px 12px rgba(32, 34, 107, 0.08)',
+                        border: 'none', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                    }}
                 >
-                    {profil?.est_admin ? '👑 Administrateur' : '📚 Enseignant'}
-                </span>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 5L8 12l7 7" stroke="var(--indigo)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+                <h2 className="font-display" style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--indigo)' }}>
+                    Mon profil
+                </h2>
             </div>
 
-            {/* 2. Mes parties */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                        🎮 Mes parties
-                    </h3>
-                    {rang && (
-                        <span className="chip chip--gold" style={{ fontSize: 12, fontWeight: 800 }}>
-                            🏅 {rang}ᵉ en salle des profs
-                        </span>
+            {/* 1. Carte Identité */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: 26,
+                display: 'flex', alignItems: 'center', gap: 22,
+            }}>
+                <div style={{
+                    width: 104, height: 104, borderRadius: 32,
+                    background: 'var(--surface-alt)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
+                    color: 'var(--indigo)', flexShrink: 0,
+                }}>
+                    {profil?.avatar_emoji ? (
+                        <span style={{ fontSize: 52 }}>{profil.avatar_emoji}</span>
+                    ) : (
+                        profil?.initiales || 'P'
                     )}
                 </div>
-
-                {nbSessions === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                        <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 14, marginBottom: 14 }}>
-                            Tu n'as pas encore joué.
-                        </p>
-                        <button
-                            className="btn btn--mint"
-                            style={{ fontSize: 15, padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: 8 }}
-                            onClick={() => onGo?.('play')}
-                        >
-                            <IconSansFaute size={20} color="var(--action-texte)" actionColor="var(--action-texte)" /> S'entraîner
-                        </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+                    <div className="font-display" style={{ fontSize: 34, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {profil?.nom || 'Professeur'}
                     </div>
-                ) : (
-                    <>
-                        <div className="stat-grid" style={{ marginBottom: 14 }}>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--succes)' }}>
-                                    {records?.points_total || 0}
-                                </span>
-                                <span className="stat__label">
-                                    Points total {records?.points_semaine > 0 ? `(+${records.points_semaine} 7j)` : ''}
-                                </span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--indigo)' }}>
-                                    {records?.nb_sessions || 0}
-                                </span>
-                                <span className="stat__label">Parties jouées</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--erreur-eleve)' }}>
-                                    {records?.meilleure_serie || 0}
-                                </span>
-                                <span className="stat__label">Meilleure série</span>
-                            </div>
-                            {records?.meilleur_sprint > 0 && (
-                                <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--action)' }}>
-                                        {records.meilleur_sprint}s
-                                    </span>
-                                    <span className="stat__label">Meilleur sprint</span>
-                                </div>
-                            )}
-                            {records?.meilleur_chrono > 0 && (
-                                <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--orange)' }}>
-                                        {records.meilleur_chrono}
-                                    </span>
-                                    <span className="stat__label">Meilleur chrono</span>
-                                </div>
-                            )}
-                            {records?.plus_haute_table > 0 && (
-                                <div className="stat">
-                                    <span className="stat__value" style={{ color: 'var(--indigo-doux)' }}>
-                                        {records.plus_haute_table}
-                                    </span>
-                                    <span className="stat__label">Plus haute table</span>
-                                </div>
-                            )}
-                        </div>
-                        <button
-                            className="btn btn--mint"
-                            style={{ width: '100%', fontSize: 14, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                            onClick={() => onGo?.('play')}
-                        >
-                            <IconSansFaute size={18} color="var(--action-texte)" actionColor="var(--action-texte)" /> S'entraîner
-                        </button>
-                    </>
-                )}
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--gris)' }}>
+                        {profil?.email || ''}
+                    </div>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: 'var(--vert-pale)', padding: '9px 18px',
+                        borderRadius: 999, alignSelf: 'flex-start',
+                    }}>
+                        <div style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--vert)' }} />
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700, color: 'var(--vert)' }}>
+                            {profil?.est_admin ? 'Compte enseignant et administrateur' : 'Compte enseignant'}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* 3. Mes classes habituelles */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                        🗺 Mes classes habituelles
-                    </h3>
-                    {!editingClasses && (
-                        <button
-                            className="btn btn--ghost"
-                            style={{ fontSize: 13, padding: '6px 12px' }}
-                            onClick={() => {
-                                setSelectedClasses(profil?.classes || []);
-                                setEditingClasses(true);
-                            }}
-                        >
-                            ✏️ Modifier
-                        </button>
-                    )}
+            {/* 2. Carte Mes classes habituelles */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: 26,
+                display: 'flex', flexDirection: 'column', gap: 16,
+            }}>
+                <div className="font-display" style={{ fontSize: 23, fontWeight: 700, color: 'var(--indigo)' }}>
+                    Mes classes habituelles
                 </div>
-
-                {msgClasses && (
-                    <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: msgClasses.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
-                        {msgClasses}
-                    </p>
-                )}
+                <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--gris)' }}>
+                    Vos classes favorites apparaissent en tête des sélecteurs de défi et de maîtrise.
+                </div>
 
                 {!editingClasses ? (
-                    profil?.classes?.length > 0 ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {profil.classes.map(c => (
-                                <span key={c} className="chip chip--mint" style={{ fontSize: 13, fontWeight: 700, padding: '4px 12px' }}>
-                                    {c}
+                    <>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {mesClasses.length === 0 ? (
+                                <span style={{ fontFamily: 'var(--texte)', fontSize: 15, color: 'var(--gris-inerte)' }}>
+                                    Aucune classe favorite sélectionnée
                                 </span>
-                            ))}
-                        </div>
-                    ) : (
-                        <p style={{ color: 'var(--text-soft)', fontSize: 13, fontWeight: 600 }}>
-                            Aucune classe favorite. Tu les vois toutes.
-                        </p>
-                    )
-                ) : (
-                    <div>
-                        <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                            Sélectionne tes classes favorites :
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                            {allClasses.length === 0 ? (
-                                <p style={{ fontSize: 12, color: 'var(--text-soft)' }}>Aucune classe disponible</p>
                             ) : (
-                                allClasses.map(cl => {
-                                    const code = cl.classe;
-                                    const selected = selectedClasses.includes(code);
-                                    return (
-                                        <button
-                                            key={code}
-                                            type="button"
-                                            onClick={() => toggleClass(code)}
-                                            className={`chip ${selected ? 'chip--mint' : ''}`}
-                                            style={{
-                                                fontSize: 13,
-                                                fontWeight: 700,
-                                                padding: '6px 12px',
-                                                cursor: 'pointer',
-                                                border: selected ? '2px solid var(--mint)' : '2px solid var(--border)',
-                                                background: selected ? 'var(--mint-lt)' : 'var(--surface)',
-                                            }}
-                                        >
-                                            {selected ? '✓ ' : ''}{code}
-                                        </button>
-                                    );
-                                })
+                                mesClasses.map(c => (
+                                    <div
+                                        key={c}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 9,
+                                            background: 'var(--indigo)', padding: '12px 20px',
+                                            borderRadius: 999,
+                                        }}
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                            <path d="M5 12.5L10 17.5L19 7" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <span style={{ fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                                            {c}
+                                        </span>
+                                    </div>
+                                ))
                             )}
                         </div>
-                        <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                            type="button"
+                            onClick={() => setEditingClasses(true)}
+                            style={{
+                                height: 66, borderRadius: 18, background: 'var(--surface)',
+                                border: '2px solid var(--bordure)', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                color: 'var(--indigo)', cursor: 'pointer',
+                            }}
+                        >
+                            Modifier mes favoris
+                        </button>
+                    </>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {allClasses.map(cl => {
+                                const code = cl.classe;
+                                const isSel = selectedClasses.includes(code);
+                                return (
+                                    <button
+                                        key={code}
+                                        type="button"
+                                        onClick={() => toggleClass(code)}
+                                        style={{
+                                            padding: '12px 20px', borderRadius: 999,
+                                            background: isSel ? 'var(--indigo)' : 'var(--surface-alt)',
+                                            color: isSel ? '#fff' : 'var(--gris)',
+                                            border: 'none', fontFamily: 'var(--texte)',
+                                            fontWeight: 700, fontSize: 18, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                        }}
+                                    >
+                                        {isSel && (
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                                <path d="M5 12.5L10 17.5L19 7" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        )}
+                                        {code}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div style={{ display: 'flex', gap: 12 }}>
                             <button
-                                className="btn btn--mint"
-                                style={{ flex: 1, fontSize: 13, padding: '8px 14px' }}
-                                disabled={savingClasses}
+                                type="button"
                                 onClick={handleSaveClasses}
+                                disabled={savingClasses}
+                                style={{
+                                    flex: 1, height: 56, borderRadius: 16,
+                                    background: 'var(--action)', color: 'var(--action-texte)',
+                                    fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17,
+                                    border: 'none', cursor: 'pointer',
+                                }}
                             >
                                 {savingClasses ? 'Enregistrement…' : 'Enregistrer'}
                             </button>
                             <button
-                                className="btn btn--ghost"
-                                style={{ flex: 1, fontSize: 13, padding: '8px 14px' }}
-                                disabled={savingClasses}
-                                onClick={() => setEditingClasses(false)}
+                                type="button"
+                                onClick={() => {
+                                    setSelectedClasses(profil?.classes || []);
+                                    setEditingClasses(false);
+                                }}
+                                style={{
+                                    height: 56, padding: '0 24px', borderRadius: 16,
+                                    background: 'var(--surface)', border: '2px solid var(--bordure)',
+                                    color: 'var(--indigo)', fontFamily: 'var(--texte)',
+                                    fontWeight: 700, fontSize: 17, cursor: 'pointer',
+                                }}
                             >
                                 Annuler
                             </button>
@@ -306,11 +293,92 @@ function ProfileProf({ onBack, onLogout, onGo }) {
                 )}
             </div>
 
-            {/* Déconnexion */}
+            {/* 3. Carte Mon entraînement */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: 26,
+                display: 'flex', flexDirection: 'column', gap: 18,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span className="font-display" style={{ fontSize: 23, fontWeight: 700, color: 'var(--indigo)' }}>
+                        Mon entraînement
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)' }}>
+                        Salle des profs · ce mois
+                    </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{
+                        flex: 1, background: 'var(--surface)', borderRadius: 24,
+                        boxShadow: 'var(--ombre-carte)', padding: 20,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}>
+                        <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {records?.points_mois ?? 0}
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                            points
+                        </span>
+                    </div>
+                    <div style={{
+                        flex: 1, background: 'var(--surface)', borderRadius: 24,
+                        boxShadow: 'var(--ombre-carte)', padding: 20,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}>
+                        <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {records?.parties_mois ?? 0}
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                            parties jouées
+                        </span>
+                    </div>
+                    <div style={{
+                        flex: 1, background: 'var(--surface)', borderRadius: 24,
+                        boxShadow: 'var(--ombre-carte)', padding: 20,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    }}>
+                        <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {records?.sprint_mois ? `${Math.round(records.sprint_mois)} s` : '—'}
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                            meilleur sprint
+                        </span>
+                    </div>
+                </div>
+
+                <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--gris)' }}>
+                    Vos résultats n'apparaissent que dans la Salle des profs. Ils ne sont jamais mêlés aux classements des élèves.
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => onGo ? onGo('practice') : onBack?.()}
+                    style={{
+                        height: 76, borderRadius: 20, background: 'var(--action)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 12, border: 'none', cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(35, 164, 217, 0.25)',
+                    }}
+                >
+                    <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+                        <path d="M24 4L10 25h9l-2 15 15-22h-9z" fill="#fff" stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
+                    </svg>
+                    <span style={{ fontFamily: 'var(--texte)', fontSize: 21, fontWeight: 700, color: '#fff' }}>
+                        S'entraîner maintenant
+                    </span>
+                </button>
+            </div>
+
+            {/* Bouton Se déconnecter */}
             <button
-                className="btn btn--ghost"
-                style={{ width: '100%', fontSize: 15, color: 'var(--coral)' }}
+                type="button"
                 onClick={onLogout}
+                style={{
+                    padding: '24px 0 12px', background: 'none', border: 'none',
+                    fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 600,
+                    color: 'var(--gris)', cursor: 'pointer', textAlign: 'center',
+                }}
             >
                 Se déconnecter
             </button>
@@ -319,92 +387,75 @@ function ProfileProf({ onBack, onLogout, onGo }) {
 }
 
 /* ===================================================================
- * PROFIL ÉLÈVE
+ * ÉCRAN 29 — PROFIL ÉLÈVE
  * ================================================================= */
-const BADGE_DEFS = {
-    streak_10: { emoji: '🔥', name: 'Flamme', desc: 'Série de 10 sans faute' },
-    streak_20: { emoji: '🔥🔥', name: 'Brasier', desc: 'Série de 20 sans faute' },
-    streak_30: { emoji: '🌋', name: 'Volcan', desc: 'Série de 30 sans faute' },
-    streak_50: { emoji: '☄️', name: 'Météore', desc: 'Série de 50 sans faute' },
-    streak_100: { emoji: '💫', name: 'Légende', desc: 'Série de 100 sans faute' },
-    speed_3s: { emoji: '⚡', name: 'Rapide', desc: 'Moyenne < 3s / question' },
-    speed_2s: { emoji: '⚡⚡', name: 'Éclair', desc: 'Moyenne < 2s / question' },
-    days_3: { emoji: '📅', name: 'Régulier', desc: '3 jours cette semaine' },
-    days_7: { emoji: '🗓', name: 'Assidu', desc: '7 jours cette semaine' },
-    climb_10: { emoji: '🧗', name: 'Grimpeur', desc: 'Table 10 en Montée' },
-    climb_12: { emoji: '🧗‍♂️', name: 'Alpiniste', desc: 'Table 12 en Montée' },
-    climb_15: { emoji: '🏔', name: 'Sommet', desc: 'Table 15 en Montée' },
-    climb_20: { emoji: '🏔🏔', name: 'Légende des tables', desc: 'Table 20 en Montée' },
-};
-
-const AVATAR_OPTIONS = ['🦊', '🐼', '🐢', '🐙', '🦉', '🐝'];
-
-const PALIER_STYLE = {
-    decouverte: { label: 'Découverte', emoji: '🌱', color: 'var(--action)', bg: 'var(--ciel-pale)' },
-    confirme:   { label: 'Confirmé',   emoji: '⭐', color: 'var(--indigo)', bg: 'var(--ciel-pale)' },
-    expert:     { label: 'Expert',     emoji: '👑', color: 'var(--podium)', bg: 'var(--orange-pale)' },
-};
-
-function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
+function ProfileEleve({ onBack, identite, onLogout, onGo }) {
     const [loading, setLoading] = useState(true);
     const [erreur, setErreur] = useState(null);
     const [profil, setProfil] = useState(null);
     const [records, setRecords] = useState(null);
     const [maitrise, setMaitrise] = useState({});
-    const [badges, setBadges] = useState([]);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [avatar, setAvatar] = useState(identite?.profil?.avatar_emoji || '🦊');
-    const [showMastery, setShowMastery] = useState(true);
-    const [tablesFaibles, setTablesFaibles] = useState(null);
-    const [progression, setProgression] = useState(null);
+    const [showGrid, setShowGrid] = useState(false);
 
-    // --- Chargement du profil ---
-    useEffect(() => {
-        let annule = false;
-        async function charger() {
-            setLoading(true);
-            setErreur(null);
-            const res = await monProfil();
-            if (annule) return;
-            if (!res.ok) {
-                setErreur(res.error || 'Impossible de charger le profil.');
-                setLoading(false);
-                return;
-            }
-            const d = res.data;
-            setProfil(d.profil);
-            setRecords(d.records);
-            setMaitrise(d.maitrise || {});
-            setBadges(d.badges || []);
-            setProgression(d.progression || null);
-            setAvatar(d.profil?.avatar_emoji || '🦊');
+    const charger = useCallback(async () => {
+        setLoading(true);
+        setErreur(null);
+        const res = await monProfil();
+        if (!res.ok) {
+            setErreur(res.error || 'Impossible de charger le profil.');
             setLoading(false);
-
-            // Charger les tables faibles en arrière-plan
-            const tf = await mesTablesFaibles();
-            if (!annule && tf.ok) {
-                setTablesFaibles(tf.data || []);
-            }
+            return;
         }
-        charger();
-        return () => { annule = true; };
+        const d = res.data;
+        setProfil(d.profil);
+        setRecords(d.records);
+        setMaitrise(d.maitrise || {});
+        setAvatar(d.profil?.avatar_emoji || '🦊');
+        setLoading(false);
     }, []);
 
-    // --- Changement d'avatar ---
-    const handleAvatar = useCallback(async (emoji) => {
+    useEffect(() => {
+        charger();
+    }, [charger]);
+
+    const handleChangerAvatar = async (emoji) => {
         setAvatar(emoji);
         setShowAvatarPicker(false);
         await changerAvatar(emoji);
-    }, []);
+    };
 
-    // --- Réviser les cases rouges ---
-    const handleReviser = useCallback(() => {
-        if (tablesFaibles && tablesFaibles.length > 0) {
-            onReviser(tablesFaibles);
+    const plafond = profil?.plafond_tables || 10;
+    const totalCases = plafond * plafond;
+
+    // Règle de symétrie : on compte chaque case affichée (r, c) de 1..plafond
+    // Niveau 3 = sues, 2 = justes mais lentes, 1 = à revoir, absent/0 = pas encore vues
+    let nbSues = 0;
+    let nbLentes = 0;
+    let nbARevoir = 0;
+    let nbNonVues = 0;
+
+    for (let r = 1; r <= plafond; r++) {
+        for (let c = 1; c <= plafond; c++) {
+            const key = cleFait(r, c);
+            const val = maitrise?.[key] || 0;
+            if (val >= 3) {
+                nbSues++;
+            } else if (val === 2) {
+                nbLentes++;
+            } else if (val === 1) {
+                nbARevoir++;
+            } else {
+                nbNonVues++;
+            }
         }
-    }, [tablesFaibles, onReviser]);
+    }
 
-    // --- Chargement ---
+    const pctSues = (nbSues / totalCases) * 100;
+    const pctLentes = (nbLentes / totalCases) * 100;
+    const pctARevoir = (nbARevoir / totalCases) * 100;
+
     if (loading) {
         return (
             <div className="screen-enter" style={{
@@ -412,7 +463,7 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
                 justifyContent: 'center', minHeight: '50vh', gap: 16,
             }}>
                 <div className="spinner" />
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                <p style={{ color: 'var(--gris)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>
                     Chargement du profil…
                 </p>
             </div>
@@ -422,326 +473,360 @@ function ProfileEleve({ onBack, identite, onLogout, onReviser }) {
     if (erreur) {
         return (
             <div className="screen-enter" style={{ textAlign: 'center', padding: 40 }}>
-                <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 16 }}>{erreur}</p>
-                <button className="btn btn--ghost" style={{ marginTop: 16 }} onClick={onBack}>
+                <p style={{ color: 'var(--rouge)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--texte)' }}>{erreur}</p>
+                <button
+                    onClick={onBack}
+                    style={{
+                        marginTop: 16, height: 48, padding: '0 20px', borderRadius: 14,
+                        background: 'var(--surface)', border: '2px solid var(--bordure)',
+                        color: 'var(--indigo)', fontFamily: 'var(--texte)',
+                        fontWeight: 700, fontSize: 16, cursor: 'pointer',
+                    }}
+                >
                     ‹ Retour
                 </button>
             </div>
         );
     }
 
-    const plafond = profil?.plafond_tables || 10;
-    const palierKey = profil?.palier || 'decouverte';
-    const palier = PALIER_STYLE[palierKey] || PALIER_STYLE.decouverte;
-
-    // Grille dimensionnée sur le plafond (1..plafond × 1..plafond)
-    const gridTables = [];
-    for (let i = 1; i <= plafond; i++) gridTables.push(i);
+    const palierNom = plafond <= 10 ? 'Découverte' : plafond <= 12 ? 'Confirmé' : 'Expert';
+    const nomAffiche = `${profil?.prenom || ''} ${profil?.nom ? profil.nom.charAt(0) + '.' : ''}`.trim() || 'Élève';
 
     return (
-        <div className="screen-enter">
-            <button className="btn-back" onClick={onBack}>‹ Accueil</button>
+        <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingBottom: 24 }}>
+            {/* Modal de grille de maîtrise en grand */}
+            {showGrid && (
+                <MasteryGrid
+                    mastery={maitrise}
+                    tables={Array.from({ length: plafond }, (_, i) => i + 1)}
+                    onClose={() => setShowGrid(false)}
+                />
+            )}
 
-            {/* Carte identité */}
-            <div className="card" style={{ textAlign: 'center', marginBottom: 14 }}>
-                <div
-                    style={{ fontSize: 64, cursor: 'pointer', marginBottom: 8 }}
-                    onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                    title="Changer d'avatar"
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 8 }}>
+                <button
+                    type="button"
+                    onClick={onBack}
+                    style={{
+                        width: 52, height: 52, borderRadius: 16,
+                        background: 'var(--surface)',
+                        boxShadow: '0 4px 12px rgba(32, 34, 107, 0.08)',
+                        border: 'none', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                    }}
                 >
-                    {avatar}
-                </div>
-
-                {showAvatarPicker && (
-                    <div style={{
-                        display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center',
-                        marginBottom: 14, padding: 12, background: 'var(--surface-alt)', borderRadius: 16,
-                    }}>
-                        {AVATAR_OPTIONS.map(a => (
-                            <button
-                                key={a}
-                                style={{
-                                    fontSize: 28, background: avatar === a ? 'var(--gold-light)' : 'transparent',
-                                    border: 'none', borderRadius: 10, padding: 6, cursor: 'pointer',
-                                }}
-                                onClick={() => handleAvatar(a)}
-                            >
-                                {a}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                <h2 className="font-display" style={{ fontSize: 24, fontWeight: 800 }}>
-                    {profil?.prenom} {profil?.nom}
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 5L8 12l7 7" stroke="var(--indigo)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+                <h2 className="font-display" style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--indigo)' }}>
+                    Mon profil
                 </h2>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
-                    {profil?.classe || ''} — {profil?.email || ''}
-                </p>
-
-                {/* Palier */}
-                <span style={{
-                    display: 'inline-block', padding: '6px 16px', borderRadius: 20,
-                    fontWeight: 800, fontSize: 14,
-                    color: palier.color, background: palier.bg,
-                    border: `2px solid ${palier.color}`,
-                }}>
-                    {palier.emoji} {palier.label}
-                </span>
-                <p style={{ color: 'var(--text-soft)', fontSize: 12, fontWeight: 600, marginTop: 6 }}>
-                    Tables débloquées : 1 à {plafond}
-                </p>
             </div>
 
-            {/* ===== Cette semaine ===== */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
-                    Cette semaine
-                </h3>
-                <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
-                    Le classement repart à zéro chaque lundi — tout le monde a sa chance.
-                </p>
-
-                {progression ? (
-                    <>
-                        {/* Score principal */}
-                        <div style={{
-                            textAlign: 'center', marginBottom: 14, padding: '16px 0',
-                            background: 'var(--orange-pale)',
-                            borderRadius: 14,
-                        }}>
-                            <div className="font-display" style={{ fontSize: 36, fontWeight: 800, color: 'var(--gold)' }}>
-                                {progression.total ?? 0}
-                            </div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-soft)' }}>
-                                Score de progression
-                            </div>
-                        </div>
-
-                        {/* Composantes */}
-                        <div className="stat-grid">
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--navy)' }}>
-                                    {progression.points_jeu ?? 0}
-                                </span>
-                                <span className="stat__label">Points de jeu</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
-                                    +{progression.bonus_jours ?? 0}
-                                </span>
-                                <span className="stat__label">{progression.jours_actifs ?? 0} jour{(progression.jours_actifs ?? 0) > 1 ? 's' : ''} actif{(progression.jours_actifs ?? 0) > 1 ? 's' : ''}</span>
-                            </div>
-                            <div className="stat">
-                                <span className="stat__value" style={{ color: 'var(--mint-dk)' }}>
-                                    +{progression.bonus_vertes ?? 0}
-                                </span>
-                                <span className="stat__label">{progression.cases_vertes ?? 0} case{(progression.cases_vertes ?? 0) > 1 ? 's' : ''} verte{(progression.cases_vertes ?? 0) > 1 ? 's' : ''}</span>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <div className="stat-grid">
-                        <div className="stat">
-                            <span className="stat__value" style={{ color: 'var(--mint)' }}>
-                                {records?.points_semaine || 0}
-                            </span>
-                            <span className="stat__label">Points semaine</span>
-                        </div>
-                        <div className="stat">
-                            <span className="stat__value" style={{ color: 'var(--sky)' }}>
-                                {records?.jours_actifs_7j || 0}
-                            </span>
-                            <span className="stat__label">Jours actifs (7j)</span>
-                        </div>
+            {/* 1. Carte Identité & Avatar */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: 26,
+                display: 'flex', alignItems: 'center', gap: 22, position: 'relative',
+            }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{
+                        width: 114, height: 114, borderRadius: '50%',
+                        background: '#FFFFFF', boxShadow: '0 8px 22px rgba(32, 34, 107, 0.13)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 60,
+                    }}>
+                        {avatar}
                     </div>
-                )}
-            </div>
-
-            {/* ===== Depuis toujours ===== */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
-                    Depuis toujours
-                </h3>
-                <p style={{ fontSize: 11, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
-                    Tes records personnels — ça ne recule jamais.
-                </p>
-                <div className="stat-grid">
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--coral)' }}>
-                            {records?.meilleure_serie || 0}
-                        </span>
-                        <span className="stat__label">Meilleure série</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--sky-dk)' }}>
-                            {records?.meilleur_chrono || 0}
-                        </span>
-                        <span className="stat__label">Score 2 min</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--purple)' }}>
-                            {records?.plus_haute_table || 0}
-                        </span>
-                        <span className="stat__label">Plus haute table</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--navy)' }}>
-                            {records?.nb_sessions || 0}
-                        </span>
-                        <span className="stat__label">Sessions jouées</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat__value" style={{ color: 'var(--gold)' }}>
-                            {records?.points_total || 0}
-                        </span>
-                        <span className="stat__label">Points total</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Badges */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>
-                    🏅 Mes badges
-                </h3>
-
-                {/* Badges obtenus */}
-                {badges.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                        {badges.map(id => {
-                            const badge = BADGE_DEFS[id];
-                            if (!badge) return null;
-                            return (
-                                <div key={id} className="anim-pop" style={{
-                                    background: 'var(--orange-pale)',
-                                    borderRadius: 14, padding: '10px 14px', textAlign: 'center', minWidth: 80,
-                                    border: '1px solid var(--gold-light)',
-                                }}>
-                                    <div style={{ fontSize: 28 }}>{badge.emoji}</div>
-                                    <p className="font-display" style={{ fontWeight: 700, fontSize: 12, marginTop: 4 }}>{badge.name}</p>
-                                    <p style={{ fontSize: 10, color: 'var(--text-soft)' }}>{badge.desc}</p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Badges non obtenus */}
-                {Object.keys(BADGE_DEFS).some(id => !badges.includes(id)) && (
-                    <>
-                        <p style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 8 }}>
-                            À débloquer :
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {Object.entries(BADGE_DEFS)
-                                .filter(([id]) => !badges.includes(id))
-                                .map(([id, badge]) => (
-                                    <div key={id} style={{
-                                        background: 'var(--surface-alt)', borderRadius: 12, padding: '8px 12px',
-                                        textAlign: 'center', minWidth: 70, opacity: 0.5,
-                                    }}>
-                                        <div style={{ fontSize: 22, filter: 'grayscale(1)' }}>{badge.emoji}</div>
-                                        <p style={{ fontSize: 10, fontWeight: 600, marginTop: 2 }}>{badge.name}</p>
-                                    </div>
-                                ))
-                            }
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* Grille de maîtrise */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 className="font-display" style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Grille de maîtrise
-                    </h3>
                     <button
-                        className="btn btn--ghost"
-                        style={{ fontSize: 13, padding: '8px 12px' }}
-                        onClick={() => setShowMastery(!showMastery)}
+                        type="button"
+                        onClick={() => setShowAvatarPicker(p => !p)}
+                        title="Changer d'avatar"
+                        style={{
+                            position: 'absolute', bottom: -2, right: -2,
+                            width: 42, height: 42, borderRadius: 14,
+                            background: 'var(--action)', border: '4px solid #FFFFFF',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer',
+                        }}
                     >
-                        {showMastery ? 'Masquer' : 'Afficher'}
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 20h4L20 8l-4-4L4 16z" stroke="#fff" strokeWidth="2.4" strokeLinejoin="round" />
+                        </svg>
                     </button>
                 </div>
 
-                {showMastery && (
-                    <div style={{ marginTop: 12 }}>
-                        <div
-                            className="mastery-grid"
-                            style={{ gridTemplateColumns: `30px repeat(${gridTables.length}, 1fr)` }}
-                        >
-                            <div className="mastery-grid-hdr">×</div>
-                            {gridTables.map(c => (
-                                <div key={c} className="mastery-grid-hdr">{c}</div>
-                            ))}
-                            {gridTables.map(r => (
-                                <React.Fragment key={r}>
-                                    <div className="mastery-grid-hdr">{r}</div>
-                                    {gridTables.map(c => {
-                                        const key = cleFait(r, c);
-                                        return (
-                                            <div
-                                                key={c}
-                                                className="mastery-grid-cell"
-                                                style={{ background: masteryColor(maitrise[key]) }}
-                                                title={`${r}×${c} = ${r * c}`}
-                                            />
-                                        );
-                                    })}
-                                </React.Fragment>
-                            ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 10, fontSize: 11, fontWeight: 700, flexWrap: 'wrap' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--rouge)', display: 'inline-block' }} />
-                                À revoir
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span className="font-display" style={{ fontSize: 38, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {nomAffiche}
+                        </span>
+                        {profil?.classe && (
+                            <span style={{
+                                background: 'var(--surface-alt)', padding: '6px 15px',
+                                borderRadius: 999, fontFamily: 'var(--texte)',
+                                fontWeight: 700, fontSize: 17, color: 'var(--gris)',
+                            }}>
+                                {profil.classe}
                             </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--orange)', display: 'inline-block' }} />
-                                En cours
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--vert)', display: 'inline-block' }} />
-                                Maîtrisé
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gris-inerte)', display: 'inline-block' }} />
-                                Pas testé
-                            </span>
-                        </div>
-
-                        {/* Bouton « Réviser mes cases rouges » */}
-                        <div style={{ textAlign: 'center', marginTop: 14 }}>
-                            {tablesFaibles === null ? (
-                                <p style={{ fontSize: 13, color: 'var(--text-soft)' }}>Chargement…</p>
-                            ) : tablesFaibles.length === 0 ? (
-                                <p style={{
-                                    fontSize: 15, fontWeight: 700, color: 'var(--mint)',
-                                    padding: '10px 0',
-                                }}>
-                                    Aucune case rouge — bravo !
-                                </p>
-                            ) : (
-                                <button
-                                    className="btn btn--coral"
-                                    style={{ fontSize: 16, padding: '12px 24px' }}
-                                    onClick={handleReviser}
-                                >
-                                    Réviser mes cases rouges
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
-                )}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: 'var(--ciel-pale)', padding: '9px 18px',
+                        borderRadius: 999, alignSelf: 'flex-start',
+                    }}>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Palier {palierNom} · plafond table {plafond}
+                        </span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        Change d'avatar quand tu veux — c'est le seul réglage à toi.
+                    </div>
+                </div>
             </div>
 
-            {/* Déconnexion */}
+            {/* Sélecteur d'avatar (déplié au clic sur le crayon) */}
+            {showAvatarPicker && (
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 20, padding: 16,
+                    boxShadow: 'var(--ombre-carte)', display: 'flex',
+                    gap: 12, justifyContent: 'center', flexWrap: 'wrap',
+                }}>
+                    {AVATAR_OPTIONS.map(em => (
+                        <button
+                            key={em}
+                            type="button"
+                            onClick={() => handleChangerAvatar(em)}
+                            style={{
+                                fontSize: 36, width: 60, height: 60, borderRadius: 16,
+                                border: avatar === em ? '3px solid var(--action)' : '2px solid var(--bordure)',
+                                background: avatar === em ? 'var(--ciel-pale)' : 'var(--surface)',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            {em}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* 2. Carte Grille de maîtrise (les 4 comptes vérifiés) */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: 24,
+                display: 'flex', flexDirection: 'column', gap: 14,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <span className="font-display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {nbSues} cases vertes sur {totalCases}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setShowGrid(true)}
+                        style={{
+                            marginLeft: 'auto', background: 'none', border: 'none',
+                            fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600,
+                            color: 'var(--action)', cursor: 'pointer', padding: 0,
+                        }}
+                    >
+                        Voir ma grille ›
+                    </button>
+                </div>
+
+                <div style={{
+                    height: 16, borderRadius: 999, background: 'var(--surface-alt)',
+                    overflow: 'hidden', display: 'flex',
+                }}>
+                    <div style={{ width: `${pctSues}%`, background: 'var(--vert)', transition: 'width 0.3s ease' }} />
+                    <div style={{ width: `${pctLentes}%`, background: 'var(--orange)', transition: 'width 0.3s ease' }} />
+                    <div style={{ width: `${pctARevoir}%`, background: 'var(--rouge)', transition: 'width 0.3s ease' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--vert)' }} />
+                        {nbSues} sues
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--orange)' }} />
+                        {nbLentes} justes mais lentes
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--rouge)' }} />
+                        {nbARevoir} à revoir
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 4, background: 'var(--bordure)' }} />
+                        {nbNonVues} pas encore vues
+                    </span>
+                </div>
+            </div>
+
+            {/* 3. Les quatre tuiles de statistiques */}
+            <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{
+                    flex: 1, background: 'var(--surface)', borderRadius: 24,
+                    boxShadow: 'var(--ombre-carte)', padding: 20,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                }}>
+                    <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {records?.points_total ? records.points_total.toLocaleString('fr-FR') : 0}
+                    </span>
+                    <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                        points
+                    </span>
+                </div>
+                <div style={{
+                    flex: 1, background: 'var(--surface)', borderRadius: 24,
+                    boxShadow: 'var(--ombre-carte)', padding: 20,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                }}>
+                    <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {records?.jours_actifs ?? 0}
+                    </span>
+                    <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                        jours d'entraînement
+                    </span>
+                </div>
+                <div style={{
+                    flex: 1, background: 'var(--surface)', borderRadius: 24,
+                    boxShadow: 'var(--ombre-carte)', padding: 20,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                }}>
+                    <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {records?.nb_sessions ?? 0}
+                    </span>
+                    <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                        parties jouées
+                    </span>
+                </div>
+                <div style={{
+                    flex: 1, background: 'var(--surface)', borderRadius: 24,
+                    boxShadow: 'var(--ombre-carte)', padding: 20,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                }}>
+                    <span className="font-display" style={{ fontSize: 36, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {records?.meilleure_serie ?? 0}
+                    </span>
+                    <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)', textAlign: 'center' }}>
+                        meilleure série
+                    </span>
+                </div>
+            </div>
+
+            {/* 4. Carte Mes records */}
+            <div style={{
+                background: 'var(--surface)', borderRadius: 24,
+                boxShadow: 'var(--ombre-carte)', padding: '8px 24px',
+                display: 'flex', flexDirection: 'column',
+            }}>
+                <div className="font-display" style={{ padding: '18px 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--indigo)' }}>
+                    Mes records
+                </div>
+                <div style={{ height: 2, background: 'var(--surface-alt)' }} />
+
+                {/* Sprint */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '15px 0' }}>
+                    <div style={{
+                        width: 48, height: 48, borderRadius: 15, background: 'var(--surface-alt)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        <IconSprint size={26} color="var(--indigo)" actionColor="var(--action)" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Sprint
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                            20 questions, sans faute
+                        </span>
+                    </div>
+                    <div className="font-display" style={{ marginLeft: 'auto', fontSize: 27, fontWeight: 700, color: 'var(--indigo)', whiteSpace: 'nowrap' }}>
+                        {records?.meilleur_sprint ? `${Math.round(records.meilleur_sprint)} s` : '—'}
+                    </div>
+                </div>
+                <div style={{ height: 2, background: 'var(--surface-alt)' }} />
+
+                {/* Contre-la-montre */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '15px 0' }}>
+                    <div style={{
+                        width: 48, height: 48, borderRadius: 15, background: 'var(--surface-alt)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        <IconChrono size={26} color="var(--indigo)" actionColor="var(--action)" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Contre‑la‑montre
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                            bonnes réponses en 60 s
+                        </span>
+                    </div>
+                    <div className="font-display" style={{ marginLeft: 'auto', fontSize: 27, fontWeight: 700, color: 'var(--indigo)', whiteSpace: 'nowrap' }}>
+                        {records?.meilleur_chrono ? records.meilleur_chrono : '—'}
+                    </div>
+                </div>
+                <div style={{ height: 2, background: 'var(--surface-alt)' }} />
+
+                {/* Sans faute */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '15px 0' }}>
+                    <div style={{
+                        width: 48, height: 48, borderRadius: 15, background: 'var(--surface-alt)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        <IconSansFaute size={26} color="var(--indigo)" actionColor="var(--action)" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Sans faute
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                            questions d'affilée
+                        </span>
+                    </div>
+                    <div className="font-display" style={{ marginLeft: 'auto', fontSize: 27, fontWeight: 700, color: 'var(--indigo)', whiteSpace: 'nowrap' }}>
+                        {records?.meilleure_serie ? records.meilleure_serie : '—'}
+                    </div>
+                </div>
+                <div style={{ height: 2, background: 'var(--surface-alt)' }} />
+
+                {/* Montée des tables */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '15px 0' }}>
+                    <div style={{
+                        width: 48, height: 48, borderRadius: 15, background: 'var(--surface-alt)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        <IconMontee size={26} color="var(--indigo)" actionColor="var(--action)" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Montée des tables
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                            {profil?.plafond_atteint_le
+                                ? `débloquée le ${formaterDateSimple(profil.plafond_atteint_le)}`
+                                : ''}
+                        </span>
+                    </div>
+                    <div className="font-display" style={{ marginLeft: 'auto', fontSize: 27, fontWeight: 700, color: 'var(--indigo)', whiteSpace: 'nowrap' }}>
+                        Table {records?.plus_haute_table ? Math.max(records.plus_haute_table, plafond) : plafond}
+                    </div>
+                </div>
+            </div>
+
+            {/* Bouton Se déconnecter */}
             <button
-                className="btn btn--ghost"
-                style={{ width: '100%', fontSize: 15, color: 'var(--coral)' }}
+                type="button"
                 onClick={onLogout}
+                style={{
+                    padding: '24px 0 12px', background: 'none', border: 'none',
+                    fontFamily: 'var(--texte)', fontSize: 18, fontWeight: 600,
+                    color: 'var(--gris)', cursor: 'pointer', textAlign: 'center',
+                }}
             >
                 Se déconnecter
             </button>

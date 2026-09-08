@@ -260,6 +260,11 @@ export async function changerAvatar(emoji) {
     return error ? { ok: false, error: messageLisible(error) } : { ok: true };
 }
 
+/** Un enseignant choisit son emoji ou null pour revenir aux initiales. */
+export async function changerAvatarProf(emoji) {
+    return rpc('changer_avatar_prof', { p_emoji: emoji });
+}
+
 /* ===================================================================
  * ENREGISTRER UNE PARTIE
  * ================================================================= */
@@ -536,10 +541,29 @@ export async function enteteClasse(classe, periode = 'semaine') {
     return rpc('entete_classe', { p_classe: classe, p_periode: periode });
 }
 
+export async function maPlaceRecords(categorie = 'serie', periode = 'tout',
+                                     portee = 'classe', palier = null) {
+    return rpc('ma_place_records', {
+        p_categorie: categorie, p_periode: periode,
+        p_portee: portee, p_palier: palier,
+    });
+}
+
+export async function entetteSalleDesProfs(periode = 'mois') {
+    return rpc('entete_salle_des_profs', { p_periode: periode });
+}
+export const enteteSalleDesProfs = entetteSalleDesProfs;
+
 /** Le classement de la salle des profs — invisible pour les élèves. */
-export async function classementProfs({ categorie = 'points', periode = 'tout', limite = 20 } = {}) {
+export async function classementProfs(arg1 = 'points', arg2 = 'tout', arg3 = 20) {
+    if (typeof arg1 === 'object' && arg1 !== null) {
+        const { categorie = 'points', periode = 'tout', limite = 20 } = arg1;
+        return rpc('classement_profs', {
+            p_categorie: categorie, p_periode: periode, p_limite: limite,
+        });
+    }
     return rpc('classement_profs', {
-        p_categorie: categorie, p_periode: periode, p_limite: limite,
+        p_categorie: arg1, p_periode: arg2, p_limite: arg3,
     });
 }
 

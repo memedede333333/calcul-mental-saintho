@@ -57,6 +57,52 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Lot 23 : Migrations 29 et 30, profils et classements (Écrans 28 à 32)
+
+**Fait** —
+- **Migrations 29 et 30 appliquées** avec succès sur la base Supabase (`lkukdlspcgqtiimvwlsd`) :
+  - Migration 29 (`20260908210000_salle_des_profs.sql`) : colonne `profs.avatar_emoji` nullable (`null` = affichage des initiales), fonction `initiales_de`, `changer_avatar_prof`, refonte de `classement_profs` (avec rôle, points, sprint et initiales), `entete_salle_des_profs` (deux populations : `inscrits` et `ont_joue`), `rejoints` dans `mes_defis`, et chiffres du mois dans `mon_profil_prof`.
+  - Migration 30 (`20260908230000_profil_et_place_records.sql`) : `mon_profil` élève complété (`meilleur_sprint`, total des `jours_actifs`, `plafond_atteint_le` déduit), et fonction `ma_place_records` (avec `ecart_au_dessus` toujours positif et calculé côté serveur).
+  - Contrôle SQL du §1 validé : `colonne_avatar = 1`, `nouvelles = 4`, `sig_profs = 1`, `sig_defis = 1`. Types TypeScript régénérés dans `frontend/src/types/database.ts`.
+  - 167 cas de test verts.
+- **Écran 28 (Mes défis passés — `MesDefis.jsx`)** :
+  - Filtres par onglets « En cours · X » et « Terminés · Y ».
+  - Cartes de défi complètes avec double population stricte (« X ont rejoint · Y ont terminé ») et jauge bicolore sans soustraction hasardeuse.
+  - Boutons « Voir le podium » (ouvre le classement du défi) et « Projeter au tableau » (ouvre directement l'Écran 26 en mode vidéoprojecteur 1280×720).
+  - État vide avec grille de 9 pastilles colorées et bouton « Lancer un défi ».
+- **Écran 29 (Profil élève — `Profile.jsx`)** :
+  - Carte identité avec avatar, bouton d'édition (crayon) et palette d'animaux, palier et plafond.
+  - Synthèse de maîtrise : les 4 comptes (sues, justes mais lentes, à revoir, pas encore vues) dont la somme fait strictement `plafond × plafond`. Lien « Voir ma grille › » ouvrant la grille complète.
+  - 4 tuiles de records (points, jours d'entraînement totaux `jours_actifs`, parties jouées, meilleure série).
+  - Carte des records : Sprint (en secondes), Contre-la-montre, Sans faute, Montée des tables (avec date déduite uniquement si `plafond_atteint_le` n'est pas null).
+- **Écran 30 (Profil enseignant — `Profile.jsx`)** :
+  - Identité avec avatar emoji ou initiales en grand, nom, email et badge de rôle.
+  - Gestion des classes habituelles avec bouton d'édition et sélection persistée via `definirMesClasses`.
+  - Statistiques d'entraînement du mois (« Salle des profs · ce mois » : points, parties, meilleur sprint) et bouton « S'entraîner maintenant ».
+- **Écran 31 (Classements — Records — `Leaderboards.jsx`)** :
+  - 4 catégories jouables : Sprint, Chrono, Sans faute, Montée.
+  - Double sélecteur (Le collège / Ma classe et Découverte / Confirmé / Expert, sauf en Montée).
+  - Podium des 3 premiers et tableau des lignes suivantes.
+  - Ligne épinglée pour l'élève au-delà du top 3 via `maPlaceRecords`, avec rang et écart positif (« X secondes de moins et tu passes Yᵉ »).
+- **Écran 32 (Classements — Salle des profs — `Leaderboards.jsx`)** :
+  - Réservé aux enseignants. Bandeau « Entre collègues » en bleu nuit.
+  - Filtres de période (Ce mois, Cette semaine, Tout) et de tri (Points, Parties).
+  - Tableau à 6 colonnes : rang, avatar (ou initiales en badge si pas d'avatar), nom (avec mise en valeur de la ligne courante), rôle (« Professeur » ou « Administrateur »), points et meilleur sprint.
+  - Bandeau d'en-tête en pied : effectifs issus de `entetteSalleDesProfs` (« X collègues ont un compte · Y ont joué ce mois »).
+- **Correction du lot 22** :
+  - Suppression du dénominateur « sur 20 » en dur dans `JoinChallenge.jsx` (l. 256) pour afficher le score en points sans présumer du nombre de questions.
+
+**Décidé** —
+- L'avatar enseignant est nullable en base : le choix entre un emoji ou les initiales est respecté partout, aucun écran n'invente d'avatar par défaut. ✅
+- L'écart au record (`ecart_au_dessus`) est strictement calculé côté serveur pour garantir qu'il est toujours positif quel que soit le sens du tri (temps vs points). ✅
+- Si `plafond_atteint_le` est null, aucune date n'est affichée sous la Montée des tables (l'élève n'a pas encore franchi de palier par la Montée). ✅
+
+**Constaté** —
+- 0 erreur sur `check-tokens.mjs`, build Vite `npm run build` au vert (88 variables CSS conformes).
+
+**Ensuite** —
+- Lot 24 : Écran 35 (Mode Apprendre) et Écran 36 (Modales restantes : avatar enseignant, etc.).
+
 ## 2026-09-09 — Lot 22 : Code projeté plein écran, accueil professeur et rejoindre un défi (Écrans 26, 27, 33, 34)
 
 **Fait** —
