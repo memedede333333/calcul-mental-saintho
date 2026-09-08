@@ -504,10 +504,10 @@ export type Database = {
         Args: { p_niveau?: string; p_periode?: string }
         Returns: {
           classe: string
-          eleves_actifs: number
-          eleves_total: number
           est_ma_classe: boolean
-          points_moyens: number
+          inscrits: number
+          ont_joue: number
+          points_par_inscrit: number
           rang: number
         }[]
       }
@@ -652,6 +652,10 @@ export type Database = {
         }
         Returns: Json
       }
+      entete_classe: {
+        Args: { p_classe: string; p_periode?: string }
+        Returns: Json
+      }
       est_admin: { Args: never; Returns: boolean }
       est_prof: { Args: never; Returns: boolean }
       generer_code_defi: { Args: never; Returns: string }
@@ -664,8 +668,8 @@ export type Database = {
         Args: never
         Returns: {
           classe: string
-          eleves_actifs: number
           est_favorite: boolean
+          inscrits: number
           niveau: string
         }[]
       }
@@ -697,6 +701,17 @@ export type Database = {
           nom: string
           prof_id: string
           role: string
+        }[]
+      }
+      ma_place_progression: {
+        Args: { p_palier?: string; p_periode?: string; p_portee?: string }
+        Returns: {
+          classes_total: number
+          ecart_au_dessus: number
+          points: number
+          points_au_dessus: number
+          rang: number
+          rang_au_dessus: number
         }[]
       }
       maitrise_classe: {

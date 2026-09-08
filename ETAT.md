@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **8 septembre 2026** — **27 migrations, 137 cas
+> Dernière mise à jour : **8 septembre 2026** — **28 migrations, 146 cas
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
@@ -17,7 +17,12 @@
 > **Le lot 20 est livré** : écran Administration entièrement refait selon la maquette 25 (paysage pour Mac,
 > navigation Élèves / Enseignants / Journal d'audit, modales de changement de classe et de désactivation,
 > recherche locale, import CSV, rattachement, aucune couleur en dur, zéro emploi du mot « actif » pour les joueurs).
-> **Prochaine étape** : Lot 21 (Migration 28 et maquettes 22 Classements/Progression, 23 Classements/Classes, 24 Ma classe).
+> **Le lot 21 est livré** : la **migration 28 est appliquée** (`populations_classements`), les maquettes 22
+> (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) sont refaites sur les maquettes Claude Design.
+> Ligne utilisateur épinglée en bas avec écart serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe
+> (`entete_classe`), tables fragiles triées sur la part de classe en difficulté, ouverture collective de plafond.
+> Le mot « actif » est banni pour qualifier les joueurs au profit de `ont_joue` et `inscrits`.
+> **Prochaine étape** : Déploiement en production, import de rentrée, Jamf MDM et tests en conditions réelles.
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -592,6 +597,28 @@ toutes les classes » écrite plus haut dans ce même document. Un lot de retard
 pour une contrainte inventée, sur une décision déjà prise et déjà écrite.
 **La règle qui en découle : avant d'objecter, relire le §3.**
 
+### Migration 28 et lot 21 — le mot « actif » couvrait trois populations différentes
+
+*(8 septembre 2026, migration 28.)* Le mot « actif » voulait dire **trois choses différentes** dans la base :
+
+| Où | Ce que ça comptait vraiment |
+|---|---|
+| `eleves.actif` | pas désactivé |
+| `classement_classes.eleves_actifs` | **a joué** sur la période |
+| `liste_classes.eleves_actifs` | pas désactivé |
+
+Le sélecteur de classes et l'en-tête de la maquette 24 auraient affiché deux nombres portant le même nom et comptant deux choses différentes. C'est la famille de bugs de population qui a frappé cinq fois ce projet.
+
+**Les nouveaux noms :**
+- `classement_classes` : `eleves_actifs` → `ont_joue`, `eleves_total` → `inscrits`, `points_moyens` → `points_par_inscrit`.
+- `liste_classes` : `eleves_actifs` → `inscrits`.
+
+Le calcul de `points_par_inscrit` ne change pas : c'est bien la somme des points divisée par l'effectif **inscrit**, jamais par ceux qui ont joué. Une classe où trois élèves jouent beaucoup ne doit pas passer devant une classe où tout le monde s'y met. À l'écran, le libellé est **« points par élève inscrit »** (la maquette 23 qui écrivait « pts / élève actif » avait tort).
+
+Le mot « actif » disparaît de tous les écrans quand il parle de quelqu'un qui joue. On écrit **« 24 ont joué · 28 inscrits »**. « Actif » ne reste que pour le statut d'un compte dans l'administration : « Actif / Désactivé ».
+
+**`ma_place_progression` garantit la cohérence du rang.** L'élève voit sa ligne épinglée en bas de classement avec son rang, ses points et `ecart_au_dessus`. L'écart est calculé par le serveur avec exactement les mêmes filtres et CTE que `classement_progression`, sans soustraction locale côté React.
+
 ### Méthode
 
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
@@ -751,7 +778,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     dans `enregistrer_session` et `terminer_defi`. Instrumenté sur l'ensemble
     des quiz (`useQuizEngine`, `LibreQuiz`, `Quiz`). Phrase élève ajoutée sous
     la légende de la grille. Fait le 04/09.
-11. ⬜ **Lot 21** : Migration 28 (`populations_classements`) et les trois derniers écrans maquettés (22 Classements/Progression, 23 Classements/Classes, 24 Ma classe).
+11. ✅ **Lot 21** : Migration 28 (`populations_classements`) appliquée en base (146 cas verts), types TypeScript régénérés, écrans 22 (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) refaits sur les maquettes Claude Design. Mot « actif » banni pour qualifier les joueurs, ligne sticky avec rang et écart calculé au serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe (`entete_classe`), tables fragiles triées par part de classe en difficulté, ouverture collective de plafond. Fait le 08/09.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

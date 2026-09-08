@@ -7,6 +7,45 @@
 
 ## Entrées
 
+## 2026-09-08 — Lot 21 : Migration 28, classements et Ma classe sur les maquettes 22 à 24
+
+**Fait** —
+- **Migration 28 appliquée** sur la base `calcul-mental-dev` (`lkukdlspcgqtiimvwlsd`) via MCP Supabase (`supabase/migrations/20260908160000_populations_classements.sql`). Contrôle SQL validé : `sig_classes = 1`, `sig_liste = 1`, `nouvelles = 2`. Suite de test à **146 cas verts**.
+- **Types TypeScript régénérés** dans `frontend/src/types/database.ts` avec les nouveaux noms de colonnes et fonctions.
+- **Client API (`frontend/src/api.js`) mis à jour** :
+  - Ajout des fonctions wrappers `maPlaceProgression` et `enteteClasse`.
+  - Intégration dans les exports nommés et l'objet exporté par défaut `api`.
+- **Écrans 22 & 23 Classements (`frontend/src/screens/Leaderboards.jsx`) refaits sur les maquettes de référence** :
+  - Colonnes renommées : `ont_joue`, `inscrits`, `points_par_inscrit`.
+  - Libellé « points par élève inscrit » (points cumulés divisés par les inscrits, jamais par les seuls joueurs).
+  - Ligne utilisateur épinglée en bas d'écran alimentée par `maPlaceProgression` : affiche le rang, les points et l'écart (`ecart_au_dessus` calculé par le serveur sans soustraction locale). Masquée si l'élève est déjà présent dans la liste visible.
+  - État vide de la maquette 23 (« Personne n'a encore joué cette semaine » + bouton d'action « Jouer une partie » + lien de bascule vers le mois).
+  - Banni définitivement l'emploi du mot « actif » pour désigner les joueurs.
+- **Écran 24 Ma classe (`frontend/src/screens/MaClasse.jsx`) refait sur la maquette de référence** :
+  - En-tête alimenté par `enteteClasse` : décompte clair `{ont_joue} ont joué · {inscrits} inscrits · plafond commun : table {plafond_commun}`.
+  - Sélecteur de classes alimenté par `listeClasses` (`inscrits`).
+  - Encadré d'alerte des tables fragiles : trié sur la part de la classe en difficulté `(eleves_jaunes + eleves_rouges) / eleves_classe` décroissant, avec bouton d'action « Lancer un défi » pré-cochant les tables fragiles.
+  - Jauges par table affichant `taux_maitrise` et `taux_couverture` en toutes lettres.
+  - Liste des élèves avec filtres « Sous le plafond », « Désactivés », « Tous » (`listeEleves(classe)`).
+  - Bouton d'action collective « Ouvrir la table X à toute la classe » branché sur `definirPlafondClasse`.
+- **Intégrité et vérification** :
+  - `node frontend/scripts/check-tokens.mjs` : 88 tokens actifs, 0 erreur.
+  - `npm run build` : compilation sans erreur (856ms).
+
+**Décidé** —
+- Le mot « actif » couvrait trois populations différentes en base (`eleves.actif`, `classement_classes.eleves_actifs`, `liste_classes.eleves_actifs`). Il est désormais scindé : `ont_joue` pour ceux qui ont joué sur la période, `inscrits` pour l'effectif non désactivé, et « Actif / Désactivé » conservé uniquement pour le statut de compte dans l'administration.
+- `ecart_au_dessus` est calculé par le serveur dans `ma_place_progression` pour garantir la stricte cohérence avec le classement principal sans divergence d'arrondi ou de tri.
+- Le relèvement de plafond depuis l'écran Ma classe est collectif (« à toute la classe »), conformément aux règles du projet.
+
+**Constaté** —
+- Toutes les variables CSS respectent `tokens.css`.
+- L'expérience élève et enseignant sur les classements et le pilotage de classe reflète fidèlement les maquettes Claude Design.
+
+**Ensuite** —
+- Phase de validation finale avant rentrée : base de production, import de rentrée, Jamf MDM et tests multi-comptes en conditions réelles.
+
+---
+
 ## 2026-09-08 — Lot 20 : Écran Administration (Maquette 25)
 
 **Fait** —

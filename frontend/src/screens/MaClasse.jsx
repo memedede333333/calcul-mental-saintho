@@ -1,46 +1,47 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { maitriseClasse, listeClasses } from '../api';
-import { IconMaGrille, IconSprint, IconCadenas } from '../components/Icons';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+    maitriseClasse,
+    enteteClasse,
+    listeClasses,
+    listeEleves,
+    definirPlafondClasse,
+} from '../api';
+import { IconMaGrille, IconSprint } from '../components/Icons';
 
 /**
- * MaClasse — L'écran qui décide de l'adoption en salle des profs.
+ * MaClasse — Pilotage enseignant (Maquette 24)
  *
- * Le serveur renvoie UNE LIGNE PAR TABLE existant pour cette classe,
- * travaillée ou non. L'écran ne fabrique plus la liste, ne la complète
- * plus, ne la borne plus. Une table absente du retour n'existe pas
- * pour cette classe.
- *
- * Colonnes serveur (migration 20) :
- *   travaillee             — au moins un élève l'a rencontrée
- *   dans_le_plafond_commun — TOUS les élèves de la classe y ont droit
- *   eleves_verts/jaunes/rouges/total — ceux qui ont travaillé
- *   eleves_sans_trace      — effectif - total (calculé par le serveur)
- *   eleves_classe          — effectif actif de la classe
- *   taux_maitrise          — % verts parmi ceux qui ont travaillé
- *   taux_couverture        — % de la classe qui l'a travaillée
- *
- * Deux blocs :
- *   1. Tables travaillées, triées par taux_maitrise croissant
- *   2. Tables pas encore abordées (travaillee = false)
- *
- * Bouton défi : candidates = travaillee=true ET dans_le_plafond_commun=true,
- * triées par taux_maitrise croissant, les 2-3 premières.
- * Jamais de table non travaillée en candidate.
+ * RÈGLES PROJET (Lot 21) :
+ * - L'en-tête appelle `enteteClasse(selectedClasse)` et affiche :
+ *   « {ont_joue} ont joué · {inscrits} inscrits · plafond commun : table {plafond_commun} ».
+ * - Les nombres viennent d'`enteteClasse()` et de `listeClasses()` (inscrits).
+ * - Le mot « actif » est banni pour parler de quelqu'un qui joue.
+ * - Tri des tables fragiles sur `(eleves_jaunes + eleves_rouges) / eleves_classe` décroissant.
+ * - Les jauges affichent à la fois le taux de maîtrise et le taux de couverture en toutes lettres.
+ * - La liste des élèves vient de `listeEleves(classe)` avec filtres : Sous le plafond · Inactifs · Tous.
+ * - Bouton de relèvement du plafond : « Ouvrir la table X à toute la classe ».
  */
 
 export default function MaClasse({ onBack, onLancerDefi }) {
     const [classes, setClasses] = useState([]);
     const [selectedClasse, setSelectedClasse] = useState(null);
-    const [data, setData] = useState([]);
+    const [entete, setEntete] = useState(null);
+    const [maitrise, setMaitrise] = useState([]);
+    const [eleves, setEleves] = useState([]);
     const [loading, setLoading] = useState(true);
     const [erreur, setErreur] = useState(null);
 
-    // Charger la liste des classes au montage
+    // Filtre des élèves : 'sous_plafond' | 'inactifs' | 'tous'
+    const [filtreEleves, setFiltreEleves] = useState('sous_plafond');
+    // Voir plus de tables
+    const [voirToutesTables, setVoirToutesTables] = useState(false);
+    const [actionEnCours, setActionEnCours] = useState(false);
+
+    // 1. Charger la liste des classes au montage
     useEffect(() => {
         (async () => {
             const res = await listeClasses();
             if (res.ok && res.data?.length) {
-                // Favorites d'abord, puis par nom
                 const sorted = [...res.data].sort((a, b) => {
                     if (a.est_favorite !== b.est_favorite) return b.est_favorite ? 1 : -1;
                     return a.classe.localeCompare(b.classe);
@@ -53,93 +54,111 @@ export default function MaClasse({ onBack, onLancerDefi }) {
         })();
     }, []);
 
-    // Charger la maîtrise quand la classe change
-    useEffect(() => {
+    // 2. Charger les données de la classe sélectionnée
+    const rechargerClasse = useCallback(async () => {
         if (!selectedClasse) return;
         setLoading(true);
         setErreur(null);
-        (async () => {
-            const res = await maitriseClasse(selectedClasse);
-            if (res.ok) {
-                setData(res.data || []);
-            } else {
-                setErreur(res.error || 'Impossible de charger la maîtrise.');
-            }
-            setLoading(false);
-        })();
+
+        const [resEntete, resMaitrise, resEleves] = await Promise.all([
+            enteteClasse(selectedClasse),
+            maitriseClasse(selectedClasse),
+            listeEleves(selectedClasse),
+        ]);
+
+        if (resEntete.ok) setEntete(resEntete.data);
+        if (resMaitrise.ok) setMaitrise(resMaitrise.data || []);
+        if (resEleves.ok) setEleves(resEleves.data || []);
+
+        if (!resEntete.ok && !resMaitrise.ok) {
+            setErreur(resMaitrise.error || resEntete.error || 'Erreur lors du chargement de la classe.');
+        }
+
+        setLoading(false);
     }, [selectedClasse]);
 
-    // Effectif de la classe (constant sur toutes les lignes)
-    const effectif = data.length > 0 ? (data[0].eleves_classe || 0) : 0;
+    useEffect(() => {
+        rechargerClasse();
+    }, [rechargerClasse]);
 
-    // Bloc 1 : tables travaillées, triées par eleves_verts/eleves_classe
-    // croissant, départagé par taux_couverture décroissant.
-    // taux_maitrise (verts/total) est trompeur : une table vue par 1 élève
-    // sur 27 peut afficher 100 % si cet élève l'a réussie.
-    const tablesTravaillees = useMemo(() => {
-        return data
-            .filter(d => d.travaillee)
-            .sort((a, b) => {
-                const ec = a.eleves_classe || 1; // même valeur partout
-                const ratioA = a.eleves_verts / ec;
-                const ratioB = b.eleves_verts / ec;
-                if (ratioA !== ratioB) return ratioA - ratioB;
-                // À ratio égal, la plus couverte en premier :
-                // c'est un rattrapage, pas une découverte.
-                return (b.taux_couverture ?? 0) - (a.taux_couverture ?? 0);
-            });
-    }, [data]);
+    // Tri des tables fragiles :
+    // (eleves_jaunes + eleves_rouges) / eleves_classe décroissant
+    const tablesTriees = useMemo(() => {
+        return [...maitrise].sort((a, b) => {
+            const ecA = a.eleves_classe || 1;
+            const ecB = b.eleves_classe || 1;
+            const diffA = (a.eleves_jaunes + a.eleves_rouges) / ecA;
+            const diffB = (b.eleves_jaunes + b.eleves_rouges) / ecB;
+            if (diffA !== diffB) return diffB - diffA;
+            return a.table_n - b.table_n;
+        });
+    }, [maitrise]);
 
-    // Bloc 2 : tables pas encore abordées
-    const tablesNonAbordees = useMemo(() => {
-        return data.filter(d => !d.travaillee);
-    }, [data]);
+    // Tables les plus fragiles pour le défi
+    const tablesFragiles = useMemo(() => {
+        return tablesTriees.filter(d => (d.eleves_jaunes + d.eleves_rouges) > 0);
+    }, [tablesTriees]);
 
-    // Tables qui coincent : au moins un élève en jaune ou en rouge sur une table travaillée.
-    const tablesQuiCoincent = useMemo(() => {
-        return tablesTravaillees
-            .filter(d => (d.eleves_jaunes + d.eleves_rouges) > 0);
-    }, [tablesTravaillees]);
-
-    // Candidates pour le bouton défi de rattrapage :
-    // Triées par la part de la CLASSE en difficulté décroissante ((jaunes + rouges) / eleves_classe).
-    // On retient les 2 ou 3 premières, ordonnées pour l'affichage (a - b).
     const tablesDefi = useMemo(() => {
-        return [...tablesQuiCoincent]
-            .sort((a, b) => {
-                const ecA = a.eleves_classe || 1;
-                const ecB = b.eleves_classe || 1;
-                const diffA = (a.eleves_jaunes + a.eleves_rouges) / ecA;
-                const diffB = (b.eleves_jaunes + b.eleves_rouges) / ecB;
-                if (diffA !== diffB) return diffB - diffA;
-                return a.table_n - b.table_n;
-            })
-            .slice(0, 3)
+        return tablesFragiles
+            .slice(0, 2)
             .map(d => d.table_n)
             .sort((a, b) => a - b);
-    }, [tablesQuiCoincent]);
+    }, [tablesFragiles]);
 
-    // Rien ne coince : au moins une table travaillée, et aucun élève en jaune ou en rouge.
-    const rienNeCoince = useMemo(() => {
-        return tablesTravaillees.length > 0 && tablesQuiCoincent.length === 0;
-    }, [tablesTravaillees, tablesQuiCoincent]);
+    // Tables affichées dans la liste (6 premières ou toutes)
+    const tablesAffichees = useMemo(() => {
+        if (voirToutesTables) return tablesTriees;
+        return tablesTriees.slice(0, 6);
+    }, [tablesTriees, voirToutesTables]);
 
-    // Tables non abordées pour le bouton découverte (pas de filtre par plafond)
-    const tablesDecouverte = useMemo(() => {
-        return tablesNonAbordees
-            .slice(0, 3)
-            .map(d => d.table_n)
-            .sort((a, b) => a - b);
-    }, [tablesNonAbordees]);
+    // Filtrage des élèves
+    const plafondCommun = entete?.plafond_commun ?? 10;
+
+    const elevesFiltres = useMemo(() => {
+        return eleves.filter(e => {
+            if (filtreEleves === 'sous_plafond') {
+                return (e.plafond_tables || 10) < plafondCommun || !e.actif;
+            }
+            if (filtreEleves === 'inactifs') {
+                return !e.actif;
+            }
+            return true; // 'tous'
+        });
+    }, [eleves, filtreEleves, plafondCommun]);
+
+    // Prochain plafond pour ouverture collective
+    const prochainPlafond = useMemo(() => {
+        if (plafondCommun < 10) return 10;
+        if (plafondCommun < 12) return 12;
+        if (plafondCommun < 15) return 15;
+        if (plafondCommun < 20) return 20;
+        return null;
+    }, [plafondCommun]);
+
+    const handleOuvrirProchainPlafond = async () => {
+        if (!prochainPlafond || !selectedClasse) return;
+        const ok = window.confirm(`Ouvrir la table ${prochainPlafond} à toute la classe ${selectedClasse} ?`);
+        if (!ok) return;
+
+        setActionEnCours(true);
+        const res = await definirPlafondClasse(selectedClasse, prochainPlafond);
+        if (res.ok) {
+            await rechargerClasse();
+        } else {
+            alert(`Erreur : ${res.error || 'Impossible de relever le plafond.'}`);
+        }
+        setActionEnCours(false);
+    };
 
     if (!classes.length && !loading) {
         return (
             <div className="screen-enter" style={{ textAlign: 'center', padding: 40 }}>
                 <span style={{ fontSize: 48 }}>🏫</span>
-                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--navy)', marginTop: 12 }}>
+                <h2 className="font-display" style={{ fontSize: 22, fontWeight: 800, color: 'var(--indigo)', marginTop: 12 }}>
                     Aucune classe trouvée
                 </h2>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 600, fontSize: 14, marginTop: 8 }}>
+                <p style={{ color: 'var(--gris)', fontWeight: 600, fontSize: 14, marginTop: 8 }}>
                     Les classes apparaissent dès qu'un élève s'est connecté.
                 </p>
                 <button className="btn-back" style={{ marginTop: 16 }} onClick={onBack}>‹ Retour</button>
@@ -148,270 +167,327 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     }
 
     return (
-        <div className="screen-enter">
+        <div className="screen-enter" style={{ maxWidth: 834, margin: '0 auto', paddingBottom: 32 }}>
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
 
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <h1 className="font-display" style={{ fontSize: 24, fontWeight: 800, color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <IconMaGrille size={22} color="var(--indigo)" actionColor="var(--ciel)" /> Ma classe
+            {/* En-tête : titre et sélecteur de classe */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+                <h1 className="font-display" style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--indigo)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconMaGrille size={28} color="var(--indigo)" actionColor="var(--action)" /> Ma classe
                 </h1>
-            </div>
 
-            {/* Sélecteur de classe */}
-            <div style={{
-                display: 'flex', gap: 8, flexWrap: 'wrap',
-                justifyContent: 'center', marginBottom: 16,
-            }}>
-                {classes.map(c => (
-                    <button
-                        key={c.classe}
-                        onClick={() => setSelectedClasse(c.classe)}
-                        style={{
-                            padding: '8px 16px', fontSize: 14, fontWeight: 700,
-                            background: selectedClasse === c.classe
-                                ? 'var(--indigo)' : 'var(--surface)',
-                            color: selectedClasse === c.classe ? 'var(--action-texte)' : 'var(--indigo-encre)',
-                            border: selectedClasse === c.classe
-                                ? '2px solid var(--indigo)' : '2px solid var(--bordure)',
-                            borderRadius: 12, cursor: 'pointer',
-                            transition: 'all 0.15s',
-                        }}
-                    >
-                        {c.classe}
-                        {c.est_favorite && ' ★'}
-                        <span style={{ fontSize: 11, marginLeft: 4, opacity: 0.7 }}>
-                            ({c.eleves_actifs})
-                        </span>
-                    </button>
-                ))}
+                {/* Sélecteur de classes */}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {classes.map(c => {
+                        const estActive = selectedClasse === c.classe;
+                        return (
+                            <button
+                                key={c.classe}
+                                onClick={() => setSelectedClasse(c.classe)}
+                                style={{
+                                    padding: '10px 18px', borderRadius: 999,
+                                    background: estActive ? 'var(--indigo)' : 'var(--surface)',
+                                    color: estActive ? '#ffffff' : 'var(--gris)',
+                                    fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                    border: estActive ? 'none' : '1px solid var(--bordure)',
+                                    boxShadow: estActive ? 'none' : '0 2px 8px rgba(48,59,122,.08)',
+                                    cursor: 'pointer', whiteSpace: 'nowrap',
+                                    transition: 'all 0.15s ease',
+                                }}
+                            >
+                                {c.classe}{c.est_favorite ? ' ★' : ''}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40 }}>
-                    <div className="spinner" />
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                    <div className="spinner" style={{ margin: '0 auto 12px' }} />
+                    <span style={{ fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 600 }}>
+                        Chargement des données de la classe…
+                    </span>
                 </div>
             ) : erreur ? (
                 <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-                    <p style={{ color: 'var(--coral)', fontWeight: 700 }}>{erreur}</p>
+                    <p style={{ color: 'var(--rouge)', fontWeight: 700 }}>{erreur}</p>
                 </div>
             ) : (
                 <>
-                    {/* Résumé */}
-                    <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
-                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--navy)' }}>
-                            {selectedClasse} — {effectif} élève{effectif !== 1 ? 's' : ''} actif{effectif !== 1 ? 's' : ''}
-                        </p>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', marginTop: 2 }}>
-                            {tablesTravaillees.length} table{tablesTravaillees.length !== 1 ? 's' : ''} travaillée{tablesTravaillees.length !== 1 ? 's' : ''}
-                            {tablesNonAbordees.length > 0 && ` · ${tablesNonAbordees.length} pas encore abordée${tablesNonAbordees.length !== 1 ? 's' : ''}`}
-                        </p>
+                    {/* En-tête de classe (Maquette 24) */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 16 }}>
+                        <span className="font-display" style={{ fontWeight: 700, fontSize: 28, color: 'var(--indigo)' }}>
+                            {selectedClasse}
+                        </span>
+                        <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 16, color: 'var(--gris)' }}>
+                            {entete?.ont_joue ?? 0} ont joué · {entete?.inscrits ?? 0} inscrits · plafond commun : table {plafondCommun}
+                        </span>
                     </div>
 
-                    {/* Légende */}
-                    <div style={{
-                        display: 'flex', gap: 12, justifyContent: 'center',
-                        marginBottom: 12, fontSize: 11, fontWeight: 700,
-                        color: 'var(--text-soft)',
-                    }}>
-                        <Legend color="var(--mint)" label="Maîtrisé" />
-                        <Legend color="var(--sun)" label="En cours" />
-                        <Legend color="var(--coral)" label="Difficulté" />
-                        <Legend color="var(--border)" label="Pas travaillé" />
-                    </div>
-
-                    {/* Bloc 1 : Tables travaillées, triées par faiblesse */}
-                    {tablesTravaillees.length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                            {tablesTravaillees.map(d => (
-                                <TableBar
-                                    key={d.table_n}
-                                    tableN={d.table_n}
-                                    verts={d.eleves_verts}
-                                    jaunes={d.eleves_jaunes}
-                                    rouges={d.eleves_rouges}
-                                    sansTrace={d.eleves_sans_trace}
-                                    effectif={d.eleves_classe}
-                                    tauxMaitrise={d.taux_maitrise}
-                                    dansPlafond={d.dans_le_plafond_commun}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Bloc 2 : Tables pas encore abordées */}
-                    {tablesNonAbordees.length > 0 && (
-                        <div style={{ marginBottom: 16 }}>
-                            <h3 style={{
-                                fontSize: 13, fontWeight: 800, color: 'var(--text-soft)',
-                                textTransform: 'uppercase', letterSpacing: '0.05em',
-                                marginBottom: 8,
-                            }}>
-                                Pas encore abordées
-                            </h3>
-                            {tablesNonAbordees.map(d => (
-                                <TableBar
-                                    key={d.table_n}
-                                    tableN={d.table_n}
-                                    verts={0} jaunes={0} rouges={0}
-                                    sansTrace={d.eleves_sans_trace}
-                                    effectif={d.eleves_classe}
-                                    jamaisTravaillee
-                                    dansPlafond={d.dans_le_plafond_commun}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Bouton défi de rattrapage ou message si rien ne coince */}
-                    {tablesDefi.length > 0 ? (
-                        <button
-                            className="btn btn--gold"
-                            style={{
-                                width: '100%', fontSize: 16, padding: '16px 24px',
-                                marginTop: 8,
-                            }}
-                            onClick={() => onLancerDefi?.(tablesDefi, selectedClasse)}
-                        >
-                            <IconSprint size={18} color="var(--action-texte)" /> Lancer un défi sur {tablesDefi.length === 1 ? 'la table' : 'les tables'} {tablesDefi.join(', ')}
-                        </button>
-                    ) : rienNeCoince ? (
-                        <div className="card" style={{
-                            padding: '14px 18px', marginTop: 8,
-                            background: 'rgba(0, 201, 167, 0.08)',
-                            border: '2px solid var(--mint)',
-                            borderRadius: 14, textAlign: 'center',
+                    {/* Encadré des tables les plus fragiles (Maquette 24) */}
+                    {tablesFragiles.length > 0 && tablesDefi.length > 0 && (
+                        <div style={{
+                            background: 'var(--action)', borderRadius: 24, padding: 22,
+                            display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20,
+                            boxShadow: 'var(--ombre-action)', color: '#ffffff',
                         }}>
-                            <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--navy)', marginBottom: 4 }}>
-                                Rien ne coince dans cette classe.
-                            </p>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-soft)', lineHeight: 1.4 }}>
-                                Aucun élève n'est en difficulté sur les tables travaillées. Le bouton « Découvrir » ci-dessous ouvre les tables suivantes.
-                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                                <div className="font-display" style={{ fontWeight: 700, fontSize: 22, color: '#ffffff' }}>
+                                    Table{tablesDefi.length > 1 ? 's' : ''} {tablesDefi.join(' et ')} — {tablesDefi.length > 1 ? 'les plus fragiles' : 'la plus fragile'}
+                                </div>
+                                <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 15, color: 'var(--ciel-pale)' }}>
+                                    {tablesFragiles[0] && (
+                                        <span>
+                                            {tablesFragiles[0].eleves_jaunes + tablesFragiles[0].eleves_rouges} élève{(tablesFragiles[0].eleves_jaunes + tablesFragiles[0].eleves_rouges) > 1 ? 's' : ''} en rouge ou en jaune sur la {tablesFragiles[0].table_n}
+                                        </span>
+                                    )}
+                                    {tablesFragiles[1] && (
+                                        <span>, {tablesFragiles[1].eleves_jaunes + tablesFragiles[1].eleves_rouges} sur la {tablesFragiles[1].table_n}</span>
+                                    )}.
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => onLancerDefi?.(tablesDefi, selectedClasse)}
+                                style={{
+                                    height: 64, padding: '0 20px', borderRadius: 18,
+                                    background: 'var(--surface)', border: 'none', cursor: 'pointer',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                    justifyContent: 'center', gap: 1, flex: 'none',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                }}
+                            >
+                                <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 17, color: 'var(--action)', whiteSpace: 'nowrap' }}>
+                                    Lancer un défi
+                                </span>
+                                <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 12, color: 'var(--gris)', whiteSpace: 'nowrap' }}>
+                                    table{tablesDefi.length > 1 ? 's' : ''} {tablesDefi.join(' et ')} pré‑cochée{tablesDefi.length > 1 ? 's' : ''}
+                                </span>
+                            </button>
                         </div>
-                    ) : (
-                        <button
-                            className="btn btn--ghost"
-                            disabled
-                            style={{
-                                width: '100%', fontSize: 14, padding: '14px 24px',
-                                marginTop: 8, opacity: 0.5, cursor: 'default',
-                            }}
-                        >
-                            Pas encore assez de données pour un défi ciblé
-                        </button>
                     )}
 
-                    {/* Bouton découverte — tables non abordées */}
-                    {tablesDecouverte.length > 0 && (
+                    {/* Section Maîtrise par table */}
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                                Maîtrise par table
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontWeight: 600 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--vert)' }} /> vert
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontWeight: 600 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--orange)' }} /> jaune
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontWeight: 600 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--rouge)' }} /> rouge
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontWeight: 600 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--bordure)' }} /> sans trace
+                            </div>
+                        </div>
+
+                        {/* Carte des jauges */}
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 24,
+                            boxShadow: 'var(--ombre-carte)', padding: '20px 22px',
+                            display: 'flex', flexDirection: 'column', gap: 14,
+                            border: '1px solid var(--bordure)',
+                        }}>
+                            {tablesAffichees.map(d => {
+                                const ec = d.eleves_classe || entete?.inscrits || 1;
+                                const pVert = Math.min(100, (d.eleves_verts / ec) * 100);
+                                const pJaune = Math.min(100, (d.eleves_jaunes / ec) * 100);
+                                const pRouge = Math.min(100, (d.eleves_rouges / ec) * 100);
+                                const pSansTrace = Math.max(0, 100 - (pVert + pJaune + pRouge));
+
+                                const maitrisePct = Math.round(d.taux_maitrise ?? 0);
+                                const couvertPct = Math.round(d.taux_couverture ?? 0);
+
+                                return (
+                                    <div key={d.table_n} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                        <div style={{ width: 44, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
+                                            × {d.table_n}
+                                        </div>
+                                        <div style={{
+                                            flex: 1, height: 26, borderRadius: 8,
+                                            overflow: 'hidden', display: 'flex', background: 'var(--bordure)',
+                                        }}>
+                                            {pVert > 0 && <div style={{ width: `${pVert}%`, background: 'var(--vert)' }} />}
+                                            {pJaune > 0 && <div style={{ width: `${pJaune}%`, background: 'var(--orange)' }} />}
+                                            {pRouge > 0 && <div style={{ width: `${pRouge}%`, background: 'var(--rouge)' }} />}
+                                            {pSansTrace > 0 && <div style={{ width: `${pSansTrace}%`, background: 'var(--bordure)' }} />}
+                                        </div>
+                                        <div style={{ width: 50, textAlign: 'right', fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 17, color: maitrisePct < 50 ? 'var(--rouge)' : maitrisePct < 80 ? 'var(--orange)' : 'var(--vert)' }}>
+                                            {maitrisePct}%
+                                        </div>
+                                        <div style={{ width: 110, textAlign: 'right', fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                            couvert {couvertPct} %
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {tablesTriees.length > 6 && (
+                                <button
+                                    onClick={() => setVoirToutesTables(!voirToutesTables)}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14,
+                                        color: 'var(--action)', textAlign: 'left', padding: '6px 0 0',
+                                    }}
+                                >
+                                    {voirToutesTables ? 'Replier les tables ‹' : `Voir les ${tablesTriees.length - 6} autres tables ›`}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section Les Élèves (Maquette 24) */}
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                                Les élèves
+                            </span>
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                                {[
+                                    { id: 'sous_plafond', label: 'Sous le plafond' },
+                                    { id: 'inactifs', label: 'Désactivés' },
+                                    { id: 'tous', label: 'Tous' },
+                                ].map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setFiltreEleves(f.id)}
+                                        style={{
+                                            padding: '8px 16px', borderRadius: 999,
+                                            background: filtreEleves === f.id ? 'var(--indigo)' : 'var(--surface)',
+                                            color: filtreEleves === f.id ? '#ffffff' : 'var(--gris)',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
+                                            border: filtreEleves === f.id ? 'none' : '1px solid var(--bordure)',
+                                            boxShadow: filtreEleves === f.id ? 'none' : '0 2px 6px rgba(48,59,122,.06)',
+                                            cursor: 'pointer', whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Liste des élèves */}
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 24,
+                            boxShadow: 'var(--ombre-carte)', padding: '8px 20px',
+                            display: 'flex', flexDirection: 'column',
+                            border: '1px solid var(--bordure)',
+                        }}>
+                            {elevesFiltres.length === 0 ? (
+                                <div style={{ padding: 24, textAlign: 'center', fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 600 }}>
+                                    Aucun élève dans cette catégorie.
+                                </div>
+                            ) : (
+                                elevesFiltres.map((e, idx) => {
+                                    const estSousPlafond = (e.plafond_tables || 10) < plafondCommun;
+                                    const estDernier = idx === elevesFiltres.length - 1;
+
+                                    return (
+                                        <div
+                                            key={e.eleve_id}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 14,
+                                                padding: '14px 0', borderBottom: estDernier ? 'none' : '1px solid var(--bordure)',
+                                                opacity: e.actif ? 1 : 0.6,
+                                            }}
+                                        >
+                                            <span style={{ fontSize: 26, opacity: e.actif ? 1 : 0.45 }}>
+                                                {e.avatar_emoji || '👤'}
+                                            </span>
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16, color: e.actif ? 'var(--indigo)' : 'var(--gris)' }}>
+                                                    {e.prenom} {e.nom}
+                                                </span>
+                                                <span style={{
+                                                    fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13,
+                                                    color: !e.deja_connecte ? 'var(--rouge)' : 'var(--gris)',
+                                                }}>
+                                                    {!e.deja_connecte ? 'jamais connecté' : (e.derniere_connexion ? `vu ${formatDateRelative(e.derniere_connexion)}` : 'connecté')}
+                                                </span>
+                                            </div>
+
+                                            <span style={{
+                                                padding: '6px 12px', borderRadius: 8,
+                                                background: estSousPlafond ? 'var(--rouge-pale)' : 'var(--vert-pale)',
+                                                color: estSousPlafond ? 'var(--rouge)' : 'var(--vert)',
+                                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14,
+                                                whiteSpace: 'nowrap',
+                                            }}>
+                                                table {e.plafond_tables || 10}
+                                            </span>
+
+                                            <span style={{ width: 80, textAlign: 'right', fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
+                                                {e.points_semaine ?? 0} pts
+                                            </span>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Boutons d'action en bas (Maquette 24) */}
+                    <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                        {prochainPlafond && (
+                            <button
+                                type="button"
+                                onClick={handleOuvrirProchainPlafond}
+                                disabled={actionEnCours}
+                                style={{
+                                    flex: 1, height: 64, borderRadius: 18,
+                                    background: 'var(--surface)', border: '1px solid var(--bordure)',
+                                    boxShadow: 'var(--ombre-carte)', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                    color: 'var(--indigo)', cursor: 'pointer',
+                                }}
+                            >
+                                {actionEnCours ? 'Mise à jour…' : `Ouvrir la table ${prochainPlafond} à toute la classe`}
+                            </button>
+                        )}
                         <button
-                            className="btn btn--ghost"
+                            type="button"
+                            onClick={onBack}
                             style={{
-                                width: '100%', fontSize: 14, padding: '14px 24px',
-                                marginTop: 8,
+                                flex: 1, height: 64, borderRadius: 18,
+                                background: 'var(--surface)', border: '1px solid var(--bordure)',
+                                boxShadow: 'var(--ombre-carte)', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                color: 'var(--indigo)', cursor: 'pointer',
                             }}
-                            onClick={() => onLancerDefi?.(tablesDecouverte, selectedClasse)}
                         >
-                            Découvrir les tables {tablesDecouverte.join(', ')}
+                            ‹ Retour
                         </button>
-                    )}
+                    </div>
                 </>
             )}
         </div>
     );
 }
 
-/* ===================== LÉGENDE ===================== */
+function formatDateRelative(dateStr) {
+    if (!dateStr) return 'jamais';
+    const now = new Date();
+    const d = new Date(dateStr);
+    const diffMs = now - d;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
 
-function Legend({ color, label }) {
-    return (
-        <span>
-            <span style={{
-                display: 'inline-block', width: 10, height: 10, borderRadius: 3,
-                background: color, marginRight: 4, verticalAlign: 'middle',
-            }} />
-            {label}
-        </span>
-    );
-}
-
-/* ===================== BARRE D'UNE TABLE ===================== */
-
-function TableBar({ tableN, verts, jaunes, rouges, sansTrace, effectif, tauxMaitrise, jamaisTravaillee, dansPlafond }) {
-    // Largeurs en pourcentage de l'effectif
-    const pVerts = effectif > 0 ? (verts / effectif) * 100 : 0;
-    const pJaunes = effectif > 0 ? (jaunes / effectif) * 100 : 0;
-    const pRouges = effectif > 0 ? (rouges / effectif) * 100 : 0;
-    // Le gris = le reste de la barre via background
-
-    return (
-        <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            marginBottom: 6, padding: '6px 0',
-            opacity: dansPlafond ? 1 : 0.55,
-        }}>
-            {/* Label */}
-            <div style={{
-                minWidth: 48, textAlign: 'right',
-                fontWeight: 800, fontSize: 14,
-                color: jamaisTravaillee ? 'var(--text-soft)' : 'var(--navy)',
-                fontFamily: 'var(--font-display)',
-            }}>
-                × {tableN}
-                {!dansPlafond && <span style={{ marginLeft: 4 }}><IconCadenas size={11} color="var(--gris-inerte)" /></span>}
-            </div>
-
-            {/* Barre */}
-            <div style={{
-                flex: 1, height: 28, borderRadius: 8,
-                display: 'flex', overflow: 'hidden',
-                background: 'var(--border)',
-            }}>
-                {!jamaisTravaillee && (
-                    <>
-                        {pVerts > 0 && (
-                            <div style={{
-                                width: `${pVerts}%`, background: 'var(--mint)',
-                                transition: 'width 0.3s',
-                            }} />
-                        )}
-                        {pJaunes > 0 && (
-                            <div style={{
-                                width: `${pJaunes}%`, background: 'var(--sun)',
-                                transition: 'width 0.3s',
-                            }} />
-                        )}
-                        {pRouges > 0 && (
-                            <div style={{
-                                width: `${pRouges}%`, background: 'var(--coral)',
-                                transition: 'width 0.3s',
-                            }} />
-                        )}
-                        {/* Le gris restant = élèves sans trace — via background de la barre */}
-                    </>
-                )}
-            </div>
-
-            {/* Texte résumé */}
-            <div style={{
-                minWidth: 110, textAlign: 'right', fontSize: 12, fontWeight: 700,
-                color: jamaisTravaillee ? 'var(--text-soft)' : 'var(--text)',
-                lineHeight: 1.3,
-            }}>
-                {jamaisTravaillee ? (
-                    <span style={{ fontStyle: 'italic', color: 'var(--text-soft)' }}>
-                        Pas travaillée
-                    </span>
-                ) : (
-                    <>
-                        <div>{verts} / {effectif} maîtrisent</div>
-                        {sansTrace > 0 && (
-                            <div style={{ fontSize: 10, color: 'var(--text-soft)', fontWeight: 600 }}>
-                                {sansTrace} sans trace
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
-        </div>
-    );
+    if (diffDays === 0) {
+        if (diffHours < 1) return "à l'instant";
+        return `il y a ${diffHours} h`;
+    }
+    if (diffDays === 1) return 'hier';
+    if (diffDays < 7) return `il y a ${diffDays} j`;
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }

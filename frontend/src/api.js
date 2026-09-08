@@ -526,6 +526,16 @@ export async function classementClasses({ periode = 'semaine', niveau = null } =
     return rpc('classement_classes', { p_periode: periode, p_niveau: niveau });
 }
 
+export async function maPlaceProgression(periode = 'semaine', portee = 'classe', palier = null) {
+    return rpc('ma_place_progression', {
+        p_periode: periode, p_portee: portee, p_palier: palier,
+    });
+}
+
+export async function enteteClasse(classe, periode = 'semaine') {
+    return rpc('entete_classe', { p_classe: classe, p_periode: periode });
+}
+
 /** Le classement de la salle des profs — invisible pour les élèves. */
 export async function classementProfs({ categorie = 'points', periode = 'tout', limite = 20 } = {}) {
     return rpc('classement_profs', {
@@ -700,9 +710,9 @@ export const api = {
     creerDefi, rejoindreDefi, terminerDefi,
     classementDefi, avancementDefi, suivreDefi, mesDefis,
     // classements
-    classementProgression, classementRecords, classementClasses, classementProfs,
+    classementProgression, maPlaceProgression, classementRecords, classementClasses, classementProfs,
     // enseignant
-    maitriseClasse, listeClasses, definirMesClasses, apercuDefiClasse,
+    maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
     importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,

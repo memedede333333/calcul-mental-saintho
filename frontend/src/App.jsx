@@ -401,7 +401,7 @@ export default function App() {
                 />
             )}
             {screen === 'leaderboards' && (
-                <Leaderboards onBack={goHome} identite={identite} estProf={estProf} />
+                <Leaderboards onBack={goHome} identite={identite} estProf={estProf} onGo={setScreen} />
             )}
             {screen === 'profile' && (
                 <Profile
