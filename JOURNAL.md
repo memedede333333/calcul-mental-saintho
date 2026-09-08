@@ -5,6 +5,56 @@
 
 ---
 
+## Comment écrire une entrée
+
+À la fin de chaque étape — pas à la fin de chaque fichier modifié — ajoute une
+entrée **en haut de la section « Entrées »**, juste sous son titre, sur ce
+modèle :
+
+```markdown
+## 2026-09-03 — Écrans de connexion et d'accueil
+
+**Fait** — Écran de démarrage avec restauration de session, connexion par code
+à 6 chiffres, accueils élève et professeur distincts selon `quiSuisJe()`.
+
+**Décidé** — Le champ code accepte le collage depuis Mail : les élèves copient
+le code entier plutôt que de le retaper. ✅ *validé par Aymeri le 03/09*
+
+**Proposé, en attente** — Remplacer les 6 cases séparées par un champ unique :
+plus simple sur clavier iPad. ⏳ *à trancher*
+
+**Constaté** — Safari iPad remplit parfois le champ automatiquement avec un
+ancien code. Contourné en désactivant l'autocomplétion.
+
+**Ensuite** — Brancher l'enregistrement des parties (étape 4 de `ECRANS.md`).
+```
+
+### Les quatre rubriques
+
+| Rubrique | Ce qu'on y met |
+|---|---|
+| **Fait** | Ce qui fonctionne maintenant et qui ne fonctionnait pas avant |
+| **Décidé** | Les choix de conception pris. **Indiquer s'ils sont validés, et par qui.** |
+| **Constaté** | Ce qui a surpris, cassé, ou ne s'est pas passé comme prévu |
+| **Ensuite** | La prochaine étape |
+
+### Trois règles
+
+**Marque clairement ce qui est validé.** ✅ validé par *qui* et *quand*, ou
+⏳ proposé en attente. Une décision prise seul par l'agent et une décision
+validée par l'établissement n'ont pas le même poids — et dans six mois,
+personne ne s'en souviendra.
+
+**« Constaté » est la rubrique la plus utile.** Les surprises et les
+contournements sont ce qu'on oublie en premier et ce qu'on regrette le plus de
+ne pas avoir noté. Un bug contourné sans trace revient toujours.
+
+**Répercute dans `ETAT.md`.** Une entrée de journal met à jour le tableau d'état
+(§2) et, si une décision de conception a été prise, le registre des décisions
+(§3). Le journal raconte, `ETAT.md` fait foi.
+
+---
+
 ## Entrées
 
 ## 2026-09-08 — Lot 21 : Migration 28, classements et Ma classe sur les maquettes 22 à 24
@@ -227,49 +277,6 @@ RGPD deux fois de suite alors qu'il était tranché depuis longtemps.
 **Ensuite** — Appliquer la migration 25, transmettre le lot 17 (maquette 9,
 bouton « Voir qui », deux finitions). Puis les écrans sans maquette, puis la
 règle de maîtrise au temps de réponse.
-
----
-
-## 2026-09-03 — Écrans de connexion et d'accueil
-
-**Fait** — Écran de démarrage avec restauration de session, connexion par code
-à 6 chiffres, accueils élève et professeur distincts selon `quiSuisJe()`.
-
-**Décidé** — Le champ code accepte le collage depuis Mail : les élèves copient
-le code entier plutôt que de le retaper. ✅ *validé par Aymeri le 03/09*
-
-**Proposé, en attente** — Remplacer les 6 cases séparées par un champ unique :
-plus simple sur clavier iPad. ⏳ *à trancher*
-
-**Constaté** — Safari iPad remplit parfois le champ automatiquement avec un
-ancien code. Contourné en désactivant l'autocomplétion.
-
-**Ensuite** — Brancher l'enregistrement des parties (étape 4 de `ECRANS.md`).
-```
-
-### Les quatre rubriques
-
-| Rubrique | Ce qu'on y met |
-|---|---|
-| **Fait** | Ce qui fonctionne maintenant et qui ne fonctionnait pas avant |
-| **Décidé** | Les choix de conception pris. **Indiquer s'ils sont validés, et par qui.** |
-| **Constaté** | Ce qui a surpris, cassé, ou ne s'est pas passé comme prévu |
-| **Ensuite** | La prochaine étape |
-
-### Trois règles
-
-**Marque clairement ce qui est validé.** ✅ validé par *qui* et *quand*, ou
-⏳ proposé en attente. Une décision prise seul par l'agent et une décision
-validée par l'établissement n'ont pas le même poids — et dans six mois,
-personne ne s'en souviendra.
-
-**« Constaté » est la rubrique la plus utile.** Les surprises et les
-contournements sont ce qu'on oublie en premier et ce qu'on regrette le plus de
-ne pas avoir noté. Un bug contourné sans trace revient toujours.
-
-**Répercute dans `ETAT.md`.** Une entrée de journal met à jour le tableau d'état
-(§2) et, si une décision de conception a été prise, le registre des décisions
-(§3). Le journal raconte, `ETAT.md` fait foi.
 
 ---
 
