@@ -5,12 +5,12 @@ import branding from '../branding';
  * Layout — Shell commun de l'application
  * Header avec logo (ou monogramme fallback), titre, baseline
  */
-export default function Layout({ children, showHeader = true }) {
+export default function Layout({ children, showHeader = true, wide = false }) {
     const [logoError, setLogoError] = useState(false);
 
     return (
         <div className="app-root">
-            <div className="app-stage">
+            <div className={`app-stage${wide ? ' app-stage--wide' : ''}`}>
                 {showHeader && (
                     <header className="app-header">
                         {!logoError ? (

@@ -348,7 +348,7 @@ export default function App() {
 
     // 4. Application (ready)
     return (
-        <Layout showHeader={screen === 'home'}>
+        <Layout showHeader={screen === 'home'} wide={screen === 'admin'}>
             {screen === 'home' && (
                 <Home
                     onGo={handleGo}

@@ -1,580 +1,744 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { masteryColor } from '../logic/mastery';
 import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
-    definirPlafondClasse, listeEleves,
-    listeProfs, creerProf, modifierProf, desactiverProf,
+    listeEleves, listeProfs, creerProf, modifierProf, desactiverProf,
     importerEleves, reparerRattachements, journalAdmin,
 } from '../api.js';
-import { IconProf, IconDocument, IconAdmin } from '../components/Icons';
 
 /**
- * Admin — Dashboard enseignant / administrateur
+ * Admin — Écran d'administration (Maquette 25)
  *
- * Onglets visibles :
- *   - Élèves          (tout enseignant)
- *   - Enseignants      (admin seulement)
- *   - Import           (admin seulement)
- *   - Journal          (admin seulement)
+ * Format paysage pour Mac / ordinateur de bord.
+ * Trois onglets principaux :
+ *   - Élèves
+ *   - Enseignants
+ *   - Journal d'audit
  *
- * Les classes viennent de listeClasses(), jamais d'une constante.
+ * Règle projet :
+ * - On ne supprime jamais un élève en cours d'année, on le désactive.
+ * - Le mot « actif » est strictement réservé au statut du compte (Actif / Désactivé),
+ *   jamais pour qualifier un élève qui a joué.
+ * - La recherche est purement locale (client-side) et ne stocke ni n'envoie rien.
  */
 
 export default function Admin({ onBack, identite, onIdentiteChange }) {
     const estAdmin = identite?.admin === true;
-    const [tab, setTab] = useState('eleves');
-    const [classes, setClasses] = useState([]);
-    const [selectedClass, setSelectedClass] = useState('');
+    const [tab, setTab] = useState('eleves'); // 'eleves' | 'profs' | 'journal'
     const [loading, setLoading] = useState(true);
 
-    // Charger les classes au montage
+    // Données principales
+    const [classes, setClasses] = useState([]);
+    const [eleves, setEleves] = useState([]);
+    const [profs, setProfs] = useState([]);
+    const [journal, setJournal] = useState([]);
+
+    // Filtres onglet Élèves
+    const [classeFiltre, setClasseFiltre] = useState('Toutes');
+    const [recherche, setRecherche] = useState('');
+
+    // Modals
+    const [modalClasseEleve, setModalClasseEleve] = useState(null);
+    const [modalDesactiverEleve, setModalDesactiverEleve] = useState(null);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [showAjoutProfModal, setShowAjoutProfModal] = useState(false);
+
+    // État d'action en cours
+    const [actionEnCours, setActionEnCours] = useState(false);
+    const [messageFeedback, setMessageFeedback] = useState('');
+
+    const monProfId = identite?.profil?.id || null;
+
+    // Chargement initial des données
+    const rechargerDonnees = useCallback(async () => {
+        setLoading(true);
+        const [resClasses, resEleves, resProfs, resJournal] = await Promise.all([
+            listeClasses(),
+            listeEleves(null),
+            listeProfs(),
+            journalAdmin(100),
+        ]);
+
+        if (resClasses.ok && resClasses.data) setClasses(resClasses.data);
+        if (resEleves.ok && resEleves.data) setEleves(resEleves.data);
+        if (resProfs.ok && resProfs.data) setProfs(resProfs.data);
+        if (resJournal.ok && resJournal.data) setJournal(resJournal.data);
+
+        setLoading(false);
+    }, []);
+
     useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            const res = await listeClasses();
-            if (cancelled) return;
-            if (res.ok && res.data) {
-                setClasses(res.data);
-                if (res.data.length > 0 && !selectedClass) {
-                    setSelectedClass(res.data[0].classe);
-                }
-            }
-            setLoading(false);
-        })();
-        return () => { cancelled = true; };
-    }, []);
+        rechargerDonnees();
+    }, [rechargerDonnees]);
 
-    const refreshClasses = useCallback(async () => {
-        const res = await listeClasses();
-        if (res.ok && res.data) setClasses(res.data);
-    }, []);
+    // Le total vient de la longueur de la liste et ne tient que tant que liste_eleves renvoie tout sans pagination.
+    const totalInscrits = eleves.length;
+    const totalDesactives = eleves.filter(e => !e.actif).length;
 
-    const tabs = [
-        { id: 'eleves', label: 'Élèves' },
-        ...(estAdmin ? [
-            { id: 'profs', label: 'Enseignants' },
-            { id: 'import', label: 'Import' },
-            { id: 'journal', label: 'Journal' },
-        ] : []),
-    ];
+    // Filtrage local des élèves (classe + recherche)
+    const elevesFiltres = eleves.filter(e => {
+        if (classeFiltre !== 'Toutes' && e.classe !== classeFiltre) return false;
+        if (recherche.trim()) {
+            const q = recherche.trim().toLowerCase();
+            const nomComplet = `${e.prenom || ''} ${e.nom || ''}`.toLowerCase();
+            const nomInverse = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase();
+            if (!nomComplet.includes(q) && !nomInverse.includes(q)) return false;
+        }
+        return true;
+    });
 
-    const currentClassInfo = classes.find(c => c.classe === selectedClass);
+    // Actions Élèves
+    const handleReactivation = async (eleve) => {
+        setActionEnCours(true);
+        setMessageFeedback('');
+        const res = await reactiverEleve(eleve.eleve_id);
+        if (res.ok) {
+            setMessageFeedback(`✅ ${eleve.prenom} ${eleve.nom} a été réactivé.`);
+            await rechargerDonnees();
+        } else {
+            setMessageFeedback(`❌ ${res.error || 'Erreur lors de la réactivation.'}`);
+        }
+        setActionEnCours(false);
+    };
+
+    const handleConfirmationDesactivation = async (eleveId, motif) => {
+        setActionEnCours(true);
+        const res = await desactiverEleve(eleveId, motif);
+        setModalDesactiverEleve(null);
+        if (res.ok) {
+            setMessageFeedback('✅ Compte élève désactivé. Ses données sont conservées.');
+            await rechargerDonnees();
+        } else {
+            setMessageFeedback(`❌ ${res.error || 'Erreur lors de la désactivation.'}`);
+        }
+        setActionEnCours(false);
+    };
+
+    const handleConfirmationChangerClasse = async (eleveId, nouvelleClasse) => {
+        setActionEnCours(true);
+        const res = await modifierEleve(eleveId, { classe: nouvelleClasse });
+        setModalClasseEleve(null);
+        if (res.ok) {
+            setMessageFeedback('✅ Classe mise à jour.');
+            await rechargerDonnees();
+        } else {
+            setMessageFeedback(`❌ ${res.error || 'Erreur lors du changement de classe.'}`);
+        }
+        setActionEnCours(false);
+    };
+
+    // Actions Enseignants
+    const handleChangementRoleProf = async (prof, nouveauRole) => {
+        if (prof.prof_id === monProfId) return;
+        const msg = nouveauRole === 'admin'
+            ? `Donner les droits d'administrateur à ${prof.nom} ?`
+            : `Retirer les droits d'administrateur à ${prof.nom} ?`;
+        if (!window.confirm(msg)) return;
+
+        setActionEnCours(true);
+        const res = await modifierProf(prof.prof_id, { role: nouveauRole });
+        if (res.ok) {
+            setMessageFeedback(`✅ Rôle de ${prof.nom} mis à jour (${nouveauRole}).`);
+            await rechargerDonnees();
+            onIdentiteChange?.();
+        } else {
+            setMessageFeedback(`❌ ${res.error || 'Impossible de modifier le rôle.'}`);
+        }
+        setActionEnCours(false);
+    };
+
+    const handleDesactiverProf = async (prof) => {
+        if (prof.prof_id === monProfId) return;
+        if (!window.confirm(`Désactiver le compte enseignant de ${prof.nom} ?`)) return;
+
+        setActionEnCours(true);
+        const res = await desactiverProf(prof.prof_id);
+        if (res.ok) {
+            setMessageFeedback(`✅ Enseignant ${prof.nom} désactivé.`);
+            await rechargerDonnees();
+        } else {
+            setMessageFeedback(`❌ ${res.error || 'Impossible de désactiver cet enseignant.'}`);
+        }
+        setActionEnCours(false);
+    };
 
     return (
-        <div className="screen-enter">
-            <button className="btn-back" onClick={onBack}>‹ Accueil</button>
-
-            <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <h1 className="font-display" style={{ fontSize: 26, fontWeight: 800, color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <IconAdmin size={26} color="var(--indigo)" /> Administration
-                </h1>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 13 }}>
-                    {identite?.nom || 'Enseignant'}{estAdmin ? ' — admin' : ''}
-                </p>
-            </div>
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: 40 }}>
-                    <div className="spinner" />
+        <div className="screen-enter" style={{ padding: '8px 0 24px' }}>
+            {/* Feedback message banner if any */}
+            {messageFeedback && (
+                <div style={{
+                    maxWidth: 1194, margin: '0 auto 12px', padding: '10px 16px',
+                    borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--bordure)',
+                    fontFamily: 'var(--texte)', fontSize: 14, fontWeight: 700,
+                    color: messageFeedback.startsWith('❌') ? 'var(--rouge)' : 'var(--succes)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                    <span>{messageFeedback}</span>
+                    <button
+                        onClick={() => setMessageFeedback('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gris)', fontSize: 16 }}
+                    >
+                        ✕
+                    </button>
                 </div>
-            ) : (
-                <>
-                    {/* Sélecteur de classe */}
-                    {classes.length > 0 && (tab === 'eleves') && (
-                        <div className="chips" style={{ justifyContent: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-                            {classes.map(c => (
-                                <button
-                                    key={c.classe}
-                                    className={`chip${c.classe === selectedClass ? ' chip--navy' : ''}`}
-                                    style={{ minWidth: 50, height: 42, fontSize: 16 }}
-                                    onClick={() => setSelectedClass(c.classe)}
-                                >
-                                    {c.classe}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+            )}
 
-                    {/* Onglets */}
-                    <div className="viz-tabs" style={{ marginBottom: 14 }}>
-                        {tabs.map(t => (
-                            <button
-                                key={t.id}
-                                className={`viz-tab${tab === t.id ? ' viz-tab--active' : ''}`}
-                                onClick={() => setTab(t.id)}
-                                style={{ fontSize: 13 }}
-                            >
-                                {t.label}
-                            </button>
-                        ))}
+            <div className="admin-landscape">
+                {/* 1. Colonne de gauche (Navigation Indigo) */}
+                <div className="admin-sidebar">
+                    <div className="admin-sidebar-header">
+                        <button className="admin-sidebar-back" onClick={onBack}>
+                            ‹ Accueil
+                        </button>
+                        <span className="admin-sidebar-title">Administration</span>
+                        <span className="admin-sidebar-subtitle">Collège Saint‑Honoré</span>
                     </div>
 
-                    {tab === 'eleves' && (
-                        <ElevesTab
-                            selectedClass={selectedClass}
-                            classInfo={currentClassInfo}
-                            onRefresh={refreshClasses}
-                            estAdmin={estAdmin}
-                        />
+                    <button
+                        className={`admin-sidebar-tab${tab === 'eleves' ? ' admin-sidebar-tab--active' : ''}`}
+                        onClick={() => setTab('eleves')}
+                    >
+                        <span>Élèves</span>
+                        <span className="admin-sidebar-badge">{totalInscrits}</span>
+                    </button>
+
+                    <button
+                        className={`admin-sidebar-tab${tab === 'profs' ? ' admin-sidebar-tab--active' : ''}`}
+                        onClick={() => setTab('profs')}
+                    >
+                        <span>Enseignants</span>
+                        <span className="admin-sidebar-badge">{profs.length}</span>
+                    </button>
+
+                    <button
+                        className={`admin-sidebar-tab${tab === 'journal' ? ' admin-sidebar-tab--active' : ''}`}
+                        onClick={() => setTab('journal')}
+                    >
+                        <span>Journal d'audit</span>
+                    </button>
+
+                    <div style={{ flex: 1 }} />
+
+                    <div className="admin-sidebar-note">
+                        On ne supprime jamais un élève en cours d'année. On le désactive : ses résultats restent, son accès s'arrête.
+                    </div>
+                </div>
+
+                {/* 2. Zone centrale */}
+                <div className="admin-main">
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                            <div className="spinner" style={{ margin: '0 auto 12px' }} />
+                            <span style={{ fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 600 }}>
+                                Chargement des données…
+                            </span>
+                        </div>
+                    ) : tab === 'eleves' ? (
+                        /* Onglet Élèves */
+                        <>
+                            <div className="admin-topbar">
+                                <h2 className="admin-heading">Élèves</h2>
+
+                                <div className="admin-class-pills">
+                                    <button
+                                        className={`admin-class-pill${classeFiltre === 'Toutes' ? ' admin-class-pill--active' : ''}`}
+                                        onClick={() => setClasseFiltre('Toutes')}
+                                    >
+                                        Toutes
+                                    </button>
+                                    {classes.map(c => (
+                                        <button
+                                            key={c.classe}
+                                            className={`admin-class-pill${classeFiltre === c.classe ? ' admin-class-pill--active' : ''}`}
+                                            onClick={() => setClasseFiltre(c.classe)}
+                                        >
+                                            {c.classe}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    <div className="admin-search-box">
+                                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                                            <circle cx="11" cy="11" r="6.6" stroke="var(--gris)" strokeWidth="2.4" />
+                                            <path d="m16 16 4 4" stroke="var(--gris)" strokeWidth="2.4" strokeLinecap="round" />
+                                        </svg>
+                                        <input
+                                            type="text"
+                                            className="admin-search-input"
+                                            placeholder="Rechercher un élève"
+                                            value={recherche}
+                                            onChange={e => setRecherche(e.target.value)}
+                                        />
+                                        {recherche && (
+                                            <button
+                                                onClick={() => setRecherche('')}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gris)', fontSize: 14 }}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {estAdmin && (
+                                        <button
+                                            className="admin-btn-action-main"
+                                            onClick={() => setShowImportModal(true)}
+                                        >
+                                            Importer une classe
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="admin-table-card">
+                                <div className="admin-table-grid-header">
+                                    <span />
+                                    <span>Nom</span>
+                                    <span>Classe</span>
+                                    <span>Plafond</span>
+                                    <span>Statut</span>
+                                    <span style={{ textAlign: 'right' }}>Actions</span>
+                                </div>
+
+                                {elevesFiltres.length === 0 ? (
+                                    <div style={{ padding: 32, textAlign: 'center', fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 600 }}>
+                                        Aucun élève trouvé pour cette sélection.
+                                    </div>
+                                ) : (
+                                    elevesFiltres.map(e => {
+                                        const estInactif = !e.actif;
+                                        return (
+                                            <div
+                                                key={e.eleve_id}
+                                                className={`admin-table-grid-row${estInactif ? ' admin-table-grid-row--inactive' : ''}`}
+                                            >
+                                                <span
+                                                    className="admin-cell-avatar"
+                                                    style={{ opacity: estInactif ? 0.45 : 1 }}
+                                                >
+                                                    {e.avatar_emoji || '👤'}
+                                                </span>
+                                                <span className={`admin-cell-name${estInactif ? ' admin-cell-name--inactive' : ''}`}>
+                                                    {e.prenom} {e.nom}
+                                                </span>
+                                                <span className="admin-cell-muted">
+                                                    {e.classe}
+                                                </span>
+                                                <span className="admin-cell-muted">
+                                                    Table {e.plafond_tables || 10}
+                                                </span>
+                                                <span className={estInactif ? 'admin-status-badge--inactive' : 'admin-status-badge--active'}>
+                                                    {estInactif ? 'Désactivé' : 'Actif'}
+                                                </span>
+                                                <span className="admin-cell-actions">
+                                                    <button
+                                                        className="admin-btn-table"
+                                                        onClick={() => setModalClasseEleve(e)}
+                                                        disabled={actionEnCours}
+                                                    >
+                                                        Classe
+                                                    </button>
+                                                    {estInactif ? (
+                                                        <button
+                                                            className="admin-btn-table admin-btn-table--reactiver"
+                                                            onClick={() => handleReactivation(e)}
+                                                            disabled={actionEnCours}
+                                                        >
+                                                            Réactiver
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="admin-btn-table admin-btn-table--desactiver"
+                                                            onClick={() => setModalDesactiverEleve(e)}
+                                                            disabled={actionEnCours}
+                                                        >
+                                                            Désactiver
+                                                        </button>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <div className="admin-footer-count">
+                                {elevesFiltres.length} ligne{elevesFiltres.length > 1 ? 's' : ''} sur {totalInscrits} inscrits
+                                {totalDesactives > 0 && ` · ${totalDesactives} désactivé${totalDesactives > 1 ? 's' : ''}`}
+                                {' '}· trié par prénom
+                            </div>
+                            <div style={{ flex: 1 }} />
+                        </>
+                    ) : tab === 'profs' ? (
+                        /* Onglet Enseignants */
+                        <>
+                            <div className="admin-topbar">
+                                <h2 className="admin-heading">Enseignants</h2>
+                                {estAdmin && (
+                                    <div style={{ marginLeft: 'auto' }}>
+                                        <button
+                                            className="admin-btn-action-main"
+                                            onClick={() => setShowAjoutProfModal(true)}
+                                        >
+                                            + Ajouter un enseignant
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="admin-table-card">
+                                <div style={{
+                                    display: 'grid', gridTemplateColumns: '44px minmax(130px, 1fr) minmax(180px, 1.2fr) 90px minmax(100px, 1fr) 140px',
+                                    boxSizing: 'border-box', padding: '11px 16px', background: 'var(--ivoire)',
+                                    borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
+                                    fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
+                                    textTransform: 'uppercase', alignItems: 'center'
+                                }}>
+                                    <span />
+                                    <span>Nom</span>
+                                    <span>Email</span>
+                                    <span>Rôle</span>
+                                    <span>Classes</span>
+                                    <span style={{ textAlign: 'right' }}>Actions</span>
+                                </div>
+
+                                {profs.map(p => {
+                                    const estMoi = p.prof_id === monProfId;
+                                    return (
+                                        <div
+                                            key={p.prof_id}
+                                            style={{
+                                                display: 'grid', gridTemplateColumns: '44px minmax(130px, 1fr) minmax(180px, 1.2fr) 90px minmax(100px, 1fr) 140px',
+                                                boxSizing: 'border-box', padding: '12px 16px', alignItems: 'center',
+                                                borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
+                                                fontFamily: 'var(--texte)'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: 20 }}>🎓</span>
+                                            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--indigo)' }}>
+                                                {p.nom} {estMoi && <span style={{ color: 'var(--gris)', fontWeight: 600, fontSize: 13 }}>(toi)</span>}
+                                            </span>
+                                            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
+                                                {p.email}
+                                            </span>
+                                            <span>
+                                                {estMoi ? (
+                                                    <span style={{
+                                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
+                                                        padding: '4px 10px', borderRadius: 8,
+                                                        background: p.role === 'admin' ? 'var(--orange-pale)' : 'var(--ciel-pale)',
+                                                        color: p.role === 'admin' ? 'var(--orange)' : 'var(--action)',
+                                                    }}>
+                                                        {p.role === 'admin' ? 'Admin' : 'Prof'}
+                                                    </span>
+                                                ) : (
+                                                    <select
+                                                        value={p.role}
+                                                        onChange={e => handleChangementRoleProf(p, e.target.value)}
+                                                        disabled={actionEnCours || !estAdmin}
+                                                        style={{
+                                                            padding: '4px 8px', borderRadius: 8, border: '1px solid var(--bordure)',
+                                                            fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700,
+                                                            color: 'var(--indigo)', background: 'var(--surface)', cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <option value="prof">Prof</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+                                                )}
+                                            </span>
+                                            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
+                                                {p.classes?.length > 0 ? p.classes.join(', ') : '—'}
+                                            </span>
+                                            <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                {!estMoi && estAdmin && p.actif && (
+                                                    <button
+                                                        className="admin-btn-table admin-btn-table--desactiver"
+                                                        onClick={() => handleDesactiverProf(p)}
+                                                        disabled={actionEnCours}
+                                                    >
+                                                        Désactiver
+                                                    </button>
+                                                )}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div style={{ flex: 1 }} />
+                        </>
+                    ) : (
+                        /* Onglet Journal d'audit complet */
+                        <>
+                            <div className="admin-topbar">
+                                <h2 className="admin-heading">Journal d'audit</h2>
+                            </div>
+
+                            <div className="admin-audit-info-box">
+                                <div className="admin-audit-info-title">Le journal ne s'efface pas</div>
+                                <div className="admin-audit-info-text">
+                                    Chaque changement de classe, plafond, rôle ou statut y est écrit avec son auteur. C'est ce qui permet de répondre à « qui a fait ça ».
+                                </div>
+                            </div>
+
+                            <div className="admin-table-card" style={{ padding: '12px 20px', maxHeight: 600, overflowY: 'auto' }}>
+                                {journal.length === 0 ? (
+                                    <div style={{ padding: 24, textAlign: 'center', fontFamily: 'var(--texte)', color: 'var(--gris)', fontWeight: 600 }}>
+                                        Aucune entrée dans le journal d'audit.
+                                    </div>
+                                ) : (
+                                    journal.map(entry => (
+                                        <div
+                                            key={entry.id}
+                                            style={{
+                                                padding: '12px 0', borderBottom: '1px solid var(--bordure)',
+                                                display: 'flex', flexDirection: 'column', gap: 3
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14, color: 'var(--indigo)' }}>
+                                                    {formaterActionJournal(entry.action)}
+                                                </span>
+                                                <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 12, color: 'var(--gris-inerte)' }}>
+                                                    {formaterDateJournal(entry.fait_le)} · {entry.acteur_email || entry.fait_par || 'système'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                                {formaterDetailJournal(entry)}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <div style={{ flex: 1 }} />
+                        </>
                     )}
-                    {tab === 'profs' && estAdmin && <ProfsTab identite={identite} onIdentiteChange={onIdentiteChange} />}
-                    {tab === 'import' && estAdmin && <ImportTab onRefresh={refreshClasses} />}
-                    {tab === 'journal' && estAdmin && <JournalTab />}
-                </>
+                </div>
+
+                {/* 3. Colonne de droite (Aperçu Journal d'audit) — seulement sur onglet élèves sur grand écran */}
+                {tab === 'eleves' && (
+                    <div className="admin-preview-col">
+                        <div className="admin-preview-header">
+                            <h3 className="admin-preview-title">Journal d'audit</h3>
+                            <button
+                                className="admin-preview-link"
+                                onClick={() => setTab('journal')}
+                            >
+                                Tout voir
+                            </button>
+                        </div>
+
+                        {journal.slice(0, 5).map(entry => (
+                            <div key={entry.id} className="admin-audit-entry">
+                                <div className="admin-audit-action">{formaterActionJournal(entry.action)}</div>
+                                <div className="admin-audit-detail">{formaterDetailJournal(entry)}</div>
+                                <div className="admin-audit-meta">
+                                    {formaterDateJournal(entry.fait_le)} · {entry.acteur_email || entry.fait_par || 'prof'}
+                                </div>
+                            </div>
+                        ))}
+
+                        <div style={{ flex: 1 }} />
+
+                        <div className="admin-audit-info-box">
+                            <div className="admin-audit-info-title">Le journal ne s'efface pas</div>
+                            <div className="admin-audit-info-text">
+                                Chaque changement de classe, plafond, rôle ou statut y est écrit avec son auteur. C'est ce qui permet de répondre à « qui a fait ça ».
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ===================== MODALS ===================== */}
+
+            {/* Modal Changer de classe */}
+            {modalClasseEleve && (
+                <ModalChangerClasse
+                    eleve={modalClasseEleve}
+                    classes={classes}
+                    onClose={() => setModalClasseEleve(null)}
+                    onConfirm={handleConfirmationChangerClasse}
+                    busy={actionEnCours}
+                />
+            )}
+
+            {/* Modal Désactiver élève */}
+            {modalDesactiverEleve && (
+                <ModalDesactiverEleve
+                    eleve={modalDesactiverEleve}
+                    onClose={() => setModalDesactiverEleve(null)}
+                    onConfirm={handleConfirmationDesactivation}
+                    busy={actionEnCours}
+                />
+            )}
+
+            {/* Modal Importer une classe */}
+            {showImportModal && (
+                <ModalImport
+                    onClose={() => setShowImportModal(false)}
+                    onSuccess={async () => {
+                        await rechargerDonnees();
+                    }}
+                />
+            )}
+
+            {/* Modal Ajouter un enseignant */}
+            {showAjoutProfModal && (
+                <ModalAjouterProf
+                    onClose={() => setShowAjoutProfModal(false)}
+                    onSuccess={async () => {
+                        await rechargerDonnees();
+                    }}
+                />
             )}
         </div>
     );
 }
 
-/* ===================== ÉLÈVES ===================== */
+/* ===================================================================
+ * MODALS ET COMPOSANTS UTILITAIRES
+ * ================================================================= */
 
-function ElevesTab({ selectedClass, classInfo, onRefresh, estAdmin }) {
-    const [eleves, setEleves] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showAdd, setShowAdd] = useState(false);
-    const [showInactifs, setShowInactifs] = useState(false);
-    const [msg, setMsg] = useState('');
-    const [busy, setBusy] = useState(null); // eleveId en cours d'action
-
-    // Plafond
-    const [plafondEnCours, setPlafondEnCours] = useState(false);
-
-    const charger = useCallback(async () => {
-        if (!selectedClass) return;
-        setLoading(true);
-        // On charge la liste des élèves sans connexion pour cette classe
-        const res = await listeEleves(selectedClass);
-        if (res.ok && res.data) {
-            setEleves(res.data);
-        }
-        setLoading(false);
-    }, [selectedClass]);
-
-    useEffect(() => { charger(); }, [charger]);
-
-    const handleToggleActif = async (eleve) => {
-        // Confirmation avant désactivation
-        if (eleve.actif !== false) {
-            const ok = window.confirm(`Désactiver ${eleve.prenom || ''} ${eleve.nom || ''} ? L'élève ne pourra plus se connecter.`);
-            if (!ok) return;
-        }
-        setBusy(eleve.eleve_id);
-        setMsg('');
-        const res = eleve.actif
-            ? await desactiverEleve(eleve.eleve_id)
-            : await reactiverEleve(eleve.eleve_id);
-        if (!res.ok) setMsg(`❌ ${res.error}`);
-        else {
-            setMsg(eleve.actif ? '✅ Élève désactivé' : '✅ Élève réactivé');
-            await charger();
-            await onRefresh();
-        }
-        setBusy(null);
-    };
-
-    const handlePlafond = async (plafond) => {
-        setPlafondEnCours(true);
-        setMsg('');
-        const res = await definirPlafondClasse(selectedClass, plafond);
-        if (res.ok) {
-            setMsg(`✅ Plafond de ${selectedClass} → tables 1-${plafond}`);
-            await onRefresh();
-        } else {
-            setMsg(`❌ ${res.error}`);
-        }
-        setPlafondEnCours(false);
-    };
-
-    const actifs = eleves.filter(e => e.actif !== false);
-    const inactifs = eleves.filter(e => e.actif === false);
-
-    if (!selectedClass) {
-        return (
-            <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700 }}>
-                    Aucune classe disponible. Importez des élèves pour commencer.
-                </p>
-            </div>
-        );
-    }
+function ModalChangerClasse({ eleve, classes, onClose, onConfirm, busy }) {
+    const [nouvelleClasse, setNouvelleClasse] = useState(eleve.classe || '');
 
     return (
-        <div>
-            {/* Info classe */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                        Classe {selectedClass} — {classInfo?.eleves_actifs ?? actifs.length} élève{(classInfo?.eleves_actifs ?? actifs.length) > 1 ? 's' : ''} actif{(classInfo?.eleves_actifs ?? actifs.length) > 1 ? 's' : ''}
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                className="screen-enter"
+                style={{
+                    background: 'var(--surface)', borderRadius: 20, padding: 24,
+                    width: '100%', maxWidth: 440, border: '1px solid var(--bordure)',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 16
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
+                        Changer de classe
                     </h3>
-                    <button className="btn btn--mint" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => setShowAdd(!showAdd)}>
-                        + Ajouter
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
+                        ✕
                     </button>
                 </div>
 
-                {showAdd && <AddStudentForm selectedClass={selectedClass} onDone={async () => { setShowAdd(false); await charger(); await onRefresh(); }} />}
+                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 15, color: 'var(--gris)', fontWeight: 600 }}>
+                    Élève : <b style={{ color: 'var(--indigo)' }}>{eleve.prenom} {eleve.nom}</b><br />
+                    Classe actuelle : <b style={{ color: 'var(--indigo)' }}>{eleve.classe}</b>
+                </p>
 
-                {msg && (
-                    <p style={{ fontSize: 12, fontWeight: 700, padding: '6px 0', color: msg.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
-                        {msg}
-                    </p>
-                )}
-
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: 20 }}>
-                        <div className="spinner" />
-                    </div>
-                ) : actifs.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
-                        Aucun élève actif dans cette classe. Utilisez « + Ajouter » ou l'onglet Import.
-                    </p>
-                ) : (
-                    actifs.map(s => (
-                        <StudentRow
-                            key={s.eleve_id}
-                            eleve={s}
-                            busy={busy === s.eleve_id}
-                            onToggle={() => handleToggleActif(s)}
-                        />
-                    ))
-                )}
-
-                {/* Inactifs repliés */}
-                {inactifs.length > 0 && (
-                    <>
-                        <button
-                            className="btn btn--ghost"
-                            style={{ width: '100%', marginTop: 10, fontSize: 12 }}
-                            onClick={() => setShowInactifs(!showInactifs)}
-                        >
-                            {showInactifs ? '▾' : '▸'} {inactifs.length} élève{inactifs.length > 1 ? 's' : ''} inactif{inactifs.length > 1 ? 's' : ''}
-                        </button>
-                        {showInactifs && inactifs.map(s => (
-                            <StudentRow
-                                key={s.eleve_id}
-                                eleve={s}
-                                busy={busy === s.eleve_id}
-                                onToggle={() => handleToggleActif(s)}
-                            />
-                        ))}
-                    </>
-                )}
-            </div>
-
-            {/* Plafond de tables */}
-            {estAdmin && (
-                <div className="card" style={{ marginBottom: 14 }}>
-                    <h3 className="font-display" style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
-                        Plafond de tables — {selectedClass}
-                    </h3>
-                    <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                        Relève le plafond quand la classe est prête. Ne redescend jamais un élève qui a débloqué plus haut.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        {[10, 12, 15, 20].map(n => (
+                <div>
+                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 8, textTransform: 'uppercase' }}>
+                        Nouvelle classe :
+                    </label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {classes.map(c => (
                             <button
-                                key={n}
-                                className="chip"
-                                style={{ flex: 1, width: 'auto', fontSize: 15, height: 46 }}
-                                disabled={plafondEnCours}
-                                onClick={() => handlePlafond(n)}
+                                key={c.classe}
+                                type="button"
+                                className={`admin-class-pill${nouvelleClasse === c.classe ? ' admin-class-pill--active' : ''}`}
+                                onClick={() => setNouvelleClasse(c.classe)}
                             >
-                                1-{n}
+                                {c.classe}
                             </button>
                         ))}
                     </div>
                 </div>
-            )}
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, justifyContent: 'flex-end' }}>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        onClick={onClose}
+                        disabled={busy}
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        className="admin-btn-action-main"
+                        style={{ height: 38, padding: '0 16px', fontSize: 14 }}
+                        onClick={() => onConfirm(eleve.eleve_id, nouvelleClasse)}
+                        disabled={busy || nouvelleClasse === eleve.classe}
+                    >
+                        {busy ? 'Enregistrement…' : 'Valider le changement'}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
 
-function StudentRow({ eleve, busy, onToggle }) {
-    const nom = eleve.nom || '';
-    const prenom = eleve.prenom || '';
-    const email = eleve.email || '';
-    const dejaConnecte = eleve.deja_connecte === true;
-    const nbSessions = eleve.nb_sessions ?? 0;
+function ModalDesactiverEleve({ eleve, onClose, onConfirm, busy }) {
+    const [motif, setMotif] = useState('');
 
     return (
-        <div className="admin-row" style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
-            borderBottom: '1px solid var(--border)',
-            opacity: eleve.actif === false ? 0.5 : 1,
-        }}>
-            <span style={{ fontSize: 22 }}>{eleve.avatar_emoji || '🦊'}</span>
-            <div style={{ flex: 1 }}>
-                <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
-                    {prenom} {nom}
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                    {email}
-                    {!dejaConnecte && (
-                        <span style={{ marginLeft: 6, color: 'var(--coral)', fontWeight: 700 }}>
-                            compte Google pas encore rattaché
-                        </span>
-                    )}
-                    {dejaConnecte && nbSessions === 0 && (
-                        <span style={{ marginLeft: 6, color: 'var(--text-soft)', fontWeight: 600 }}>
-                            ◻︎ compte rattaché — n'a pas encore joué
-                        </span>
-                    )}
-                    {dejaConnecte && nbSessions > 0 && (
-                        <span style={{ marginLeft: 6, color: 'var(--text-soft)', fontWeight: 600 }}>
-                            · {nbSessions} partie{nbSessions > 1 ? 's' : ''}
-                        </span>
-                    )}
-                </p>
-            </div>
-            <button
-                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 12, padding: '4px 8px', fontWeight: 700, color: eleve.actif === false ? 'var(--succes)' : 'var(--coral)', opacity: busy ? 0.4 : 1 }}
-                onClick={onToggle}
-                disabled={busy}
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                className="screen-enter"
+                style={{
+                    background: 'var(--surface)', borderRadius: 20, padding: 24,
+                    width: '100%', maxWidth: 460, border: '1px solid var(--bordure)',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 14
+                }}
+                onClick={e => e.stopPropagation()}
             >
-                {eleve.actif === false ? 'Réactiver' : 'Désactiver'}
-            </button>
-        </div>
-    );
-}
-
-function AddStudentForm({ selectedClass, onDone }) {
-    const [nom, setNom] = useState('');
-    const [prenom, setPrenom] = useState('');
-    const [email, setEmail] = useState('');
-    const [msg, setMsg] = useState('');
-    const [busy, setBusy] = useState(false);
-
-    const handleAdd = async () => {
-        if (!nom.trim() || !prenom.trim() || !email.trim()) {
-            setMsg('❌ Tous les champs sont obligatoires.');
-            return;
-        }
-        setBusy(true);
-        setMsg('');
-        const res = await ajouterEleve({
-            email: email.trim(),
-            nom: nom.trim(),
-            prenom: prenom.trim(),
-            classe: selectedClass,
-        });
-        if (res.ok) {
-            await onDone();
-        } else {
-            setMsg(`❌ ${res.error}`);
-            setBusy(false);
-        }
-    };
-
-    return (
-        <div style={{ background: 'var(--surface-alt)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <input placeholder="Prénom" value={prenom} onChange={e => setPrenom(e.target.value)}
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-                <input placeholder="Nom" value={nom} onChange={e => setNom(e.target.value)}
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-            </div>
-            <input placeholder="Email Google" value={email} onChange={e => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)', marginBottom: 8 }} />
-            {msg && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 6 }}>{msg}</p>}
-            <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={handleAdd} disabled={busy}>
-                {busy ? '⏳...' : "Ajouter l'élève"}
-            </button>
-        </div>
-    );
-}
-
-/* ===================== ENSEIGNANTS (admin) ===================== */
-
-function ProfsTab({ identite, onIdentiteChange }) {
-    const [profs, setProfs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showAdd, setShowAdd] = useState(false);
-    const [msg, setMsg] = useState('');
-    const [busy, setBusy] = useState(null);
-
-    const monId = identite?.profil?.id || null;
-
-    const charger = useCallback(async () => {
-        setLoading(true);
-        const res = await listeProfs();
-        if (res.ok && res.data) setProfs(res.data);
-        setLoading(false);
-    }, []);
-
-    useEffect(() => { charger(); }, [charger]);
-
-    const handleToggle = async (prof) => {
-        if (prof.prof_id === monId) return; // impossible de se désactiver soi-même
-        const ok = window.confirm(`Désactiver ${prof.nom} ? Ce compte enseignant ne pourra plus se connecter.`);
-        if (!ok) return;
-        setBusy(prof.prof_id);
-        setMsg('');
-        if (prof.actif) {
-            const res = await desactiverProf(prof.prof_id);
-            if (res.ok) {
-                setMsg('✅ Enseignant désactivé');
-                await charger();
-                onIdentiteChange?.();
-            } else {
-                setMsg(`❌ ${res.error}`);
-            }
-        }
-        setBusy(null);
-    };
-
-    const handleRoleChange = async (prof, newRole) => {
-        if (prof.prof_id === monId) return; // interdit de se changer soi-même
-        const action = newRole === 'admin'
-            ? `Donner les droits d'administrateur à ${prof.nom} ?`
-            : `Retirer les droits d'administrateur à ${prof.nom} ?`;
-        const ok = window.confirm(action);
-        if (!ok) return;
-        setBusy(prof.prof_id);
-        setMsg('');
-        const res = await modifierProf(prof.prof_id, { role: newRole });
-        if (res.ok) {
-            setMsg(`✅ ${prof.nom} → ${newRole}`);
-            await charger();
-            onIdentiteChange?.();
-        } else {
-            // Messages de la base : "Impossible : c'est le dernier administrateur actif."
-            // "Réservé à l'administrateur" etc. — on les affiche tels quels
-            setMsg(`❌ ${res.error}`);
-        }
-        setBusy(null);
-    };
-
-    return (
-        <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800 }}>
-                    Enseignants — {profs.filter(p => p.actif).length} actif{profs.filter(p => p.actif).length > 1 ? 's' : ''}
+                <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--rouge)' }}>
+                    Désactiver {eleve.prenom} {eleve.nom} ?
                 </h3>
-                <button className="btn btn--mint" style={{ fontSize: 13, padding: '8px 14px' }} onClick={() => setShowAdd(!showAdd)}>
-                    + Ajouter
-                </button>
+
+                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 14, lineHeight: 1.5, color: 'var(--gris)', fontWeight: 600 }}>
+                    On ne supprime jamais un élève en cours d'année. On le désactive : <b>ses résultats restent, son accès s'arrête</b>. Il sera rangé en fin de liste et pourra être réactivé à tout moment.
+                </p>
+
+                <div>
+                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 6 }}>
+                        Motif (optionnel) :
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="ex. Départ de l'établissement"
+                        value={motif}
+                        onChange={e => setMotif(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
+                            fontSize: 14, color: 'var(--indigo)', outline: 'none'
+                        }}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 10, justifyContent: 'flex-end' }}>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        onClick={onClose}
+                        disabled={busy}
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        className="admin-btn-table admin-btn-table--desactiver"
+                        style={{ height: 38, padding: '0 16px', fontSize: 14, fontWeight: 700 }}
+                        onClick={() => onConfirm(eleve.eleve_id, motif.trim() || null)}
+                        disabled={busy}
+                    >
+                        {busy ? 'Désactivation…' : `Désactiver ${eleve.prenom}`}
+                    </button>
+                </div>
             </div>
-
-            {showAdd && <AddProfForm onDone={async () => { setShowAdd(false); await charger(); }} />}
-
-            {msg && (
-                <p style={{ fontSize: 12, fontWeight: 700, padding: '6px 0', color: msg.startsWith('❌') ? 'var(--coral)' : 'var(--mint-dk)' }}>
-                    {msg}
-                </p>
-            )}
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>
-            ) : profs.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
-                    Aucun enseignant trouvé.
-                </p>
-            ) : (
-                profs.filter(p => p.actif).map(p => {
-                    const estMoi = p.prof_id === monId;
-                    return (
-                        <div key={p.prof_id} className="admin-row" style={{
-                            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px',
-                            borderBottom: '1px solid var(--border)',
-                        }}>
-                            <IconProf size={22} color="var(--indigo)" />
-                            <div style={{ flex: 1 }}>
-                                <p className="font-display" style={{ fontWeight: 700, fontSize: 14 }}>
-                                    {p.nom}{estMoi && <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}> (toi)</span>}
-                                </p>
-                                <p style={{ fontSize: 11, color: 'var(--text-soft)' }}>
-                                    {p.email}
-                                    {p.classes?.length > 0 && ` — ${p.classes.join(', ')}`}
-                                </p>
-                            </div>
-                            {estMoi ? (
-                                /* Étiquette non cliquable pour soi-même */
-                                <span
-                                    className={`chip${p.role === 'admin' ? ' chip--gold' : ''}`}
-                                    style={{ fontSize: 11, height: 28, minWidth: 60, cursor: 'default', pointerEvents: 'none' }}
-                                >
-                                    {p.role === 'admin' ? 'Admin' : 'Prof'}
-                                </span>
-                            ) : (
-                                /* Menu déroulant pour les autres */
-                                <select
-                                    value={p.role}
-                                    disabled={busy === p.prof_id}
-                                    onChange={(e) => handleRoleChange(p, e.target.value)}
-                                    style={{
-                                        fontSize: 13, fontWeight: 700, padding: '6px 10px',
-                                        borderRadius: 10, border: '2px solid var(--border)',
-                                        background: p.role === 'admin' ? 'var(--gold-light)' : 'var(--surface)',
-                                        color: 'var(--navy)', cursor: 'pointer',
-                                        fontFamily: 'var(--font-body)',
-                                    }}
-                                >
-                                    <option value="prof">Prof</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            )}
-                            {!estMoi && (
-                                <button
-                                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontSize: 12, padding: '4px 8px', fontWeight: 700, color: 'var(--coral)', opacity: busy === p.prof_id ? 0.4 : 1 }}
-                                    onClick={() => handleToggle(p)}
-                                    disabled={busy === p.prof_id}
-                                >
-                                    Désactiver
-                                </button>
-                            )}
-                        </div>
-                    );
-                })
-            )}
         </div>
     );
 }
 
-function AddProfForm({ onDone }) {
-    const [nom, setNom] = useState('');
-    const [email, setEmail] = useState('');
-    const [role, setRole] = useState('prof');
-    const [msg, setMsg] = useState('');
-    const [busy, setBusy] = useState(false);
-
-    const handleAdd = async () => {
-        if (!nom.trim() || !email.trim()) { setMsg('❌ Nom et email requis.'); return; }
-        setBusy(true); setMsg('');
-        const res = await creerProf({ email: email.trim(), nom: nom.trim(), role });
-        if (res.ok) { await onDone(); }
-        else { setMsg(`❌ ${res.error}`); setBusy(false); }
-    };
-
-    return (
-        <div style={{ background: 'var(--surface-alt)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <input placeholder="Nom" value={nom} onChange={e => setNom(e.target.value)}
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-                <input placeholder="Email Google" value={email} onChange={e => setEmail(e.target.value)}
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'var(--font-body)' }} />
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <button className={`chip${role === 'prof' ? ' chip--navy' : ''}`}
-                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('prof')}>Prof</button>
-                <button
-                    type="button"
-                    className={`btn ${role === 'admin' ? 'btn--gold' : 'btn--ghost'}`}
-                    style={{ flex: 1, height: 38, fontSize: 14 }} onClick={() => setRole('admin')}>Admin</button>
-            </div>
-            {msg && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--coral)', marginBottom: 6 }}>{msg}</p>}
-            <button className="btn btn--mint" style={{ width: '100%', fontSize: 14, padding: 10 }} onClick={handleAdd} disabled={busy}>
-                {busy ? '⏳...' : "Ajouter l'enseignant"}
-            </button>
-        </div>
-    );
-}
-
-/* ===================== IMPORT (admin) ===================== */
-
-function ImportTab({ onRefresh }) {
+function ModalImport({ onClose, onSuccess }) {
     const [csv, setCsv] = useState('');
-    const [result, setResult] = useState(null);
+    const [resultat, setResultat] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [busyRattachement, setBusyRattachement] = useState(false);
+    const [msgRattachement, setMsgRattachement] = useState('');
     const fileRef = useRef(null);
 
     const handleFile = (e) => {
@@ -587,223 +751,336 @@ function ImportTab({ onRefresh }) {
 
     const handleImport = async () => {
         if (!csv.trim()) return;
-        setBusy(true); setResult(null);
+        setBusy(true);
+        setResultat(null);
 
-        // Parse CSV : email, nom, prenom, classe
         const lines = csv.trim().split('\n').filter(l => l.trim());
         const eleves = [];
         for (const line of lines) {
             const parts = line.split(/[,;\t]/).map(s => s.trim());
             if (parts.length < 4) continue;
-            // Skip header
             if (parts[0].toLowerCase() === 'email') continue;
             eleves.push({ email: parts[0], nom: parts[1], prenom: parts[2], classe: parts[3] });
         }
 
         if (eleves.length === 0) {
-            setResult({ ok: false, error: 'Aucun élève trouvé. Format : email, nom, prénom, classe' });
+            setResultat({ ok: false, error: 'Aucun élève trouvé. Format requis : email, nom, prénom, classe' });
             setBusy(false);
             return;
         }
 
         const res = await importerEleves(eleves);
-        setResult(res.ok ? res.data : { error: res.error });
-        if (res.ok) await onRefresh();
+        setResultat(res.ok ? res.data : { error: res.error });
+        if (res.ok) {
+            await onSuccess();
+        }
         setBusy(false);
     };
 
+    const handleRepair = async () => {
+        setBusyRattachement(true);
+        setMsgRattachement('');
+        const res = await reparerRattachements();
+        if (res.ok) {
+            const count = res.data?.rattaches ?? 0;
+            setMsgRattachement(count > 0
+                ? `✅ ${count} fiche${count > 1 ? 's' : ''} rattachée${count > 1 ? 's' : ''} à un compte Google.`
+                : 'ℹ️ Aucune fiche à rattacher.');
+            await onSuccess();
+        } else {
+            setMsgRattachement(`❌ ${res.error || 'Erreur lors du rattachement.'}`);
+        }
+        setBusyRattachement(false);
+    };
+
     return (
-        <div className="card">
-            <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
-                Import de rentrée
-            </h3>
-            <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 12 }}>
-                Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.
-                L'import ne désactive jamais personne.
-            </p>
-
-            <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile}
-                style={{ marginBottom: 10, fontSize: 13 }} />
-
-            {csv && (
-                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: 10, marginBottom: 10, maxHeight: 150, overflow: 'auto' }}>
-                    <pre style={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                        {csv.slice(0, 1000)}{csv.length > 1000 ? '\n…' : ''}
-                    </pre>
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                className="screen-enter"
+                style={{
+                    background: 'var(--surface)', borderRadius: 20, padding: 24,
+                    width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto',
+                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                    display: 'flex', flexDirection: 'column', gap: 14
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
+                        Importer une classe
+                    </h3>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
+                        ✕
+                    </button>
                 </div>
-            )}
 
-            <button className="btn btn--gold" style={{ width: '100%', fontSize: 14, padding: 12 }}
-                onClick={handleImport} disabled={busy || !csv.trim()}>
-                {busy ? '⏳ Import en cours…' : "Lancer l'import"}
-            </button>
+                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 14, color: 'var(--gris)', fontWeight: 600 }}>
+                    Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.<br />
+                    L'import ne désactive jamais personne.
+                </p>
 
-            {result && (
-                <div style={{ marginTop: 14 }}>
-                    {result.error ? (
-                        <p style={{ color: 'var(--coral)', fontWeight: 700, fontSize: 13 }}>❌ {result.error}</p>
-                    ) : (
-                        <>
-                            <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: 12, border: '1px solid var(--border)' }}>
-                                <p style={{ color: 'var(--navy)', fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ fontSize: 13 }} />
+
+                <textarea
+                    rows={4}
+                    placeholder="Ou collez directement les lignes CSV ici..."
+                    value={csv}
+                    onChange={e => setCsv(e.target.value)}
+                    style={{
+                        width: '100%', padding: '10px', borderRadius: 10,
+                        border: '1px solid var(--bordure)', fontFamily: 'monospace',
+                        fontSize: 12, outline: 'none'
+                    }}
+                />
+
+                <button
+                    type="button"
+                    className="admin-btn-action-main"
+                    onClick={handleImport}
+                    disabled={busy || !csv.trim()}
+                >
+                    {busy ? 'Import en cours…' : "Lancer l'import"}
+                </button>
+
+                {resultat && (
+                    <div style={{
+                        padding: 12, borderRadius: 10, background: 'var(--ivoire)',
+                        border: '1px solid var(--bordure)', fontFamily: 'var(--texte)', fontSize: 13
+                    }}>
+                        {resultat.error ? (
+                            <span style={{ color: 'var(--rouge)', fontWeight: 700 }}>❌ {resultat.error}</span>
+                        ) : (
+                            <div>
+                                <div style={{ color: 'var(--succes)', fontWeight: 700, marginBottom: 4 }}>
                                     ✅ Import terminé
-                                </p>
-                                <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
-                                    {result.crees ?? 0} élève{(result.crees ?? 0) > 1 ? 's' : ''} créé{(result.crees ?? 0) > 1 ? 's' : ''}, {result.mis_a_jour ?? 0} mis à jour.
-                                    {' '}
-                                    {(result.rattaches ?? 0) > 0
-                                        ? `${result.rattaches} ${(result.rattaches ?? 0) > 1 ? 'avaient' : 'avait'} déjà un compte Google : ${(result.rattaches ?? 0) > 1 ? 'ils ont été rattachés' : 'il a été rattaché'}.`
-                                        : 'Aucun compte Google préexistant à rattacher.'}
-                                </p>
+                                </div>
+                                <div style={{ color: 'var(--indigo)' }}>
+                                    {resultat.crees ?? 0} créé{(resultat.crees ?? 0) > 1 ? 's' : ''}, {resultat.mis_a_jour ?? 0} mis à jour.
+                                    {(resultat.rattaches ?? 0) > 0 && ` (${resultat.rattaches} rattachés)`}
+                                </div>
                             </div>
-                            {result.lignes_ignorees?.length > 0 && (
-                                <div style={{ background: 'var(--orange-pale)', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid var(--bordure)' }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--erreur-eleve)', marginBottom: 4 }}>
-                                        ⚠️ {result.lignes_ignorees.length} ligne{result.lignes_ignorees.length > 1 ? 's' : ''} ignorée{result.lignes_ignorees.length > 1 ? 's' : ''}
-                                    </p>
-                                    {result.lignes_ignorees.slice(0, 10).map((l, i) => (
-                                        <p key={i} style={{ fontSize: 11, color: 'var(--gris)' }}>{l.raison}: {l.email || '(vide)'}</p>
-                                    ))}
-                                </div>
-                            )}
-                            {result.actifs_absents_du_fichier?.length > 0 && (
-                                <div style={{ background: 'var(--orange-pale)', borderRadius: 10, padding: 10, marginTop: 8, border: '1px solid var(--bordure)' }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--orange)', marginBottom: 4 }}>
-                                        ℹ️ {result.actifs_absents_du_fichier.length} élève{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} actif{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} absent{result.actifs_absents_du_fichier.length > 1 ? 's' : ''} du fichier
-                                    </p>
-                                    <p style={{ fontSize: 11, color: 'var(--gris)' }}>
-                                        Vérifiez au cas par cas — l'import ne les a pas désactivés.
-                                    </p>
-                                    {result.actifs_absents_du_fichier.slice(0, 10).map((e, i) => (
-                                        <p key={i} style={{ fontSize: 11, color: 'var(--text-soft)', marginTop: 2 }}>
-                                            {e.prenom} {e.nom} ({e.classe})
-                                        </p>
-                                    ))}
-                                </div>
-                            )}
-                        </>
+                        )}
+                    </div>
+                )}
+
+                {/* Section Rattachement Google */}
+                <div style={{ borderTop: '1px solid var(--bordure)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--indigo)' }}>
+                        Rattachement des comptes Google
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 12, color: 'var(--gris)' }}>
+                        À lancer après un import ou si un élève s'est connecté avant la création de sa fiche.
+                    </div>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        style={{ height: 36, fontWeight: 700 }}
+                        onClick={handleRepair}
+                        disabled={busyRattachement}
+                    >
+                        {busyRattachement ? 'Vérification…' : '🔄 Réparer les rattachements'}
+                    </button>
+                    {msgRattachement && (
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 12, fontWeight: 700, color: msgRattachement.startsWith('❌') ? 'var(--rouge)' : 'var(--succes)' }}>
+                            {msgRattachement}
+                        </div>
                     )}
                 </div>
-            )}
 
-            {/* Section Réparation des rattachements */}
-            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-                <h4 className="font-display" style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
-                    Rattachement des comptes Google
-                </h4>
-                <p style={{ fontSize: 12, color: 'var(--text-soft)', fontWeight: 600, marginBottom: 10 }}>
-                    À lancer après chaque import ou si un élève s'est connecté avant la création de sa fiche.
-                </p>
-                <RepairButton onRefresh={onRefresh} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                    <button type="button" className="admin-btn-table" onClick={onClose}>
+                        Fermer
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
-/* ===================== JOURNAL (admin) ===================== */
+function ModalAjouterProf({ onClose, onSuccess }) {
+    const [nom, setNom] = useState('');
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState('prof');
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
 
-function JournalTab() {
-    const [entries, setEntries] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            const res = await journalAdmin(200);
-            if (cancelled) return;
-            if (res.ok && res.data) setEntries(res.data);
-            setLoading(false);
-        })();
-        return () => { cancelled = true; };
-    }, []);
+    const handleAdd = async () => {
+        if (!nom.trim() || !email.trim()) {
+            setMsg('❌ Nom et email requis.');
+            return;
+        }
+        setBusy(true);
+        setMsg('');
+        const res = await creerProf({ email: email.trim(), nom: nom.trim(), role });
+        if (res.ok) {
+            await onSuccess();
+            onClose();
+        } else {
+            setMsg(`❌ ${res.error || 'Erreur lors de la création.'}`);
+            setBusy(false);
+        }
+    };
 
     return (
-        <div className="card">
-            <h3 className="font-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>
-                Journal d'administration
-            </h3>
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>
-            ) : entries.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontWeight: 600, padding: 20 }}>
-                    Aucune entrée dans le journal.
-                </p>
-            ) : (
-                <div style={{ maxHeight: 500, overflow: 'auto' }}>
-                    {entries.map((e, i) => (
-                        <div key={e.id || i} style={{
-                            padding: '8px 4px', borderBottom: '1px solid var(--border)',
-                            fontSize: 12,
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                                <span style={{ fontWeight: 700, color: 'var(--navy)' }}>
-                                    {e.action} → {e.cible}
-                                </span>
-                                <span style={{ color: 'var(--text-soft)', fontSize: 11 }}>
-                                    {new Date(e.fait_le).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                            {e.detail && (
-                                <p style={{ color: 'var(--text-soft)', fontSize: 11 }}>
-                                    {typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)}
-                                </p>
-                            )}
-                            <p style={{ color: 'var(--text-soft)', fontSize: 10, fontStyle: 'italic' }}>
-                                par {e.fait_par_nom || e.fait_par || '—'}
-                            </p>
-                        </div>
-                    ))}
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                className="screen-enter"
+                style={{
+                    background: 'var(--surface)', borderRadius: 20, padding: 24,
+                    width: '100%', maxWidth: 420, border: '1px solid var(--bordure)',
+                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 14
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
+                        Ajouter un enseignant
+                    </h3>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
+                        ✕
+                    </button>
                 </div>
-            )}
+
+                <div>
+                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 4 }}>
+                        Nom :
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="M. Dupont"
+                        value={nom}
+                        onChange={e => setNom(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
+                            fontSize: 14, outline: 'none'
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 4 }}>
+                        Email Google :
+                    </label>
+                    <input
+                        type="email"
+                        placeholder="dupont@saintho.fr"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
+                            fontSize: 14, outline: 'none'
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 6 }}>
+                        Rôle :
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            type="button"
+                            className={`admin-class-pill${role === 'prof' ? ' admin-class-pill--active' : ''}`}
+                            style={{ flex: 1, textAlign: 'center' }}
+                            onClick={() => setRole('prof')}
+                        >
+                            Prof
+                        </button>
+                        <button
+                            type="button"
+                            className={`admin-class-pill${role === 'admin' ? ' admin-class-pill--active' : ''}`}
+                            style={{ flex: 1, textAlign: 'center' }}
+                            onClick={() => setRole('admin')}
+                        >
+                            Admin
+                        </button>
+                    </div>
+                </div>
+
+                {msg && (
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--rouge)' }}>
+                        {msg}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, justifyContent: 'flex-end' }}>
+                    <button type="button" className="admin-btn-table" onClick={onClose} disabled={busy}>
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        className="admin-btn-action-main"
+                        style={{ height: 38, padding: '0 16px', fontSize: 14 }}
+                        onClick={handleAdd}
+                        disabled={busy}
+                    >
+                        {busy ? 'Ajout…' : "Créer l'enseignant"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
 
-function RepairButton({ onRefresh }) {
-    const [busy, setBusy] = useState(false);
-    const [msg, setMsg] = useState('');
+/* Formatage du journal d'audit */
+function formaterDateJournal(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const jour = String(d.getDate()).padStart(2, '0');
+    const mois = String(d.getMonth() + 1).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${jour}/${mois} ${h}:${m}`;
+}
 
-    const handleRepair = async () => {
-        setBusy(true);
-        setMsg('');
-        const res = await reparerRattachements();
-        if (res.ok) {
-            const count = res.data?.rattaches ?? 0;
-            if (count > 0) {
-                setMsg(`✅ ${count} fiche${count > 1 ? 's' : ''} rattachée${count > 1 ? 's' : ''} à leur compte Google`);
-            } else {
-                setMsg('ℹ️ Aucune fiche à rattacher');
-            }
-            if (onRefresh) await onRefresh();
-        } else {
-            setMsg(`❌ ${res.error || 'Erreur lors du rattachement.'}`);
+function formaterActionJournal(action) {
+    switch (action) {
+        case 'modification_eleve': return 'Changement de classe';
+        case 'import_eleves': return 'Import de classe';
+        case 'plafond_classe': return 'Plafond relevé';
+        case 'desactivation': return 'Désactivation';
+        case 'reactivation': return 'Réactivation';
+        case 'creation_prof': return 'Enseignant ajouté';
+        case 'modification_prof': return 'Enseignant modifié';
+        case 'desactivation_prof': return 'Enseignant désactivé';
+        case 'reactivation_prof': return 'Enseignant réactivé';
+        case 'reparer_rattachements': return 'Rattachement des comptes';
+        case 'ajout_eleve': return 'Élève ajouté';
+        default: return action || "Action d'administration";
+    }
+}
+
+function formaterDetailJournal(entry) {
+    const { action, cible, detail } = entry;
+    if (!detail && !cible) return '—';
+    if (action === 'modification_eleve') {
+        const avant = detail?.avant;
+        if (avant) {
+            return `${avant.prenom || ''} ${avant.nom || ''} · ${avant.classe || ''} → ${cible || ''}`;
         }
-        setBusy(false);
-    };
-
-    return (
-        <div>
-            <button
-                className="btn btn--navy"
-                style={{ width: '100%', fontSize: 13, padding: 10 }}
-                onClick={handleRepair}
-                disabled={busy}
-            >
-                {busy ? '⏳ Recherche des comptes…' : '🔄 Réparer les rattachements'}
-            </button>
-            {msg && (
-                <p style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginTop: 8,
-                    textAlign: 'center',
-                    color: msg.startsWith('❌') ? 'var(--coral)' : msg.startsWith('✅') ? 'var(--mint-dk)' : 'var(--text-soft)',
-                }}>
-                    {msg}
-                </p>
-            )}
-        </div>
-    );
+        return cible || '—';
+    }
+    if (action === 'import_eleves') {
+        const c = detail?.classe || cible || '';
+        const crees = detail?.crees ?? 0;
+        const ignores = detail?.lignes_ignorees?.length ?? 0;
+        return `${c ? `${c} · ` : ''}${crees} créé${crees > 1 ? 's' : ''}${ignores > 0 ? `, ${ignores} ignoré${ignores > 1 ? 's' : ''}` : ''}`;
+    }
+    if (action === 'plafond_classe') {
+        return `${cible || ''} · table ${detail?.plafond || ''}`;
+    }
+    if (action === 'desactivation') {
+        return `${cible || ''}${detail?.motif ? ` · ${detail.motif}` : ''}`;
+    }
+    if (action === 'creation_prof' || action === 'modification_prof') {
+        return `${cible || ''}${detail?.role ? ` · rôle ${detail.role}` : ''}`;
+    }
+    if (typeof detail === 'string') return detail;
+    if (detail && typeof detail === 'object') {
+        if (Object.keys(detail).length === 0) return cible || '—';
+        return JSON.stringify(detail);
+    }
+    return cible || '—';
 }

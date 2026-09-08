@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **4 septembre 2026, fin d'après-midi** — **27 migrations, 137 cas
+> Dernière mise à jour : **8 septembre 2026** — **27 migrations, 137 cas
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
@@ -14,8 +14,10 @@
 > `enregistrer_session` et `terminer_defi` renvoient la clé `maitrise` des seuls faits touchés.
 > Le front répercute ce delta dans `App.jsx` (`handleMaitriseMaj`) et localement (`Practice.jsx`),
 > la grille bouge immédiatement après chaque partie et les poids de tirage s'adaptent sans recharger.
-> **Aucun lot en attente.** Prochaines étapes : les écrans sans maquette (Ma
-> classe, accueil professeur, administration). La mise en service reste entière chez Aymeri.
+> **Le lot 20 est livré** : écran Administration entièrement refait selon la maquette 25 (paysage pour Mac,
+> navigation Élèves / Enseignants / Journal d'audit, modales de changement de classe et de désactivation,
+> recherche locale, import CSV, rattachement, aucune couleur en dur, zéro emploi du mot « actif » pour les joueurs).
+> **Prochaine étape** : Lot 21 (Migration 28 et maquettes 22 Classements/Progression, 23 Classements/Classes, 24 Ma classe).
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -741,8 +743,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
 8. ✅ **Lot 17** — migration 25 appliquée en base, maquette 9 (code projeté
    au tableau), bouton « Voir qui » de l'écran 17, finitions message erreur
    et types TypeScript régénérés. Fait le 04/09.
-9. ⬜ **Les écrans sans maquette** : Ma classe, accueil professeur,
-   administration, et les quatre écrans que Claude Design n'a pas dessinés.
+9. ✅ **Écran Administration (Lot 20)** — refait sur la maquette 25 (paysage pour Mac, trois onglets Élèves / Enseignants / Journal, colonne d'audit, filtres de classes et recherche locale, actions nominatives). Fait le 08/09.
 10. ✅ **La règle de maîtrise au temps de réponse (Lot 18)** — migration 26
     appliquée sur la base de dev, 132 cas de test verts. Deux réponses justes
     d'affilée sous 3 000 ms du premier coup (`serie_rapide >= 2`) valent vert ;
@@ -750,6 +751,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     dans `enregistrer_session` et `terminer_defi`. Instrumenté sur l'ensemble
     des quiz (`useQuizEngine`, `LibreQuiz`, `Quiz`). Phrase élève ajoutée sous
     la légende de la grille. Fait le 04/09.
+11. ⬜ **Lot 21** : Migration 28 (`populations_classements`) et les trois derniers écrans maquettés (22 Classements/Progression, 23 Classements/Classes, 24 Ma classe).
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

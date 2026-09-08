@@ -5,12 +5,53 @@
 
 ---
 
-## Comment écrire une entrée
+## Entrées
 
-À la fin de chaque étape — pas à la fin de chaque fichier modifié — ajoute une
-entrée **en haut** de la section « Entrées », sur ce modèle :
+## 2026-09-08 — Lot 20 : Écran Administration (Maquette 25)
 
-```markdown
+**Fait** —
+- **Écran 25 Administration entièrement refait** sur la maquette de référence (`docs/design/matHo-refonte-v9.dc.html`) au format paysage pour ordinateur de bord / Mac (`admin-landscape`).
+- **Colonne de gauche (Indigo)** :
+  - En-tête avec bouton retour « ‹ Accueil », titre « Administration » et sous-titre d'établissement.
+  - Onglets interactifs avec compteurs en temps réel : Élèves (`totalInscrits`), Enseignants (`profs.length`), Journal d'audit.
+  - Règle pédagogique affichée en pied : « On ne supprime jamais un élève en cours d'année. On le désactive : ses résultats restent, son accès s'arrête. »
+- **Zone centrale — Onglet Élèves** :
+  - Filtres de classe par pilules dynamiques (« Toutes », « 6ᵉ 1 », etc., alimentées par `listeClasses()`).
+  - Champ de recherche client-side (« Rechercher un élève ») filtrant instantanément sans appel réseau ni stockage.
+  - Bouton « Importer une classe » ouvrant la modale d'importation CSV et de rattachement des comptes Google (`importerEleves` / `reparerRattachements`).
+  - Tableau des élèves : avatar, nom prénom, classe, plafond de tables, statut (`Actif` en vert / `Désactivé` en gris).
+  - Actions en ligne : bouton « Classe » ouvrant la modale de changement de classe (`modifierEleve`), bouton « Désactiver » demandant confirmation avec nom de l'élève (`desactiverEleve`), bouton « Réactiver » pour les élèves désactivés (`reactiverEleve`). Les élèves désactivés sont maintenus en fin de liste sans être masqués.
+  - Pied de tableau : décompte clair `{N} lignes sur {total} inscrits · trié par prénom`.
+- **Zone centrale — Onglet Enseignants** :
+  - Liste complète des professeurs (`listeProfs()`).
+  - Bouton « + Ajouter un enseignant » ouvrant la modale de création (`creerProf`).
+  - Gestion des rôles (Prof / Admin) et désactivation avec confirmation nominative (verrou préservé pour soi-même et pour le dernier administrateur actif).
+- **Zone centrale — Onglet Journal d'audit** :
+  - Vue complète chronologique du journal (`journalAdmin(100)`).
+  - Encart explicatif : « Le journal ne s'efface pas. Chaque changement de classe, plafond, rôle ou statut y est écrit avec son auteur. C'est ce qui permet de répondre à « qui a fait ça ». »
+- **Colonne de droite — Aperçu Journal d'audit** (visible sur grand écran sur l'onglet Élèves) :
+  - 5 dernières entrées horodatées avec auteur et détail.
+  - Lien « Tout voir » basculant vers l'onglet complet du journal.
+- **Intégrité du système de design et compilation** :
+  - `check-tokens.mjs` vérifié (88 tokens actifs, 0 erreur).
+  - `npm run build` 100 % vert.
+  - Aucune couleur en dur hors `tokens.css`.
+  - Mot « actif » rigoureusement banni pour qualifier un joueur ; utilisé uniquement comme statut de compte « Actif / Désactivé ».
+
+**Décidé** —
+- Le total des inscrits s'appuie sur la longueur de la liste renvoyée par `listeEleves(null)` tant que la fonction ne pagine pas, avec commentaire explicite dans le code.
+- Pas de bouton supprimer : la désactivation préserve l'historique et les classements passés.
+- Les modales de changement de classe et de désactivation garantissent la confirmation explicite nominative avant tout appel Supabase.
+
+**Constaté** —
+- `npm run build` compile sans erreur.
+- La mise en page paysage s'adapte sur écrans larges (1194px+) et se réorganise proprement sur tablettes et mobiles sans débordement horizontal.
+
+**Ensuite** —
+- Lot 21 : Migration 28 (`populations_classements`) et refonte des maquettes 22 (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe).
+
+---
+
 ## 2026-09-04 — Lot 19 : Migration 27 appliquée, la grille se met à jour après chaque partie
 
 **Fait** —
