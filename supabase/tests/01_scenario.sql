@@ -1399,3 +1399,139 @@ select case when (entete_classe('6A', 'tout')->>'inscrits')::int = 0
             then 'OK : un eleve ne lit pas le pilotage de sa classe'
             else 'ECHEC : un eleve lit l ecran du professeur' end as verdict;
 reset role;
+
+
+
+-- =====================================================================
+-- MIGRATION 29 — la salle des profs, l avatar des enseignants
+-- =====================================================================
+
+\echo '=== 147. initiales_de : deux lettres au plus, et rien sur un nom vide ==='
+select case when initiales_de('Aymeri Desjardins') = 'AD'
+             and initiales_de('Dupont') = 'D'
+             and initiales_de('Jean Marie De La Tour') = 'JM'
+             and initiales_de('  ') is null
+             and initiales_de(null) is null
+            then 'OK : les initiales sont calculees a un seul endroit'
+            else 'ECHEC : decoupage de nom faux' end as verdict;
+
+\echo '=== 148. Un enseignant choisit son emoji, et peut revenir aux initiales ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select changer_avatar_prof('🦊')->>'ok' as pose;
+select case when (select avatar_emoji from public.profs
+                   where user_id = :'PROF') = '🦊'
+            then 'OK : l emoji est enregistre'
+            else 'ECHEC : l avatar ne se pose pas' end as verdict;
+select changer_avatar_prof(null)->>'ok' as retire;
+select case when (select avatar_emoji from public.profs
+                   where user_id = :'PROF') is null
+            then 'OK : null remet les initiales, ce n est pas un trou'
+            else 'ECHEC : impossible de revenir aux initiales' end as verdict;
+select changer_avatar_prof('🦊')->>'ok' as repose;
+
+\echo '=== 149. Un enseignant ne peut PAS se nommer administrateur ==='
+-- La raison pour laquelle changer_avatar_prof passe par une fonction et
+-- non par une politique RLS d UPDATE : une politique ouvrirait la LIGNE
+-- entiere, role compris.
+-- ATTENTION : ce test n a de sens que sous `set role authenticated`. En
+-- superutilisateur, PostgreSQL ignore RLS et l UPDATE passe toujours —
+-- c est ce qui m a fait croire une premiere fois a un trou de securite.
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+reset role; set role authenticated;
+do $$ begin
+  update public.profs set role = 'admin'
+   where user_id = '44444444-4444-4444-4444-444444444444';
+exception when others then raise notice 'refus a l ecriture : %', sqlerrm; end $$;
+reset role;
+select case when (select role from public.profs
+                   where user_id = '44444444-4444-4444-4444-444444444444') = 'prof'
+            then 'OK : le role n a pas bouge'
+            else 'ECHEC : un prof s est nomme admin' end as verdict;
+
+\echo '=== 150. Un texte qui n est pas un emoji est refuse ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+do $$ begin
+  perform changer_avatar_prof('Professeur de mathematiques');
+  raise notice 'ECHEC : du texte libre est passe !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 151. classement_profs : les six colonnes du contrat, puis les ajouts ==='
+select rang, nom_affiche, classe, avatar, valeur, parties, est_moi,
+       initiales, role, points, meilleur_sprint
+  from classement_profs('points', 'tout', 10);
+select case when (select bool_and(classe is null) from classement_profs('points','tout',10))
+             and (select bool_and(initiales is not null) from classement_profs('points','tout',10))
+            then 'OK : classe null, initiales toujours presentes'
+            else 'ECHEC : contrat de colonnes casse' end as verdict;
+
+\echo '=== 152. points et meilleur_sprint sont la QUELLE QUE SOIT la categorie ==='
+-- La maquette 32 affiche Points ET Sprint sur la meme ligne, en un appel.
+-- On compare pour les collegues presents dans LES DEUX tris : trier sur
+-- le sprint exclut ceux qui n en ont jamais fait, et c est voulu.
+select case when not exists (
+                 select 1
+                   from classement_profs('points','tout',100) a
+                   join classement_profs('serie','tout',100) b
+                     on b.nom_affiche = a.nom_affiche
+                  where a.points is distinct from b.points)
+            then 'OK : les points ne dependent pas du tri'
+            else 'ECHEC : deux valeurs de points selon le tri' end as verdict;
+
+\echo '=== 153. L avatar suit le choix du collegue ==='
+select case when (select avatar from classement_profs('points','tout',10) where est_moi) = '🦊'
+            then 'OK : l emoji choisi apparait au classement'
+            else 'ECHEC : l avatar ne remonte pas' end as verdict;
+
+\echo '=== 154. entete_salle_des_profs : deux populations, ont_joue dedans ==='
+select jsonb_pretty(entete_salle_des_profs('tout')) as entete;
+select case when (entete_salle_des_profs('tout')->>'ont_joue')::int
+                 <= (entete_salle_des_profs('tout')->>'inscrits')::int
+             and (entete_salle_des_profs('tout')->>'inscrits')::int > 0
+            then 'OK : ont_joue tient dans inscrits'
+            else 'ECHEC : populations incoherentes' end as verdict;
+select case when (entete_salle_des_profs('tout')->>'ont_joue')::int
+                 = (select count(*) from classement_profs('points','tout',100))
+            then 'OK : ont_joue egale le nombre de lignes du classement'
+            else 'ECHEC : l en-tete et le classement se contredisent' end as verdict;
+
+\echo '=== 155. Un eleve ne lit pas la salle des profs ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (select count(*) from classement_profs('points','tout',100)) = 0
+             and (entete_salle_des_profs('tout')->>'inscrits')::int = 0
+            then 'OK : rien pour un eleve, des deux cotes'
+            else 'ECHEC : un eleve lit la salle des profs' end as verdict;
+
+\echo '=== 156. mes_defis : rejoints a cote de participants ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{2}'::smallint[], 20, null, '6A')->>'code' as code_m29 \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select (rejoindre_defi(:'code_m29')->>'defi_id') as did29 \gset
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select code, rejoints, participants, participants_classe, attendus
+  from mes_defis() where code = :'code_m29';
+select case when (select rejoints from mes_defis() where code = :'code_m29') = 1
+             and (select participants from mes_defis() where code = :'code_m29') = 0
+            then 'OK : a rejoint sans avoir termine'
+            else 'ECHEC : rejoindre et terminer sont confondus' end as verdict;
+
+\echo '=== 157. participants garde son sens : ceux qui ont TERMINE ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select terminer_defi(:'did29'::uuid, 2, 5.0, 0, '{}'::jsonb, '{}'::jsonb, 2,
+         '[{"fait":"2_3","juste":true,"premier":true,"temps_ms":800},
+           {"fait":"2_4","juste":true,"premier":true,"temps_ms":900}]'::jsonb)->>'ok' as fini;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select rejoints from mes_defis() where code = :'code_m29') = 1
+             and (select participants from mes_defis() where code = :'code_m29') = 1
+            then 'OK : rejoints inchange, participants passe a 1'
+            else 'ECHEC : les deux compteurs ne suivent pas' end as verdict;
+
+\echo '=== 158. mon_profil_prof : avatar, initiales et les chiffres du mois ==='
+select jsonb_pretty(mon_profil_prof()->'profil') as profil_prof;
+select case when mon_profil_prof()->'profil'->>'initiales' = 'MD'
+             and mon_profil_prof()->'profil'->>'avatar_emoji' = '🦊'
+             and (mon_profil_prof()->'records'->>'points_mois') is not null
+             and (mon_profil_prof()->'records'->>'parties_mois') is not null
+             and (mon_profil_prof()->'records'->>'sprint_mois') is not null
+            then 'OK : le profil enseignant a de quoi remplir la maquette 30'
+            else 'ECHEC : il manque de quoi afficher le profil' end as verdict;
+reset role;
