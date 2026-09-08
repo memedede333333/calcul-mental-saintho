@@ -112,6 +112,12 @@ export default function App() {
         }
     }
 
+    // --- Mise à jour de la maîtrise après une partie (lot 19) ---
+    const handleMaitriseMaj = useCallback((maj) => {
+        if (!maj || typeof maj !== 'object') return;
+        setMaitrise(prev => ({ ...prev, ...maj }));
+    }, []);
+
     // --- Rafraîchir l'identité après un changement de rôle ---
     const refreshIdentite = useCallback(async () => {
         const res = await quiSuisJe();
@@ -366,10 +372,21 @@ export default function App() {
                     tablesInitiales={tablesADemarrer}
                     maitrise={maitrise}
                     config={practiceConfig}
+                    onMaitriseMaj={handleMaitriseMaj}
                 />
             )}
             {screen === 'challenges' && (
-                <Challenges onBack={goHome} identite={identite} estProf={estProf} onPlafondChange={handlePlafondChange} maitrise={maitrise} onGo={setScreen} defiPreConfig={defiPreConfig} clearPreConfig={() => setDefiPreConfig(null)} />
+                <Challenges
+                    onBack={goHome}
+                    identite={identite}
+                    estProf={estProf}
+                    onPlafondChange={handlePlafondChange}
+                    maitrise={maitrise}
+                    onGo={setScreen}
+                    defiPreConfig={defiPreConfig}
+                    clearPreConfig={() => setDefiPreConfig(null)}
+                    onMaitriseMaj={handleMaitriseMaj}
+                />
             )}
             {screen === 'mes-defis' && (
                 <MesDefis onBack={goHome} estProf={estProf} />

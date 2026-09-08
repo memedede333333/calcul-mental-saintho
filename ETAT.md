@@ -4,14 +4,16 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **4 septembre 2026, après-midi** — **26 migrations, 132 cas
+> Dernière mise à jour : **4 septembre 2026, fin d'après-midi** — **27 migrations, 137 cas
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
-> **Le lot 18 est livré** : la **migration 26 est appliquée** sur `calcul-mental-dev`,
-> la maîtrise devient une règle de temps côté serveur (2 réussites rapides d'affilée < 3s = vert),
-> relayée pour les modes solos et les défis (`terminer_defi`).
+> **Le lot 18 est livré** (maîtrise au temps de réponse côté serveur, seuil 3s).
+> **Le lot 19 est livré** : la **migration 27 est appliquée** sur `calcul-mental-dev`,
+> `enregistrer_session` et `terminer_defi` renvoient la clé `maitrise` des seuls faits touchés.
+> Le front répercute ce delta dans `App.jsx` (`handleMaitriseMaj`) et localement (`Practice.jsx`),
+> la grille bouge immédiatement après chaque partie et les poids de tirage s'adaptent sans recharger.
 > **Aucun lot en attente.** Prochaines étapes : les écrans sans maquette (Ma
 > classe, accueil professeur, administration). La mise en service reste entière chez Aymeri.
 >
@@ -562,6 +564,16 @@ que rien ne le signale. On compte les **cases affichées** : le nombre annoncé
 est alors exactement ce que l'élève voit quand il ouvre sa grille. Et
 `MasteryGrid` doit recevoir `tables` — sans quoi elle retombe sur `[1..10]` et
 un élève au plafond 15 voit une grille de 10.
+
+**La maîtrise renvoyée par le serveur alimente la grille en continu.** *(4 septembre,
+lot 19, migration 27.)* Le lot 18 avait retiré `updateMastery()` sans le remplacer,
+laissant `maitrise` figée côté front jusqu'à la déconnexion : un élève finissait sa partie,
+ouvrait sa grille, et rien n'avait changé. `enregistrer_session` et `terminer_defi`
+renvoient désormais la clé `maitrise` contenant le niveau à jour des seuls faits touchés
+par la partie. Aucun recalcul dans l'écran, aucun appel redondant à `monProfil()` : l'écran
+fusionne ce delta dans son état local (`setMastery`) et dans `App.jsx` (`handleMaitriseMaj`).
+La grille se colore immédiatement et les pondérations de questions s'adaptent dès la partie
+suivante.
 
 **L'écran du premier jour et le verrouillage des modes chronométrés viennent de
 Claude Design**, pas d'une décision de conception prise ici : le texte « Les

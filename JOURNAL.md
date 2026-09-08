@@ -38,6 +38,35 @@ entrée **en haut** de la section « Entrées », sur ce modèle :
 
 ---
 
+## 2026-09-04 — Lot 19 : Migration 27 appliquée, la grille se met à jour après chaque partie
+
+**Fait** —
+- **Migration 27 appliquée** sur la base `calcul-mental-dev` via MCP Supabase (`supabase/migrations/20260904200000_maitrise_renvoyee.sql`). Contrôle SQL vérifié : `sig_session = 1`, `sig_defi = 1`. Scénario de test : **137 cas verts**.
+- **Types TypeScript régénérés** dans `frontend/src/types/database.ts`.
+- **Renvoyée par le serveur** : `enregistrer_session` et `terminer_defi` renvoient désormais la clé `maitrise` contenant le niveau à jour des seuls faits touchés par la session ou le défi.
+- **Gestionnaire `handleMaitriseMaj` ajouté dans `App.jsx`** : conserve la grille de maîtrise globale en mémoire et fusionne le delta reçu du serveur sans réclamer un rechargement complet (`monProfil()`).
+- **Remontée branchée aux 3 fins de partie** :
+  - `Practice.jsx` (`handleDone`) : met à jour l'état local `setMastery` (pour affichage immédiat dans l'écran de résultats) et appelle `onMaitriseMaj`.
+  - `Challenges.jsx` (`handleDone`) : modes solos (Sprint, Sans faute, Contre-la-montre, Montée des tables).
+  - `Challenges.jsx` (`envoyerDefi`) : défis partagés via le retour de `terminerDefi()`.
+- **Vérifications et compilation** : `check-tokens.mjs` (88 tokens actifs) et `npm run build` 100 % verts.
+
+**Décidé** —
+- Aucun recalcul de niveau ni déduction côté front : le chiffre appliqué est strictement celui renvoyé par Postgres.
+- Pas de rappel de `monProfil()` après une partie : le delta de quelques faits touchés évite un aller-retour complet et toute course d'affichage.
+- La file d'attente hors-ligne n'est pas modifiée : une partie stockée hors-ligne mettra sa grille à jour à la prochaine connexion réseau.
+
+**Constaté** —
+- Test SQL de session simulant 2 réussites rapides (< 3 000 ms) sur `7_8` : renvoie `{ maitrise: { "7_8": 3 } }` (vert).
+- Test SQL d'erreur sur `7_8` : renvoie `{ maitrise: { "7_8": 1 } }` (rouge immédiat).
+- Test SQL sur défi (`terminer_defi`) : relaie `{ ok: true, maitrise: { "7_8": 3 } }`.
+- Les tirages adaptatifs (`buildWeights`) appliquent le poids 1 au fait devenu vert dès la partie suivante sans déconnexion.
+
+**Ensuite** —
+- Les écrans sans maquette (Ma classe, accueil professeur, administration) dès réception des maquettes Claude Design.
+
+---
+
 ## 2026-09-04 — Lot 18 : La maîtrise devient une règle de temps (Migration 26 appliquée)
 
 **Fait** —

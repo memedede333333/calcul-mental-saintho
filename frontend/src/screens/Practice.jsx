@@ -29,6 +29,7 @@ export default function Practice({
     tablesInitiales,
     maitrise: maitriseProp,
     config,
+    onMaitriseMaj,
 }) {
     const plafond = estProf ? 20 : (identite?.profil?.plafond_tables || 10);
     const mode = config?.mode || 'libre';
@@ -88,6 +89,10 @@ export default function Practice({
         enregistrer(session).then(res => {
             if (res.ok) {
                 setServerResult(res.data);
+                if (res.data?.maitrise) {
+                    setMastery(prev => ({ ...prev, ...res.data.maitrise }));
+                    onMaitriseMaj?.(res.data.maitrise);
+                }
                 const np = res.data?.plafond_tables;
                 const currentPlafond = estProf ? 20 : (identite?.profil?.plafond_tables || 10);
                 if (np && np !== currentPlafond) {
@@ -97,7 +102,7 @@ export default function Practice({
                 setServerResult({ erreur: res.error, enAttente: res.enAttente });
             }
         }).catch(() => {});
-    }, [picked, estProf, identite, onPlafondChange, mode, isLibre]);
+    }, [picked, estProf, identite, onPlafondChange, mode, isLibre, onMaitriseMaj]);
 
     const startWithTables = (tables, len) => {
         setPicked(tables);

@@ -1251,3 +1251,65 @@ select case when (select count(*) from pg_proc p
             then 'OK : une seule signature pour chacune'
             else 'ECHEC : signature en double, les appels par noms echouent' end as verdict;
 reset role;
+
+
+
+-- =====================================================================
+-- MIGRATION 27 — la grille de l'eleve bouge apres sa partie
+-- =====================================================================
+
+\echo '=== 133. enregistrer_session renvoie le niveau des faits touches ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select jsonb_pretty(enregistrer_session('libre', '{6}'::smallint[], 2, 2, '[]'::jsonb, 3, 0, 0,
+         null, '{}'::jsonb, null, 2,
+         '[{"fait":"6_7","juste":true,"premier":true,"temps_ms":900},
+           {"fait":"6_7","juste":true,"premier":true,"temps_ms":800}]'::jsonb)->'maitrise') as maitrise_renvoyee;
+select case when (enregistrer_session('libre', '{6}'::smallint[], 1, 1, '[]'::jsonb, 2, 0, 0,
+                    null, '{}'::jsonb, null, 1,
+                    '[{"fait":"6_8","juste":true,"premier":true,"temps_ms":700}]'::jsonb)
+                  ->'maitrise'->>'6_8')::int = 2
+            then 'OK : le niveau du fait touche revient a l ecran'
+            else 'ECHEC : l ecran n a rien pour mettre sa grille a jour' end as verdict;
+
+\echo '=== 134. Seuls les faits TOUCHES reviennent, pas toute la grille ==='
+select case when (select count(*) from jsonb_object_keys(
+                    enregistrer_session('libre', '{6}'::smallint[], 1, 1, '[]'::jsonb, 2, 0, 0,
+                      null, '{}'::jsonb, null, 1,
+                      '[{"fait":"6_9","juste":true,"premier":true,"temps_ms":700}]'::jsonb)
+                    ->'maitrise')) = 1
+            then 'OK : une partie sur un fait renvoie un fait'
+            else 'ECHEC : la reponse charrie toute la grille' end as verdict;
+
+\echo '=== 135. Le niveau renvoye est celui qui est EN BASE ==='
+-- Le meme chiffre des deux cotes : si l ecran et la base divergeaient,
+-- l eleve verrait une couleur qui change au rechargement.
+select (enregistrer_session('libre', '{6}'::smallint[], 1, 1, '[]'::jsonb, 2, 0, 0,
+          null, '{}'::jsonb, null, 1,
+          '[{"fait":"6_9","juste":true,"premier":true,"temps_ms":700}]'::jsonb)
+        ->'maitrise'->>'6_9')::int as renvoye \gset
+select case when :renvoye = (select niveau from public.maitrise
+                              where eleve_id = (select id from public.eleves where email='bob.martin@demo.saintho.fr')
+                                and fait='6_9')
+            then 'OK : meme niveau a l ecran et en base'
+            else 'ECHEC : l ecran affichera autre chose que la base' end as verdict;
+
+\echo '=== 136. Un defi renvoie aussi la maitrise mise a jour ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{7}'::smallint[], 20, null, '6A')->>'code' as code_m27 \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select (rejoindre_defi(:'code_m27')->>'defi_id') as did27 \gset
+select case when (terminer_defi(:'did27'::uuid, 2, 4.0, 0, '{}'::jsonb, '{}'::jsonb, 2,
+                    '[{"fait":"7_7","juste":true,"premier":true,"temps_ms":900},
+                      {"fait":"7_7","juste":true,"premier":true,"temps_ms":800}]'::jsonb)
+                  ->'maitrise'->>'7_7')::int = 3
+            then 'OK : la grille bouge aussi apres un defi'
+            else 'ECHEC : un eleve qui ne joue que des defis a une grille figee' end as verdict;
+
+\echo '=== 137. Un ancien client recoit une cle maitrise vide, pas une erreur ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when enregistrer_session('libre', '{8}'::smallint[], 1, 1, '[]'::jsonb, 2, 0, 0,
+                    null, '{"8_8": 3}'::jsonb, null, 1)
+                  ->'maitrise'->>'8_8' = '3'
+            then 'OK : l ancien format renvoie aussi son fait'
+            else 'ECHEC : ancien client sans retour de maitrise' end as verdict;
+reset role;

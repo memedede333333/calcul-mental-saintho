@@ -51,7 +51,7 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig, onMaitriseMaj }) {
     const [phase, setPhase] = useState(() => (estProf ? 'config' : 'select'));
     const [challengeType, setChallengeType] = useState(() => CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0]);
     const [joinCode, setJoinCode] = useState('');
@@ -122,13 +122,16 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         enregistrer(session).then(res => {
             if (res.ok) {
                 setServerResult(res.data);
+                if (res.data?.maitrise) {
+                    onMaitriseMaj?.(res.data.maitrise);
+                }
                 const np = res.data?.plafond_tables;
                 if (np && np !== plafond) onPlafondChange?.(np);
             } else {
                 setServerResult({ erreur: res.error, enAttente: res.enAttente });
             }
         }).catch(() => {});
-    }, [challengeType, selectedTables, estProf, plafond, onPlafondChange]);
+    }, [challengeType, selectedTables, estProf, plafond, onPlafondChange, onMaitriseMaj]);
 
     // --- Fin de partie DÉFI : terminerDefi() seul (pas enregistrerSession) ---
     const envoyerDefi = useCallback(async (payload) => {
@@ -136,12 +139,15 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
         const res = await terminerDefi(payload);
         if (res.ok) {
             effacerDefiEnCours(identite?.profil?.id);
+            if (res.data?.maitrise) {
+                onMaitriseMaj?.(res.data.maitrise);
+            }
         }
         setEnvoiDefi(res.ok
             ? { etat: 'ok' }
             : { etat: 'echec', message: res.error, payload }
         );
-    }, [identite]);
+    }, [identite, onMaitriseMaj]);
 
     const handleDoneDefi = useCallback((r) => {
         setResult(r);
