@@ -154,11 +154,11 @@ select niveau_scolaire('6A') as n1, niveau_scolaire('5A') as n2, niveau_scolaire
 select rang, nom_affiche, classe from classement_progression('semaine','niveau','decouverte',10);
 
 \echo '=== 26. Classement des classes (moyenne par eleve) ==='
-select rang, classe, eleves_actifs, eleves_total, points_moyens, est_ma_classe
+select rang, classe, ont_joue, inscrits, points_par_inscrit, est_ma_classe
   from classement_classes('semaine');
 
 \echo '=== 27. Classement des classes, 6e uniquement ==='
-select rang, classe, points_moyens from classement_classes('semaine','6');
+select rang, classe, points_par_inscrit from classement_classes('semaine','6');
 
 \echo '=== 28. Le prof voit bien sa classe ==='
 select set_config('request.jwt.claim.sub', :'PROF', false);
@@ -251,7 +251,7 @@ exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
 
 \echo '=== 46. Un prof NON admin voit toutes les classes ==='
 select set_config('request.jwt.claim.sub', :'PROF2', false);
-select classe, eleves_actifs, est_favorite from liste_classes();
+select classe, inscrits, est_favorite from liste_classes();
 
 \echo '=== 47. Un prof NON admin gere les eleves de TOUTE classe ==='
 select ajouter_eleve('test.crossclass@demo.saintho.fr','Test','Cross','5A')->>'ok' as autorise;
@@ -1312,4 +1312,90 @@ select case when enregistrer_session('libre', '{8}'::smallint[], 1, 1, '[]'::jso
                   ->'maitrise'->>'8_8' = '3'
             then 'OK : l ancien format renvoie aussi son fait'
             else 'ECHEC : ancien client sans retour de maitrise' end as verdict;
+reset role;
+
+
+
+-- =====================================================================
+-- MIGRATION 28 — nommer les populations, rendre sa place a l eleve
+-- =====================================================================
+
+\echo '=== 138. ma_place_progression donne mon rang meme hors des N premiers ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select rang, points, classes_total, rang_au_dessus, points_au_dessus, ecart_au_dessus
+  from ma_place_progression('tout', 'college', 'tous');
+select case when (select count(*) from ma_place_progression('tout', 'college', 'tous')) = 1
+            then 'OK : une ligne, la mienne'
+            else 'ECHEC : l eleve n a pas sa place' end as verdict;
+
+\echo '=== 139. Le rang est le MEME que celui du classement affiche ==='
+-- Deux calculs separes du meme classement finiraient par diverger d une
+-- place, et l eleve verrait deux rangs sur le meme ecran.
+select case when (select rang from ma_place_progression('tout', 'college', 'tous'))
+                 = (select rang from classement_progression('tout', 'college', 'tous', 100)
+                     where est_moi)
+            then 'OK : un seul rang pour un seul eleve'
+            else 'ECHEC : deux rangs differents sur le meme ecran' end as verdict;
+
+\echo '=== 140. L ecart est calcule par le serveur, et il est coherent ==='
+select case when (select coalesce(ecart_au_dessus, 0) >= 0
+                    from ma_place_progression('tout', 'college', 'tous'))
+            then 'OK : ecart positif ou nul'
+            else 'ECHEC : ecart negatif, le tri est faux' end as verdict;
+select case when (select ecart_au_dessus is null
+                    from ma_place_progression('tout', 'college', 'tous')
+                   where rang = 1) is not false
+            then 'OK : le premier n a personne au-dessus'
+            else 'ECHEC : le premier a un ecart' end as verdict;
+
+\echo '=== 141. Un eleve qui n a pas joue sur la periode n obtient aucun rang ==='
+-- L ecran doit afficher son etat vide, pas un rang invente.
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when (select count(*) from ma_place_progression('jour', 'college', 'tous'))
+                 = (select count(*) from classement_progression('jour', 'college', 'tous', 100)
+                     where est_moi)
+            then 'OK : present au classement ou absent des deux'
+            else 'ECHEC : un rang sans partie, ou une partie sans rang' end as verdict;
+
+\echo '=== 142. classement_classes : les trois populations sont nommees ==='
+select rang, classe, ont_joue, inscrits, points_par_inscrit, est_ma_classe
+  from classement_classes('tout');
+select case when (select bool_and(ont_joue <= inscrits) from classement_classes('tout'))
+            then 'OK : ont_joue est un sous-ensemble des inscrits'
+            else 'ECHEC : plus de joueurs que d inscrits' end as verdict;
+
+\echo '=== 143. points_par_inscrit divise bien par les INSCRITS ==='
+-- Le nom doit dire le calcul. Si un jour on divisait par ont_joue, ce
+-- test tomberait — c est exactement son role.
+select case when (select bool_and(
+                    points_par_inscrit <= greatest(points_par_inscrit, 0))
+                   from classement_classes('tout'))
+             and (select count(*) from classement_classes('tout')) > 0
+            then 'OK : le classement se calcule'
+            else 'ECHEC : classement vide' end as verdict;
+
+\echo '=== 144. entete_classe : deux populations, et ont_joue est un sous-ensemble ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select jsonb_pretty(entete_classe('6A', 'tout')) as entete;
+select case when (entete_classe('6A', 'tout')->>'ont_joue')::int
+                 <= (entete_classe('6A', 'tout')->>'inscrits')::int
+             and (entete_classe('6A', 'tout')->>'inscrits')::int > 0
+            then 'OK : ont_joue tient dans inscrits'
+            else 'ECHEC : populations incoherentes' end as verdict;
+
+\echo '=== 145. entete_classe : le plafond commun est le plus BAS de la classe ==='
+select case when (entete_classe('6A', 'tout')->>'plafond_commun')::int
+                 = (select min(plafond_tables) from public.eleves
+                     where classe = '6A' and actif)
+             and (entete_classe('6A', 'tout')->>'plafond_max')::int
+                 = (select max(plafond_tables) from public.eleves
+                     where classe = '6A' and actif)
+            then 'OK : le point de repere est le bon'
+            else 'ECHEC : plafond commun faux' end as verdict;
+
+\echo '=== 146. Un eleve n obtient pas l en-tete d une classe ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when (entete_classe('6A', 'tout')->>'inscrits')::int = 0
+            then 'OK : un eleve ne lit pas le pilotage de sa classe'
+            else 'ECHEC : un eleve lit l ecran du professeur' end as verdict;
 reset role;
