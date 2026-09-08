@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     rejoindreDefi, monProfil, mesTablesFaibles, changerAvatar,
     partiesEnAttente, surFileChangee,
+    monProfilProf, mesDefis, maitriseClasse,
 } from '../api';
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 import { cleFait, masteryColor } from '../logic/mastery';
+import { tablePlusFragileClasse } from '../logic/classeStats';
+import branding from '../branding';
 import MasteryGrid from '../components/MasteryGrid';
 import {
     IconSprint, IconSansFaute, IconChrono, IconMontee,
@@ -62,6 +65,18 @@ function getMockMaitrise(plafond) {
     return m;
 }
 
+function formaterDateRelative(isoDate) {
+    if (!isoDate) return '';
+    const d = new Date(isoDate);
+    const maintenant = new Date();
+    const diffJours = Math.floor((maintenant - d) / (1000 * 60 * 60 * 24));
+    if (diffJours === 0) return "aujourd'hui";
+    if (diffJours === 1) return "hier";
+    if (diffJours === 2) return "avant-hier";
+    if (diffJours < 7) return `il y a ${diffJours} jours`;
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
 export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onReprendreDefi }) {
     const profil = identite?.profil;
     const idUtilisateur = profil?.id;
@@ -92,10 +107,58 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [selectedAvatar, setSelectedAvatar] = useState(null);
 
-    // Code direct de défi
-    const [joinCode, setJoinCode] = useState('');
-    const [joinLoading, setJoinLoading] = useState(false);
-    const [joinError, setJoinError] = useState(null);
+
+    // Données professeur (Écran 27)
+    const [profData, setProfData] = useState(null);
+    const [fragileAlerte, setFragileAlerte] = useState(null);
+    const [statsDefisProf, setStatsDefisProf] = useState(null);
+
+    useEffect(() => {
+        if (!estProf || isDevPreview) return;
+        let actif = true;
+
+        async function chargerDonneesProf() {
+            try {
+                const [resProf, resDefis] = await Promise.all([
+                    monProfilProf(),
+                    mesDefis({ limite: 50 }),
+                ]);
+
+                if (!actif) return;
+
+                if (resProf.ok && resProf.data?.profil) {
+                    const p = resProf.data.profil;
+                    setProfData(p);
+                    const premiereClasse = p.classes?.[0];
+                    if (premiereClasse) {
+                        const resMaitrise = await maitriseClasse(premiereClasse);
+                        if (actif && resMaitrise.ok && resMaitrise.data) {
+                            const fragile = tablePlusFragileClasse(resMaitrise.data);
+                            if (fragile && fragile.nb_bloquent > 0) {
+                                setFragileAlerte({
+                                    classe: premiereClasse,
+                                    table_n: fragile.table_n,
+                                    nb_bloquent: fragile.nb_bloquent,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (actif && resDefis.ok && Array.isArray(resDefis.data)) {
+                    setStatsDefisProf({
+                        count: resDefis.data.length,
+                        dernier: resDefis.data[0]?.cree_le || null,
+                    });
+                }
+            } catch (e) {
+                console.error('Erreur chargement accueil prof:', e);
+            }
+        }
+
+        chargerDonneesProf();
+        return () => { actif = false; };
+    }, [estProf, isDevPreview]);
 
     useEffect(() => {
         if (!estProf && idUtilisateur) {
@@ -177,136 +240,248 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
         }
     };
 
-    const handleJoinDirect = async () => {
-        if (joinCode.length < 5) return;
-        setJoinLoading(true);
-        setJoinError(null);
-        const res = await rejoindreDefi(joinCode);
-        setJoinLoading(false);
-
-        if (res.ok) {
-            sauvegarderDefiEnCours(idUtilisateur, {
-                code: joinCode,
-                defi_id: res.data.defi_id,
-                type: res.data.type,
-                classe: res.data.classe,
-                auteur_nom: res.data.auteur_nom,
-                rejoint_le: Date.now(),
-            });
-            onReprendreDefi?.(res.data);
-        } else {
-            setJoinError(res.message || res.error || 'Code invalide ou défi expiré.');
-        }
-    };
-
     const handleChangerAvatar = async (emoji) => {
         setSelectedAvatar(emoji);
         setShowAvatarPicker(false);
         await changerAvatar(emoji);
     };
 
-    // ==================== ACCUEIL PROFESSEUR ====================
+    // ==================== ACCUEIL PROFESSEUR (Écran 27) ====================
     if (estProf && !isDevPreview) {
+        const nomEnseignant = profData?.nom || profil?.nom || 'Professeur';
+        const roleTexte = (profData?.role === 'admin' || estAdmin) ? 'Administrateur' : 'Professeur';
+        const classesAffichees = (() => {
+            const raw = profData?.classes || profil?.classes || [];
+            if (!raw.length) return '';
+            const formattes = raw.map(c => String(c).replace(/([0-9]+)e?([A-Z])/i, '$1ᵉ$2'));
+            return ` · ${formattes.join(', ')}`;
+        })();
+
         return (
-            <div className="screen-enter">
-                <div className="card" style={{
-                    marginBottom: 14, display: 'flex',
-                    alignItems: 'center', gap: 14, padding: '16px 20px',
-                }}>
-                    <IconProf size={40} color="var(--indigo)" actionColor="var(--ciel)" />
-                    <div>
-                        <p className="font-display" style={{
-                            fontWeight: 800, fontSize: 18, lineHeight: 1.2,
+            <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* 1. En-tête Enseignant */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingTop: 6 }}>
+                    <img
+                        src={branding.logoPath}
+                        alt={branding.appName}
+                        style={{ width: 62, height: 62, objectFit: 'contain', flexShrink: 0 }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div className="font-display" style={{ fontSize: 31, fontWeight: 700, color: 'var(--indigo)', letterSpacing: '-0.01em', lineHeight: 1.1 }}>
+                            {branding.appName}
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                            {branding.baseline}
+                        </div>
+                    </div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+                        <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: 'var(--indigo)' }}>
+                            {nomEnseignant}
+                        </div>
+                        <div style={{
+                            background: 'var(--surface)', boxShadow: '0 3px 10px rgba(32, 34, 107, 0.07)',
+                            borderRadius: 999, padding: '7px 16px', fontFamily: 'var(--texte)',
+                            fontWeight: 700, fontSize: 14, color: 'var(--gris)',
                         }}>
-                            Bonjour {profil?.nom || 'Professeur'}
-                        </p>
-                        <p style={{
-                            fontSize: 13, color: 'var(--gris)', fontWeight: 700,
-                        }}>
-                            {estAdmin ? 'Administrateur' : 'Enseignant'}
-                        </p>
+                            {roleTexte}{classesAffichees}
+                        </div>
                     </div>
                 </div>
 
-                <button className="mode-card mode-card--challenge" onClick={() => onGo('challenges')}>
-                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
-                        <IconSprint size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
-                    </span>
-                    <span>
-                        <div className="mode-card__title">Lancer un défi</div>
-                        <div className="mode-card__desc">Sprint ou Contre-la-montre pour vos classes</div>
-                    </span>
-                </button>
-
-                <button
-                    className="btn btn--ghost"
-                    style={{ fontSize: 13, padding: '8px 16px', marginTop: -4, marginBottom: 4, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                    onClick={() => onGo('mes-defis')}
+                {/* 2. Hero Card : Lancer un défi */}
+                <div
+                    onClick={() => onGo('challenges')}
+                    style={{
+                        background: 'var(--ciel)', borderRadius: 26, padding: '34px clamp(20px, 3.5vw, 34px)',
+                        display: 'flex', alignItems: 'center', gap: 22, cursor: 'pointer',
+                        boxShadow: 'var(--ombre-carte)', marginTop: 10,
+                    }}
                 >
-                    <IconDefisPasses size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Mes défis passés
-                </button>
+                    <svg width="56" height="56" viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M24 4 10 25h9l-2 15 15-22h-9z" fill="var(--action-texte)" stroke="var(--action-texte)" strokeWidth="3" strokeLinejoin="round" />
+                    </svg>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div className="font-display" style={{ fontSize: 34, fontWeight: 700, color: 'var(--action-texte)', lineHeight: 1.15 }}>
+                            Lancer un défi
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--ciel-pale)' }}>
+                            Sprint ou Contre‑la‑montre · code projeté au tableau
+                        </div>
+                    </div>
+                    <div style={{
+                        marginLeft: 'auto', width: 60, height: 60, borderRadius: 19,
+                        background: 'rgba(255, 255, 255, 0.22)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <path d="M8.5 5 17 12l-8.5 7" stroke="var(--action-texte)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                </div>
 
-                <button className="mode-card mode-card--practice" onClick={() => onGo('play')}>
-                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
-                        <IconLibre size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
-                    </span>
-                    <span>
-                        <div className="mode-card__title">S'entraîner</div>
-                        <div className="mode-card__desc">Jouez vous aussi — Salle des profs</div>
-                    </span>
-                </button>
+                {/* 3. Encadré d'alerte table fragile (calcul partagé avec Ma classe) */}
+                {fragileAlerte && (
+                    <div style={{
+                        background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                        padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 18,
+                    }}>
+                        <div style={{ width: 10, alignSelf: 'stretch', borderRadius: 5, background: 'var(--rouge)', flexShrink: 0 }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                            <div className="font-display" style={{ fontSize: 23, fontWeight: 700, color: 'var(--indigo)' }}>
+                                {fragileAlerte.nb_bloquent} élève{fragileAlerte.nb_bloquent > 1 ? 's' : ''} de {String(fragileAlerte.classe).replace(/([0-9]+)e?([A-Z])/i, '$1ᵉ$2')} bloque{fragileAlerte.nb_bloquent > 1 ? 'nt' : ''} sur la table de {fragileAlerte.table_n}
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)' }}>
+                                Un défi ciblé maintenant vaut mieux qu'une révision générale.
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => onGo('challenges', {
+                                tables: [fragileAlerte.table_n],
+                                classe: fragileAlerte.classe,
+                            })}
+                            style={{
+                                marginLeft: 'auto', height: 60, padding: '0 24px', borderRadius: 16,
+                                background: 'var(--ciel)', color: 'var(--action-texte)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 19,
+                                display: 'flex', alignItems: 'center', border: 'none', cursor: 'pointer',
+                                whiteSpace: 'nowrap', flexShrink: 0,
+                            }}
+                        >
+                            Lancer ›
+                        </button>
+                    </div>
+                )}
 
-                <button className="mode-card" onClick={() => onGo('classe')} style={{
-                    background: 'var(--indigo)',
-                }}>
-                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
-                        <IconMaGrille size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
-                    </span>
-                    <span>
-                        <div className="mode-card__title">Ma classe</div>
-                        <div className="mode-card__desc" style={{ color: 'var(--ciel-pale)' }}>Maîtrise agrégée — qui bloque, sur quoi</div>
-                    </span>
-                </button>
-
-                <button className="mode-card mode-card--learn" onClick={() => onGo('leaderboards')}>
-                    <span className="mode-card__emoji" style={{ display: 'flex', alignItems: 'center' }}>
-                        <IconClassements size={40} color="var(--action-texte)" actionColor="var(--action-texte)" />
-                    </span>
-                    <span>
-                        <div className="mode-card__title">Classements</div>
-                        <div className="mode-card__desc">Progression, records, classes et Salle des profs</div>
-                    </span>
-                </button>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-                    <button
-                        className="btn btn--ghost"
-                        style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                        onClick={() => onGo('profile')}
+                {/* 4. Grille 2×2 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, paddingTop: 6 }}>
+                    {/* Ma classe */}
+                    <div
+                        onClick={() => onGo('classe')}
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                            padding: 24, display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer',
+                        }}
                     >
-                        <IconMaGrille size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Profil
+                        <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
+                            <rect x="5" y="5" width="11" height="11" rx="2.5" fill="var(--ciel)" />
+                            <rect x="18" y="5" width="11" height="11" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                            <rect x="31" y="5" width="8" height="11" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                            <rect x="5" y="18" width="11" height="11" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                            <rect x="18" y="18" width="11" height="11" rx="2.5" fill="var(--indigo)" />
+                            <rect x="31" y="18" width="8" height="11" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                            <rect x="5" y="31" width="11" height="8" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                            <rect x="18" y="31" width="11" height="8" rx="2.5" stroke="var(--indigo)" strokeWidth="3" />
+                        </svg>
+                        <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Ma classe
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.4, fontWeight: 600, color: 'var(--gris)' }}>
+                            Maîtrise agrégée — qui bloque, sur quoi
+                        </div>
+                    </div>
+
+                    {/* Classements */}
+                    <div
+                        onClick={() => onGo('leaderboards')}
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                            padding: 24, display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer',
+                        }}
+                    >
+                        <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
+                            <rect x="4" y="24" width="11" height="15" rx="2.5" stroke="var(--indigo)" strokeWidth="3.2" />
+                            <rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke="var(--ciel)" strokeWidth="3.2" />
+                            <rect x="29" y="29" width="11" height="10" rx="2.5" stroke="var(--indigo)" strokeWidth="3.2" />
+                        </svg>
+                        <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Classements
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.4, fontWeight: 600, color: 'var(--gris)' }}>
+                            Progression, records, Salle des profs
+                        </div>
+                    </div>
+
+                    {/* S'entraîner */}
+                    <div
+                        onClick={() => onGo('play')}
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                            padding: 24, display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer',
+                        }}
+                    >
+                        <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
+                            <circle cx="22" cy="22" r="17" stroke="var(--indigo)" strokeWidth="3.4" />
+                            <circle cx="22" cy="22" r="9" stroke="var(--ciel)" strokeWidth="3.4" />
+                            <circle cx="22" cy="22" r="2.6" fill="var(--indigo)" />
+                        </svg>
+                        <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: 'var(--indigo)' }}>
+                            S'entraîner
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.4, fontWeight: 600, color: 'var(--gris)' }}>
+                            Jouez vous aussi — Salle des profs
+                        </div>
+                    </div>
+
+                    {/* Mes défis passés */}
+                    <div
+                        onClick={() => onGo('mes-defis')}
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                            padding: 24, display: 'flex', flexDirection: 'column', gap: 9, cursor: 'pointer',
+                        }}
+                    >
+                        <svg width="36" height="36" viewBox="0 0 44 44" fill="none">
+                            <circle cx="22" cy="23" r="16" stroke="var(--indigo)" strokeWidth="3.2" />
+                            <path d="M22 14v9l7 4" stroke="var(--ciel)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M6 12 11 7" stroke="var(--indigo)" strokeWidth="3.2" strokeLinecap="round" />
+                        </svg>
+                        <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Mes défis passés
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.4, fontWeight: 600, color: 'var(--gris)' }}>
+                            {statsDefisProf && statsDefisProf.count > 0
+                                ? `${statsDefisProf.count} défi${statsDefisProf.count > 1 ? 's' : ''}${statsDefisProf.dernier ? ` · le dernier ${formaterDateRelative(statsDefisProf.dernier)}` : ''}`
+                                : 'Aucun défi lancé pour l’instant'}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ flex: 1 }} />
+
+                {/* 5. Navigation basse */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 10, paddingBottom: 24 }}>
+                    <button
+                        onClick={() => onGo('profile')}
+                        style={{
+                            flex: 1, height: 74, borderRadius: 22, background: 'var(--surface)',
+                            boxShadow: 'var(--ombre-carte)', border: 'none', cursor: 'pointer',
+                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)',
+                        }}
+                    >
+                        Profil
                     </button>
                     {estAdmin && (
                         <button
-                            className="btn btn--ghost"
-                            style={{ flex: 1, fontSize: 15, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                             onClick={() => onGo('admin')}
+                            style={{
+                                flex: 1, height: 74, borderRadius: 22, background: 'var(--surface)',
+                                boxShadow: 'var(--ombre-carte)', border: 'none', cursor: 'pointer',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)',
+                            }}
                         >
-                            <IconAdmin size={18} color="var(--indigo)" actionColor="var(--ciel)" /> Administration
+                            Administration
                         </button>
                     )}
+                    <button
+                        onClick={onLogout}
+                        style={{
+                            height: 74, padding: '0 22px', border: 'none', background: 'transparent',
+                            cursor: 'pointer', fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 18, color: 'var(--gris)',
+                        }}
+                    >
+                        Se déconnecter
+                    </button>
                 </div>
-
-                <button
-                    className="btn btn--ghost"
-                    style={{
-                        width: '100%', fontSize: 13, padding: '10px 16px',
-                        color: 'var(--gris)', marginTop: 8,
-                    }}
-                    onClick={onLogout}
-                >
-                    Se déconnecter
-                </button>
             </div>
         );
     }
@@ -887,70 +1062,55 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                         </button>
                     </div>
                 ) : (
-                    <div style={{
-                        background: 'var(--surface)', borderRadius: 24, padding: '16px 20px',
-                        boxShadow: 'var(--ombre-carte)', display: 'flex', alignItems: 'center',
-                        gap: 14, minHeight: 96,
-                    }}>
+                    <div
+                        onClick={() => onGo('challenges', { mode: 'join' })}
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, padding: '16px 20px',
+                            boxShadow: 'var(--ombre-carte)', display: 'flex', alignItems: 'center',
+                            gap: 14, minHeight: 96, cursor: 'pointer',
+                        }}
+                    >
                         <div style={{
                             fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
                             color: 'var(--indigo-doux)', whiteSpace: 'nowrap',
                         }}>
                             Défi de classe
                         </div>
-                        <div style={{ flex: 1, position: 'relative', height: 64 }}>
-                            <input
-                                type="text"
-                                maxLength={5}
-                                value={joinCode}
-                                autoCapitalize="characters"
-                                onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-HJ-KM-NP-Z2-9]/g, '').slice(0, 5))}
-                                onKeyDown={e => { if (e.key === 'Enter') handleJoinDirect(); }}
-                                style={{
-                                    position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%',
-                                    cursor: 'text', zIndex: 2,
-                                }}
-                            />
-                            <div style={{ display: 'flex', gap: 8, height: '100%' }}>
-                                {[0, 1, 2, 3, 4].map(idx => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            flex: 1, height: 64, borderRadius: 14,
-                                            border: '3px dashed var(--bordure)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 26,
-                                            color: joinCode[idx] ? 'var(--indigo)' : 'var(--gris-inerte)',
-                                            background: 'var(--surface)',
-                                        }}
-                                    >
-                                        {joinCode[idx] || '·'}
-                                    </div>
-                                ))}
-                            </div>
+                        <div style={{ display: 'flex', gap: 8, flex: 1, height: 64 }}>
+                            {[0, 1, 2, 3, 4].map(idx => (
+                                <div
+                                    key={idx}
+                                    style={{
+                                        flex: 1, height: 64, borderRadius: 14,
+                                        border: '3px dashed var(--bordure)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 26,
+                                        color: 'var(--gris-inerte)',
+                                        background: 'var(--surface)',
+                                    }}
+                                >
+                                    ·
+                                </div>
+                            ))}
                         </div>
                         <button
-                            onClick={handleJoinDirect}
-                            disabled={joinCode.length < 5 || joinLoading}
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onGo('challenges', { mode: 'join' });
+                            }}
                             style={{
                                 height: 64, padding: '0 26px', borderRadius: 14,
-                                background: joinCode.length >= 5 ? 'var(--action)' : 'var(--bordure)',
-                                color: joinCode.length >= 5 ? 'var(--action-texte)' : 'var(--gris)',
+                                background: 'var(--action)',
+                                color: 'var(--action-texte)',
                                 fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 19,
-                                border: 'none', cursor: joinCode.length >= 5 ? 'pointer' : 'default',
+                                border: 'none', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 whiteSpace: 'nowrap',
                             }}
                         >
-                            {joinLoading ? '…' : 'Rejoindre'}
+                            Rejoindre
                         </button>
-                    </div>
-                )}
-                {joinError && (
-                    <div style={{
-                        marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--rouge)', textAlign: 'center',
-                    }}>
-                        {joinError}
                     </div>
                 )}
             </div>

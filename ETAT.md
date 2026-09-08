@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **8 septembre 2026** — **28 migrations, 146 cas
+> Dernière mise à jour : **9 septembre 2026** — **28 migrations, 146 cas
 > de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
 > appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
 > (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
@@ -19,10 +19,8 @@
 > recherche locale, import CSV, rattachement, aucune couleur en dur, zéro emploi du mot « actif » pour les joueurs).
 > **Le lot 21 est livré** : la **migration 28 est appliquée** (`populations_classements`), les maquettes 22
 > (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) sont refaites sur les maquettes Claude Design.
-> Ligne utilisateur épinglée en bas avec écart serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe
-> (`entete_classe`), tables fragiles triées sur la part de classe en difficulté, ouverture collective de plafond.
-> Le mot « actif » est banni pour qualifier les joueurs au profit de `ont_joue` et `inscrits`.
-> **Prochaine étape** : Déploiement en production, import de rentrée, Jamf MDM et tests en conditions réelles.
+> **Le lot 22 est livré** : **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur).
+> **Prochaine étape** : Lot 23 (Migration 29 : salle des profs, avatars/initiales enseignants, compteurs de défi ; écrans 28, 29, 30, 31, 32).
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -779,6 +777,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     des quiz (`useQuizEngine`, `LibreQuiz`, `Quiz`). Phrase élève ajoutée sous
     la légende de la grille. Fait le 04/09.
 11. ✅ **Lot 21** : Migration 28 (`populations_classements`) appliquée en base (146 cas verts), types TypeScript régénérés, écrans 22 (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) refaits sur les maquettes Claude Design. Mot « actif » banni pour qualifier les joueurs, ligne sticky avec rang et écart calculé au serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe (`entete_classe`), tables fragiles triées par part de classe en difficulté, ouverture collective de plafond. Fait le 08/09.
+12. ✅ **Lot 22** : Code projeté plein écran, accueil professeur et rejoindre un défi. **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur). Fait le 09/09.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

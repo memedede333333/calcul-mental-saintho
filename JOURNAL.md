@@ -57,6 +57,36 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Lot 22 : Code projeté plein écran, accueil professeur et rejoindre un défi (Écrans 26, 27, 33, 34)
+
+**Fait** —
+- **Écran 26 (Code projeté)** : Défi projeté plein écran en 1280×720 (format vidéoprojecteur de classe), titre en majuscules « REJOINDRE AVEC LE CODE », bouton discret « ‹ Quitter » en haut à droite, pastilles élèves avec bordure. Adaptation du `Layout` (`isProjecteur` et classes `.app-root--projecteur`, `.app-stage--projecteur`) pour s'étendre jusqu'à 1280px sans déborder sur les autres écrans. (Commis en Lot 22a : `124de6f`).
+- **Écran 27 (Accueil professeur)** : Page d'accueil professeur complète selon la maquette v10 :
+  - En-tête personnalisé avec rôle « Professeur de mathématiques », pastille des classes (`6A, 6B...`) et avatar cliquable.
+  - Carte hero « Lancer un défi » invitant et visible.
+  - Bandeau d'alerte « Table la plus fragile » de la classe (ex: « La table de 7 est la plus fragile de la classe : 4 élèves sur 28 en difficulté ») avec bouton d'action immédiate « Lancer › » pré-configurant un défi Sprint ciblé sur cette table.
+  - Module partagé `frontend/src/logic/classeStats.js` (`trierTablesFragiles` et `tablePlusFragileClasse`) assurant un calcul et tri strictement identiques entre la vue Ma classe (Écran 24) et l'accueil professeur (Écran 27).
+  - Grille 2×2 d'accès direct : « Ma classe », « Classements », « S'entraîner », « Mes défis passés ».
+  - Barre de pied : Profil, Administration (si administrateur), Se déconnecter.
+- **Écrans 33 & 34 (Rejoindre un défi)** :
+  - Nouvel écran dédié `frontend/src/screens/JoinChallenge.jsx` pour les élèves.
+  - 5 cases de code avec anneau de focus actif sur la position courante, texte d'indication « X lettres sur 5 · le curseur avance tout seul ».
+  - Clavier virtuel dédié de 31 touches (A-Z sans I/L/O + chiffres 2-9 + touche retour ⌫), interdisant toute saisie invalide et éliminant les soubresauts de clavier natif tactile.
+  - Prise en charge transparente du clavier physique (ordinateur/clavier iPad connecté) avec écouteur `keydown`.
+  - Écran 34 : carte récapitulative du défi trouvé avec informations (Créateur, Mode, Tables, Classe/participants) et grand bouton « C'est parti », ainsi que les cartes spécifiques pour les refus du serveur (`deja_joue` avec score/temps, `inconnu`, `ferme`).
+  - Carte « Défi de classe » de l'accueil élève branchée pour ouvrir ce nouvel écran.
+
+**Décidé** —
+- Le clavier virtuel de l'écran 33 est conservé pour garantir la conformité à l'alphabet restreint de 31 caractères et le confort tactile sur iPad, avec écoute clavier physique en parallèle. ✅ *validé en concertation*
+- Pour les enseignants, le choix entre un emoji ou leurs initiales est retenu pour le profil (Lot 23 / Migration 29). ✅ *validé*
+- Découpage du lot 22 : Lot 22a commis d'abord pour sécuriser l'Écran 26 et le layout projecteur, Lot 22b pour les écrans 27, 33 et 34.
+
+**Constaté** —
+- `check-tokens.mjs` a détecté une variable inexistante `var(--fond-app)` remplacée par le token existant `var(--ivoire)`. 88 tokens actifs, 0 erreur.
+
+**Ensuite** —
+- Lot 23 : Migration 29 (salle des profs, avatars/initiales enseignants, compteurs de participation aux défis) et écrans 28, 29, 30, 31, 32.
+
 ## 2026-09-08 — Lot 21 : Migration 28, classements et Ma classe sur les maquettes 22 à 24
 
 **Fait** —

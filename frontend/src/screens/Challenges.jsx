@@ -15,6 +15,7 @@ import {
     IconSprint, IconChrono, IconSansFaute, IconMontee, IconApprendre,
 } from '../components/Icons';
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
+import JoinChallenge from './JoinChallenge';
 
 /**
  * Challenges — Mode Défis
@@ -76,6 +77,9 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             setChallengeType(type);
             setSelectedTables(d.tables || [2, 3, 4, 5]);
             setPhase('defi-intro');
+            clearPreConfig?.();
+        } else if (defiPreConfig?.mode === 'join') {
+            setPhase('join');
             clearPreConfig?.();
         } else if (defiPreConfig) {
             const sprintType = CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0];
@@ -207,6 +211,33 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
     // --- PHASES ---
 
+    if (phase === 'join') {
+        return (
+            <JoinChallenge
+                onBack={() => setPhase(estProf ? 'config' : 'select')}
+                onStartDefi={(d) => {
+                    const type = CHALLENGE_TYPES.find(t => t.id === d.type) || CHALLENGE_TYPES[0];
+                    setDefiInfo(d);
+                    setChallengeType(type);
+                    setSelectedTables(d.tables || [2, 3, 4, 5]);
+                    sauvegarderDefiEnCours(identite?.profil?.id, {
+                        code: d.code,
+                        defi_id: d.defi_id,
+                        type: d.type,
+                        classe: d.classe,
+                        auteur_nom: d.auteur_nom,
+                        rejoint_le: Date.now(),
+                    });
+                    setPhase('defi-intro');
+                }}
+                onViewDefi={(defiId) => {
+                    setDefiInfo({ defi_id: defiId });
+                    setPhase('defi-leaderboard');
+                }}
+            />
+        );
+    }
+
     if (phase === 'select') {
         return (
             <ChallengeSelect
@@ -215,6 +246,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 joinCode={joinCode}
                 setJoinCode={setJoinCode}
                 onJoin={handleJoin}
+                onOpenJoin={() => setPhase('join')}
                 onViewDefi={(defiId) => {
                     setDefiInfo({ defi_id: defiId });
                     setPhase('defi-leaderboard');
@@ -326,99 +358,58 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
 
 /* ===================== SELECT ===================== */
 
-function ChallengeSelect({ onBack, onSelect, joinCode, setJoinCode, onJoin, onViewDefi, estProf, onGo }) {
-    const [joinError, setJoinError] = useState(null);
-    const [joinLoading, setJoinLoading] = useState(false);
-    const [joinDefiId, setJoinDefiId] = useState(null); // for deja_joue → show leaderboard
-
-    const handleJoin = async () => {
-        if (joinCode.length < 5) return;
-        setJoinError(null);
-        setJoinLoading(true);
-        try {
-            const res = await onJoin(joinCode);
-            if (!res.ok) {
-                const raison = res.data?.raison || res.raison || 'inconnu';
-                if (raison === 'deja_joue') {
-                    setJoinDefiId(res.data?.defi_id || null);
-                    setJoinError('Tu as déjà participé à ce défi.');
-                } else if (raison === 'ferme') {
-                    setJoinError('Ce défi est terminé.');
-                } else {
-                    setJoinError("Ce code n'existe pas. Vérifie les lettres.");
-                }
-            }
-        } catch {
-            setJoinError('Erreur réseau.');
-        }
-        setJoinLoading(false);
-    };
-
+function ChallengeSelect({ onBack, onSelect, onOpenJoin, onViewDefi, estProf, onGo }) {
     return (
         <div className="screen-enter">
             <button className="btn-back" onClick={onBack}>‹ Accueil</button>
 
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>
+                <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, color: 'var(--indigo)' }}>
                     ⚔️ Défis
                 </h1>
-                <p style={{ color: 'var(--text-soft)', fontWeight: 700, fontSize: 14 }}>
+                <p style={{ color: 'var(--gris)', fontWeight: 700, fontSize: 14 }}>
                     Choisis ton type de défi
                 </p>
             </div>
 
             {/* Rejoindre un défi */}
-            <div className="card" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <input
-                        type="text"
-                        maxLength={5}
-                        value={joinCode}
-                        autoCapitalize="characters"
-                        onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-HJ-KM-NP-Z2-9]/g, '').slice(0, 5))}
-                        placeholder="CODE à 5 lettres"
-                        style={{
-                            flex: 1, padding: '12px 16px', borderRadius: 14,
-                            border: '2px solid var(--border)', fontSize: 20,
-                            fontFamily: 'var(--font-display)', textAlign: 'center',
-                            letterSpacing: 6, textTransform: 'uppercase', outline: 'none',
-                        }}
-                        onFocus={e => e.target.style.borderColor = 'var(--gold)'}
-                        onBlur={e => e.target.style.borderColor = 'var(--border)'}
-                        onKeyDown={e => { if (e.key === 'Enter') handleJoin(); }}
-                    />
-                    <button
-                        className="btn btn--gold"
-                        disabled={joinCode.length < 5 || joinLoading}
-                        style={{ padding: '12px 20px', fontSize: 16, whiteSpace: 'nowrap' }}
-                        onClick={handleJoin}
-                    >
-                        {joinLoading ? '⏳' : 'Rejoindre'}
-                    </button>
+            <div
+                onClick={onOpenJoin}
+                style={{
+                    background: 'var(--surface)',
+                    borderRadius: 24, padding: '20px 22px',
+                    display: 'flex', alignItems: 'center', gap: 16,
+                    cursor: 'pointer', marginBottom: 14,
+                    boxShadow: 'var(--ombre-carte)',
+                    border: '2px solid var(--bordure)',
+                }}
+            >
+                <div style={{
+                    width: 52, height: 52, borderRadius: 16, background: 'var(--ciel-pale)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 5 8 12l7 7" stroke="var(--ciel)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                 </div>
-                {joinError && (
-                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', marginTop: 8, textAlign: 'center' }}>
-                        {joinError}
-                        {joinDefiId && (
-                            <button
-                                className="btn btn--ghost"
-                                style={{ fontSize: 12, marginLeft: 8, padding: '4px 10px' }}
-                                onClick={() => onViewDefi?.(joinDefiId)}
-                            >
-                                Voir le classement
-                            </button>
-                        )}
-                    </p>
-                )}
-                <div style={{ textAlign: 'center', marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                    <button
-                        className="btn btn--ghost"
-                        style={{ fontSize: 13, padding: '4px 12px', color: 'var(--gris)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                        onClick={() => onGo?.('mes-defis')}
-                    >
-                        <IconDefisPasses size={16} color="var(--indigo)" actionColor="var(--ciel)" /> Mes défis passés
-                    </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div className="font-display" style={{ fontSize: 20, fontWeight: 700, color: 'var(--indigo)' }}>
+                        Rejoindre un défi
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 14, fontWeight: 600, color: 'var(--gris)' }}>
+                        Code à 5 lettres affiché au tableau ›
+                    </div>
                 </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                <button
+                    className="btn btn--ghost"
+                    style={{ fontSize: 13, padding: '6px 14px', color: 'var(--gris)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    onClick={() => onGo?.('mes-defis')}
+                >
+                    <IconDefisPasses size={16} color="var(--indigo)" actionColor="var(--ciel)" /> Mes défis passés
+                </button>
             </div>
 
             {CHALLENGE_TYPES.map(type => (

@@ -7,6 +7,7 @@ import {
     definirPlafondClasse,
 } from '../api';
 import { IconMaGrille, IconSprint } from '../components/Icons';
+import { trierTablesFragiles } from '../logic/classeStats';
 
 /**
  * MaClasse — Pilotage enseignant (Maquette 24)
@@ -82,16 +83,9 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     }, [rechargerClasse]);
 
     // Tri des tables fragiles :
-    // (eleves_jaunes + eleves_rouges) / eleves_classe décroissant
+    // (eleves_jaunes + eleves_rouges) / eleves_classe décroissant (fonction partagée)
     const tablesTriees = useMemo(() => {
-        return [...maitrise].sort((a, b) => {
-            const ecA = a.eleves_classe || 1;
-            const ecB = b.eleves_classe || 1;
-            const diffA = (a.eleves_jaunes + a.eleves_rouges) / ecA;
-            const diffB = (b.eleves_jaunes + b.eleves_rouges) / ecB;
-            if (diffA !== diffB) return diffB - diffA;
-            return a.table_n - b.table_n;
-        });
+        return trierTablesFragiles(maitrise);
     }, [maitrise]);
 
     // Tables les plus fragiles pour le défi

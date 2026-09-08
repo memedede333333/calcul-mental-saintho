@@ -186,8 +186,12 @@ export default function App() {
         if (scr === 'play') {
             setPracticeConfig(opts || null);
         }
-        if (scr === 'challenges' && opts?.mode) {
-            setDefiPreConfig({ type: opts.mode });
+        if (scr === 'challenges' && opts) {
+            if (opts.tables || opts.classe) {
+                setDefiPreConfig({ tables: opts.tables, classe: opts.classe });
+            } else if (opts.mode) {
+                setDefiPreConfig({ mode: opts.mode, type: opts.mode });
+            }
         }
         setScreen(scr);
     }, []);
@@ -357,7 +361,7 @@ export default function App() {
     // 4. Application (ready)
     return (
         <Layout
-            showHeader={screen === 'home'}
+            showHeader={screen === 'home' && !estProf}
             wide={screen === 'admin' || (screen === 'challenges' && isProjecteur)}
             isProjecteur={screen === 'challenges' && isProjecteur}
         >
