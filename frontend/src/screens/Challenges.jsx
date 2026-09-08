@@ -51,7 +51,7 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig, onMaitriseMaj }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig, onMaitriseMaj, onProjecteurChange }) {
     const [phase, setPhase] = useState(() => (estProf ? 'config' : 'select'));
     const [challengeType, setChallengeType] = useState(() => CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0]);
     const [joinCode, setJoinCode] = useState('');
@@ -86,6 +86,11 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             clearPreConfig?.();
         }
     }, [defiPreConfig, clearPreConfig]);
+
+    useEffect(() => {
+        onProjecteurChange?.(phase === 'defi-code');
+        return () => onProjecteurChange?.(false);
+    }, [phase, onProjecteurChange]);
 
     // --- Fin de partie SOLO ---
     const handleDone = useCallback((r) => {
@@ -1871,41 +1876,40 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                 background: 'var(--indigo)', borderRadius: 20,
                 overflow: 'hidden', display: 'flex', flexDirection: 'column',
                 position: 'relative', boxShadow: '0 16px 40px rgba(32, 34, 107, 0.28)',
-                boxSizing: 'border-box',
+                boxSizing: 'border-box', padding: '44px clamp(20px, 4.4vw, 56px)',
             }}>
 
-                {/* En-tête : Logo matHo avec mosaïque + Métadonnées + Compteur connectés */}
+                {/* En-tête : Logo matHo avec mosaïque + Métadonnées + Compteur connectés + Quitter */}
                 <div style={{
-                    padding: '40px clamp(20px, 4vw, 60px) 0px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                     zIndex: 2, flexWrap: 'wrap', gap: 20,
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 26 }}>
                         {/* Décoration mosaïque 3x3 */}
                         <div style={{
-                            display: 'grid', gridTemplateColumns: 'repeat(3, 26px)', gap: 8, opacity: 0.9,
+                            display: 'grid', gridTemplateColumns: 'repeat(3, 26px)', gap: 8,
                             flexShrink: 0,
                         }}>
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--rouge)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--orange)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--vert)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--orange)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--ciel)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--rouge)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--vert)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--ciel)' }} />
-                            <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--action-texte)', opacity: 0.25 }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--rouge)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--orange)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--vert)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--orange)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--ciel)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--rouge)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--vert)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--ciel)' }} />
+                            <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--orange)' }} />
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <div style={{
-                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 34,
-                                color: 'var(--action-texte)',
+                                fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
+                                color: 'var(--action-texte)', letterSpacing: '-0.01em',
                             }}>
                                 matHo
                             </div>
                             <div style={{
-                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 20,
+                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 21,
                                 color: 'var(--indigo-clair)',
                             }}>
                                 Défi de {auteur} · {classe ? `${classe} · ` : ''}{modeLabel}, {tablesLabel}
@@ -1913,15 +1917,18 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
                         <div style={{
-                            display: 'flex', alignItems: 'center', gap: 14,
-                            background: 'rgba(255, 255, 255, 0.12)', padding: '14px 26px',
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            background: 'rgba(255, 255, 255, 0.14)', padding: '13px 24px',
                             borderRadius: 999,
                         }}>
-                            <div style={{ width: 14, height: 14, borderRadius: 4, background: 'var(--vert)' }} />
+                            <div style={{ position: 'relative', width: 16, height: 16, flexShrink: 0 }}>
+                                <div style={{ position: 'absolute', inset: 0, borderRadius: 5, background: 'var(--vert)' }} />
+                                <div style={{ position: 'absolute', inset: -6, borderRadius: 9, border: '3px solid var(--vert)', opacity: 0.35 }} />
+                            </div>
                             <span style={{
-                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 24,
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 23,
                                 color: 'var(--action-texte)',
                             }}>
                                 {rejoints} connecté{rejoints > 1 ? 's' : ''}
@@ -1931,8 +1938,8 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                             onClick={onBack}
                             style={{
                                 background: 'rgba(255, 255, 255, 0.08)', border: 'none',
-                                borderRadius: 999, padding: '12px 18px', cursor: 'pointer',
-                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 16,
+                                borderRadius: 999, padding: '10px 18px', cursor: 'pointer',
+                                fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 19,
                                 color: 'var(--indigo-clair)',
                             }}
                             title="Quitter la projection"
@@ -1942,32 +1949,30 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                     </div>
                 </div>
 
-                {/* Centre : « Rejoindre avec le code » + 5 cases géantes */}
+                {/* Centre : « REJOINDRE AVEC LE CODE » + 5 cases géantes */}
                 <div style={{
                     flex: '1 1 0%', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 20,
-                    padding: '30px 20px', zIndex: 2,
+                    alignItems: 'center', justifyContent: 'center', gap: 22,
+                    padding: '24px 0', zIndex: 2, minHeight: 0,
                 }}>
                     <div style={{
-                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 'clamp(20px, 2.4vw, 30px)',
-                        color: 'var(--indigo-clair)', letterSpacing: '0.22em', textTransform: 'uppercase',
+                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 'clamp(20px, 2.4vw, 27px)',
+                        color: 'var(--indigo-clair)', letterSpacing: '0.24em', textTransform: 'uppercase',
                     }}>
-                        Rejoindre avec le code
+                        REJOINDRE AVEC LE CODE
                     </div>
 
-                    <div style={{ display: 'flex', gap: 'clamp(10px, 1.8vw, 22px)', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', gap: 20, width: '100%', maxWidth: 830, justifyContent: 'center' }}>
                         {codeLetters.map((char, i) => (
                             <div
                                 key={i}
                                 className="font-display"
                                 style={{
-                                    width: 'clamp(64px, 11vw, 150px)',
-                                    height: 'clamp(84px, 14vw, 190px)',
-                                    borderRadius: 'clamp(14px, 2vw, 26px)',
-                                    background: 'var(--surface)',
+                                    flex: '1 1 0', maxWidth: 150, aspectRatio: '150/190',
+                                    background: 'var(--surface)', borderRadius: 26,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 'clamp(56px, 9vw, 130px)',
-                                    fontWeight: 700, color: 'var(--indigo)',
+                                    fontSize: 'clamp(60px, 11vw, 130px)',
+                                    fontWeight: 700, color: 'var(--indigo)', lineHeight: 1,
                                     boxShadow: '0 12px 32px rgba(0, 0, 0, 0.18)',
                                     userSelect: 'all',
                                 }}
@@ -1978,7 +1983,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                     </div>
 
                     <div style={{
-                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(16px, 2vw, 26px)',
+                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(18px, 2vw, 24px)',
                         color: 'var(--indigo-clair)',
                     }}>
                         Accueil › Défi de classe › saisir le code
@@ -1987,30 +1992,33 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
 
                 {/* Bas : Avatars + Prénoms arrivés + Indication classement */}
                 <div style={{
-                    padding: '0px clamp(20px, 4vw, 60px) clamp(24px, 4vw, 46px)',
-                    display: 'flex', alignItems: 'center', gap: 16,
+                    display: 'flex', alignItems: 'center', gap: 18,
                     zIndex: 2, flexWrap: 'wrap',
                 }}>
                     {visiblePresents.length > 0 && (
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            {visiblePresents.map((p) => (
-                                <span
-                                    key={p.eleve_id}
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePresents.map((p, idx) => (
+                                <div
+                                    key={p.eleve_id || idx}
                                     style={{
-                                        fontSize: 38,
+                                        width: 52, height: 52, borderRadius: 16,
+                                        background: 'rgba(255, 255, 255, 0.14)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 30, marginLeft: idx === 0 ? 0 : -12,
+                                        border: '3px solid var(--indigo)',
                                         filter: p.a_termine ? 'grayscale(1) opacity(0.35)' : 'none',
                                         transition: 'filter 0.3s ease',
                                     }}
                                     title={`${p.prenom}${p.a_termine ? ' (a terminé)' : ''}`}
                                 >
                                     {p.avatar_emoji || '👤'}
-                                </span>
+                                </div>
                             ))}
                         </div>
                     )}
 
                     <div style={{
-                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(16px, 1.8vw, 22px)',
+                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(16px, 1.8vw, 21px)',
                         color: 'var(--indigo-clair)',
                     }}>
                         {visiblePresents.length > 0 ? (
@@ -2026,11 +2034,16 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                     </div>
 
                     <div style={{
-                        marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16,
+                        marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14,
                     }}>
+                        <svg width="30" height="30" viewBox="0 0 44 44" fill="none">
+                            <rect x="4" y="24" width="11" height="15" rx="2.5" stroke="var(--indigo-clair)" strokeWidth="3.2" />
+                            <rect x="16.5" y="13" width="11" height="26" rx="2.5" stroke="var(--action-texte)" strokeWidth="3.2" />
+                            <rect x="29" y="29" width="11" height="10" rx="2.5" stroke="var(--indigo-clair)" strokeWidth="3.2" />
+                        </svg>
                         <span style={{
-                            fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(15px, 1.6vw, 22px)',
-                            color: 'var(--indigo-clair)', fontStyle: 'italic',
+                            fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 'clamp(15px, 1.6vw, 21px)',
+                            color: 'var(--indigo-clair)',
                         }}>
                             Le classement s'affichera ici à la fin
                         </span>
@@ -2039,7 +2052,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
                             style={{
                                 background: 'rgba(255, 255, 255, 0.14)',
                                 border: '1px solid rgba(255, 255, 255, 0.25)',
-                                borderRadius: 999, padding: '10px 22px',
+                                borderRadius: 999, padding: '10px 20px',
                                 fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
                                 color: 'var(--action-texte)', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', gap: 8,

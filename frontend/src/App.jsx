@@ -43,9 +43,17 @@ export default function App() {
     const [maitrise, setMaitrise] = useState({});
     // Adresse e-mail du compte connecté si non reconnu
     const [sessionEmail, setSessionEmail] = useState(null);
+    // Mode vidéoprojecteur 1280x720 plein écran pour le code projeté (écran 26)
+    const [isProjecteur, setIsProjecteur] = useState(false);
 
     const estProf = identite?.type === 'prof';
     const estAdmin = identite?.admin === true;
+
+    useEffect(() => {
+        if (screen !== 'challenges') {
+            setIsProjecteur(false);
+        }
+    }, [screen]);
 
     // --- Restauration de session au montage ---
     useEffect(() => {
@@ -348,7 +356,11 @@ export default function App() {
 
     // 4. Application (ready)
     return (
-        <Layout showHeader={screen === 'home'} wide={screen === 'admin'}>
+        <Layout
+            showHeader={screen === 'home'}
+            wide={screen === 'admin' || (screen === 'challenges' && isProjecteur)}
+            isProjecteur={screen === 'challenges' && isProjecteur}
+        >
             {screen === 'home' && (
                 <Home
                     onGo={handleGo}
@@ -386,6 +398,7 @@ export default function App() {
                     defiPreConfig={defiPreConfig}
                     clearPreConfig={() => setDefiPreConfig(null)}
                     onMaitriseMaj={handleMaitriseMaj}
+                    onProjecteurChange={setIsProjecteur}
                 />
             )}
             {screen === 'mes-defis' && (

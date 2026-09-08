@@ -50,6 +50,15 @@ input, textarea, select, button { touch-action: manipulation; }
   width: 100%;
 }
 
+.app-root.app-root--projecteur {
+  padding: 12px 14px 24px;
+}
+
+.app-stage.app-stage--projecteur {
+  max-width: 1280px !important;
+  width: 100%;
+}
+
 /* ── Header ───────────────────────────────────────────────────────────── */
 .app-header {
   display: flex;
