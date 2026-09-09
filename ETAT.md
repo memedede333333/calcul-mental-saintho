@@ -83,8 +83,9 @@ d'interface se juge à cette aune.
 | ✅ **Lots 13 à 16 bis** livrés par Antigravity et relus dans le code | fait le 04/09 |
 | ✅ **Migration 25** appliquée (présences aux défis, sessions vides, élèves hors plafond) | fait le 04/09 |
 | ✅ **Lot 17** livré (maquette 9 code projeté, bouton « Voir qui », finitions) | fait le 04/09 |
-| ⬜ Base de **production** (projet Supabase séparé, région EU) | migrations seules, **aucun seed** |
-| ⬜ Import de rentrée des 350 élèves | onglet Import, format `email, nom, prénom, classe` |
+| ⬜ **Outil de réveil automatique (keep-alive)** | Cron quotidien (GitHub Actions / UptimeRobot / cron-job.org) pour requêter la base tous les jours et empêcher la suspension après 7j d'inactivité (plan gratuit Supabase) |
+| ⬜ **Base de production & passage en prod** | Projet Supabase séparé (région EU), application des 30 migrations (**aucun seed**), variables d'environnement Vercel |
+| ⬜ Import de rentrée des 350 élèves | via la modale d'aperçu d'import CSV (Écran 36d), format `email, nom, prénom, classe` |
 | ⬜ `*.supabase.co` autorisé dans Jamf | Aymeri |
 | ⬜ Web Clip Jamf — libellé et icône | après le nom |
 | ⬜ RGPD : registre de traitement, DPO, direction | Aymeri |
@@ -821,8 +822,17 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
       Contrainte : les élèves ne reçoivent que du domaine `saintho.fr`.
 - [ ] **Autoriser `*.supabase.co` dans Jamf** — le wildcard, pas l'adresse
       exacte : elle changerait si le projet change.
-- [ ] **Créer la base de production**, région européenne, avec un réveil
-      hebdomadaire (l'offre gratuite suspend après 7 jours d'inactivité).
+- [ ] **Mettre en place un outil de réveil quotidien automatique (keep-alive)** :
+      Sur l'offre gratuite de Supabase, un projet inactif pendant 7 jours est suspendu.
+      Configurer un ping automatique quotidien (ex. workflow GitHub Actions planifié chaque matin
+      avec un appel HTTP/curl sur l'API Supabase, ou service UptimeRobot / cron-job.org) sur
+      `calcul-mental-dev` et sur la production pour éviter toute mise en veille pendant les vacances ou périodes calmes.
+- [ ] **Préparer et déployer le passage en production** :
+      1. Créer le projet Supabase dédié `calcul-mental-prod` en région européenne (Francfort).
+      2. Appliquer les 30 migrations SQL dans l'ordre strict (`supabase/migrations/`), **aucun seed de démo**.
+      3. Configurer l'OAuth Google (mode Interne domaine `@saintho.fr`) et le modèle OTP (`{{ .Token }}`).
+      4. Mettre à jour les variables d'environnement de production sur Vercel (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+      5. Réaliser l'import des 350 élèves via la modale d'aperçu CSV (Écran 36d).
 - [ ] **Prévenir le DPO / la direction** : données de mineurs, registre de
       traitement, information des familles. Mentionner qu'un enseignant accède
       aux données de maîtrise de tout le collège.
