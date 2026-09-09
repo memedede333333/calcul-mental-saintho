@@ -209,10 +209,21 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     }, [identite]);
 
     // --- Créer un défi ---
-    const handleCreateDefi = useCallback(async (type, tables, classe) => {
-        const res = await creerDefi({ type: type.id, tables, classe });
+    const handleCreateDefi = useCallback(async (type, tables, classe, dureeS) => {
+        const res = await creerDefi({
+            type: type.id,
+            tables,
+            classe,
+            dureeS: type.id === 'countdown' ? (dureeS || 60) : null,
+        });
         if (!res.ok) return res;
-        setDefiInfo({ defi_id: res.data.defi_id, code: res.data.code, type: type.id, tables });
+        setDefiInfo({
+            defi_id: res.data.defi_id,
+            code: res.data.code,
+            type: type.id,
+            tables,
+            duree_s: type.id === 'countdown' ? (dureeS || 60) : 3,
+        });
         setChallengeType(type);
         setPhase('defi-code');
         return res;
@@ -585,6 +596,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     const [showNoms, setShowNoms] = useState(false);
     const [nomsHorsPlafond, setNomsHorsPlafond] = useState([]);
     const [loadingNoms, setLoadingNoms] = useState(false);
+    const [countdownDuration, setCountdownDuration] = useState(60); // 30, 60, 90, 120 (défaut 1 min)
 
     // Modes autorisés en défi : sprint et countdown
     const currentModeId = type?.id === 'countdown' ? 'countdown' : 'sprint';
@@ -674,7 +686,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
         setCreating(true);
         setCreateError(null);
         const currentType = CHALLENGE_TYPES.find(t => t.id === currentModeId) || CHALLENGE_TYPES[0];
-        const res = await onCreateDefi(currentType, tables, selectedClasse);
+        const res = await onCreateDefi(currentType, tables, selectedClasse, currentModeId === 'countdown' ? countdownDuration : null);
         if (!res.ok) {
             setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
             setCreating(false);
@@ -684,8 +696,16 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     // Tables disponibles (2 à 13)
     const availableTables = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
+    const formatDureeLabel = (s) => {
+        if (s === 30) return '30 s';
+        if (s === 60) return '1 min';
+        if (s === 90) return '1 min 30';
+        if (s === 120) return '2 min';
+        return `${s} s`;
+    };
+
     const modeLabel = currentModeId === 'sprint' ? 'Sprint' : 'Contre‑la‑montre';
-    const durationLabel = currentModeId === 'sprint' ? '20 questions' : '2 min';
+    const durationLabel = currentModeId === 'sprint' ? '20 questions' : formatDureeLabel(countdownDuration);
     const sortedTables = [...tables].sort((a, b) => a - b);
     const summaryText = `${modeLabel} · table${sortedTables.length > 1 ? 's' : ''} ${sortedTables.join(', ')} · ${selectedClasse || 'Sans classe'} · ${durationLabel}`;
 
@@ -783,11 +803,54 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                                 fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
                                 color: currentModeId === 'countdown' ? 'var(--ciel-pale)' : 'var(--gris)',
                             }}>
-                                2 minutes
+                                {formatDureeLabel(countdownDuration)}
                             </div>
                         </div>
                     </div>
                 </div>
+
+                {currentModeId === 'countdown' && (
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 8,
+                        background: 'var(--surface)', borderRadius: 18, padding: '14px 16px',
+                        boxShadow: 'var(--ombre-carte)',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700,
+                            color: 'var(--gris)', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}>
+                            Durée du contre-la-montre
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            {[
+                                { s: 30, label: '30 s' },
+                                { s: 60, label: '1 min' },
+                                { s: 90, label: '1 min 30' },
+                                { s: 120, label: '2 min' },
+                            ].map(opt => {
+                                const isSel = countdownDuration === opt.s;
+                                return (
+                                    <button
+                                        key={opt.s}
+                                        type="button"
+                                        onClick={() => setCountdownDuration(opt.s)}
+                                        style={{
+                                            height: 48, borderRadius: 12,
+                                            border: isSel ? '2px solid var(--action)' : '1px solid var(--bordure)',
+                                            background: isSel ? 'var(--action)' : 'var(--ivoire)',
+                                            color: isSel ? 'var(--action-texte)' : 'var(--indigo)',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                            cursor: 'pointer', transition: 'all 0.12s ease',
+                                        }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
                     Sans faute et Montée ne sont pas proposés : les durées varient trop pour une classe entière.
                 </div>
@@ -1373,9 +1436,9 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
     );
 }
 
-/* --- Contre-la-montre : 2 min, 3s/question --- */
+/* --- Contre-la-montre : durée variable (défaut 60s), 3s/question --- */
 function CountdownPlay({ tables, maitrise, defiQuestions, defiDureeS, onQuit, onDone }) {
-    const duration = defiDureeS || 120;
+    const duration = defiDureeS || 60;
     const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions, mode: 'countdown' });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
@@ -1849,7 +1912,15 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
     const auteur = avancement?.auteur_nom || defiInfo?.auteur_nom || (estProf ? 'mon professeur' : 'Défi');
     const classe = avancement?.classe || defiInfo?.classe || null;
     const modeKey = defiInfo?.type || 'sprint';
-    const modeLabel = modeKey === 'countdown' ? 'Contre‑la‑montre' : 'Sprint';
+    const dureeS = defiInfo?.duree_s || 60;
+    const formatDureeSimple = (s) => {
+        if (s === 30) return '30 s';
+        if (s === 60) return '1 min';
+        if (s === 90) return '1 min 30';
+        if (s === 120) return '2 min';
+        return `${s} s`;
+    };
+    const modeLabel = modeKey === 'countdown' ? `Contre‑la‑montre (${formatDureeSimple(dureeS)})` : 'Sprint';
 
     const formatTablesLabel = (tbls) => {
         if (!tbls || !tbls.length) return 'toutes les tables';
@@ -2090,7 +2161,10 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
 
     const modeLabels = {
         sprint: { name: 'Sprint', desc: '20 questions · 3 secondes chacune' },
-        countdown: { name: 'Contre-la-montre', desc: '2 minutes · max de bonnes réponses' },
+        countdown: {
+            name: 'Contre-la-montre',
+            desc: `${defiInfo?.duree_s === 30 ? '30 secondes' : defiInfo?.duree_s === 60 ? '1 minute' : defiInfo?.duree_s === 90 ? '1 min 30' : (defiInfo?.duree_s ? Math.round(defiInfo.duree_s / 60) + ' min' : '1 minute')} · max de bonnes réponses`,
+        },
         flawless: { name: 'Sans faute', desc: 'Zéro erreur · la première te stoppe' },
         climb: { name: 'Montée', desc: 'Palier par palier' },
     };
