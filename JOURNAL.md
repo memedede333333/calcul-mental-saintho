@@ -57,6 +57,20 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Recette terrain : défis en classe, fix page blanche et durée chrono
+
+**Fait** —
+- **Correction responsive Administration (Écran 25)** : adaptation des colonnes et largeurs de la barre latérale et du journal d'audit sur résolutions intermédiaires (`@media (max-width: 1250px)`). Passage de `.admin-table-card` en `overflow-x: auto` pour empêcher tout rognage caché des boutons d'action (« Désactiver ») sur iPad et Mac en paysage.
+- **Correction crash page blanche sur `JoinChallenge.jsx` (Écran 34)** : au moment de valider le code, l'application tentait de rendre directement l'objet brut `defiData.questions` (`[{a, b}, ...]`) au lieu de sa longueur dans le récapitulatif du mode, provoquant une erreur React fatale non rattrapée. Remplacé par `defiData.questions.length`.
+- **Durée paramétrable pour le défi Contre-la-montre** : ajout d'un sélecteur de durée à 4 boutons sur l'écran professeur `ChallengeConfigProf` (30 s, 1 min par défaut, 1 min 30, 2 min). Câblé directement sur le paramètre `p_duree_s` de la RPC `creer_defi` (déjà géré par la base SQL), répercuté sur l'écran de projection au tableau (`DefiCodeScreen`), l'écran d'annonce élève (`DefiIntro`) et la durée effective de `CountdownPlay`.
+- **Diagnostic réseau / temps de réponse Supabase** : mesures en direct sur la base : `classement_classes` répond en **150 ms**, `classement_progression` en **150 ms**, `ma_place_progression` en **120 ms**. L'écran de « Connexion perdue » et la latence observés sur un iPad en test ont été identifiés : batterie critique à 9 %, déclenchant le bridage agressif d'iOS / Safari (mise en veille des sockets TCP avec timeout de 15 à 20 secondes).
+
+**Décidé** —
+- La durée standard recommandée en classe pour le Contre-la-montre passe à **1 minute** par défaut (au lieu de 2 minutes, jugées trop longues pour l'attention des collégiens). ✅ *validé par Aymeri*
+- Rejet du passage au plan payant Supabase (300 $/an) : maintien sur le plan gratuit (limites largement suffisantes pour 350 élèves). La sauvegarde sera assurée gratuitement et sous contrôle local (NAS / script `pg_dump`). ✅ *tranché par Aymeri*
+
+**Ensuite** — Mise en place du keep-alive (GitHub Actions + ping NAS pour l'été) et script de sauvegarde local.
+
 ## 2026-09-09 — Lot 25 : Clavier physique fermé dans les modes chronométrés
 
 **Fait** — Fermeture sélective de la saisie numérique au clavier physique sur ordinateur dans les modes où le temps détermine le score :
