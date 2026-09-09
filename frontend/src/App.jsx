@@ -183,17 +183,18 @@ export default function App() {
     }, []);
 
     const handleGo = useCallback((scr, opts) => {
-        if (scr === 'play') {
+        const targetScreen = scr === 'practice' ? 'play' : scr;
+        if (targetScreen === 'play') {
             setPracticeConfig(opts || null);
         }
-        if (scr === 'challenges' && opts) {
+        if (targetScreen === 'challenges' && opts) {
             if (opts.tables || opts.classe) {
                 setDefiPreConfig({ tables: opts.tables, classe: opts.classe });
             } else if (opts.mode) {
                 setDefiPreConfig({ mode: opts.mode, type: opts.mode });
             }
         }
-        setScreen(scr);
+        setScreen(targetScreen);
     }, []);
 
     // --- Navigation vers Practice avec des tables pré-sélectionnées ---
@@ -379,7 +380,7 @@ export default function App() {
                 />
             )}
             {screen === 'learn' && <Learn onBack={goHome} onGo={handleGo} profil={profil} />}
-            {screen === 'play' && (
+            {(screen === 'play' || screen === 'practice') && (
                 <Practice
                     onBack={goHome}
                     identite={identite}
@@ -398,7 +399,7 @@ export default function App() {
                     estProf={estProf}
                     onPlafondChange={handlePlafondChange}
                     maitrise={maitrise}
-                    onGo={setScreen}
+                    onGo={handleGo}
                     defiPreConfig={defiPreConfig}
                     clearPreConfig={() => setDefiPreConfig(null)}
                     onMaitriseMaj={handleMaitriseMaj}
@@ -418,7 +419,7 @@ export default function App() {
                 />
             )}
             {screen === 'leaderboards' && (
-                <Leaderboards onBack={goHome} identite={identite} estProf={estProf} onGo={setScreen} />
+                <Leaderboards onBack={goHome} identite={identite} estProf={estProf} onGo={handleGo} />
             )}
             {screen === 'profile' && (
                 <Profile
@@ -427,7 +428,7 @@ export default function App() {
                     estProf={estProf}
                     onLogout={handleDeconnexion}
                     onReviser={goPlayWithTables}
-                    onGo={setScreen}
+                    onGo={handleGo}
                 />
             )}
             {screen === 'admin' && estAdmin && (

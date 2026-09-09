@@ -366,7 +366,7 @@ function ProfileProf({ onBack, onLogout, onGo }) {
 
                 <button
                     type="button"
-                    onClick={() => onGo ? onGo('practice') : onBack?.()}
+                    onClick={() => onGo ? onGo('play') : onBack?.()}
                     style={{
                         height: 76, borderRadius: 20, background: 'var(--action)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
