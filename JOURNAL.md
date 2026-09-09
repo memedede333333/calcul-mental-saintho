@@ -57,6 +57,22 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Lot 24 : Apprendre les tables et les quatre modales (Écrans 35 et 36)
+
+**Fait** — Les deux derniers écrans de la refonte v10 sont livrés, parachevant l'intégration des 36 maquettes dans le code :
+- **Écran 35 (Apprendre)** (`Learn.jsx`) : sélecteur de tables borné par `profil.plafond_tables` (10, 12 ou 15) et multiplicateur 1 à 10. Carte 1 commutativité avec animation de rotation de la grille de points (« Faire tourner », réarrangement des mêmes ronds, maxime « Une case apprise, c'est deux réponses »). Carte 2 « La coupure en deux » calculée par règle algorithmique (masquée pour ≤ 5 et 10, 5 + n pour 6..9, 10 + n pour ≥ 11). Bouton direct « Tester la table de X en libre » et « Fait suivant › ». Aucune écriture ni scoring en base.
+- **Écran 36 (Les quatre modales)** (`Modals.jsx`) sur voile indigo 55% (`rgba(32, 34, 107, 0.55)`), fermables par clic backdrop et touche Échap :
+  1. *Choisir mon avatar* (Élève 8 emojis fermés sans saisie libre, et Enseignant avec choix d'initiales ou emojis).
+  2. *Changer la classe d'un élève* (liste des classes, mention de l'audit trail).
+  3. *Désactiver l'accès* (explication exacte de la conservation des données).
+  4. *Aperçu d'import CSV* : branchement effectif de `apercu_import_eleves` (RPC `apercuImportEleves` dans `api.js`), affichage des 4 compteurs serveur stricts (`creations + mises_a_jour + ignorees = lignes_lues`, `dont_reactivations` en sous-ensemble, `actifs_absents_du_fichier` distinct), tableau prévisionnel avec raisons de rejet serveur mot pour mot, et séparation stricte entre aperçu en lecture seule et validation finale.
+
+**Décidé** — L'aperçu d'import est un garde-fou fondamental en lecture seule : aucune modification n'est appliquée tant que le professeur ne confirme pas explicitement. ✅ *validé par conception (migration 24)*
+
+**Constaté** — `apercu_import_eleves` existait depuis la migration 24 mais n'avait jamais été exposée dans `api.js` ni intégrée à l'UI admin. C'est désormais chose faite.
+
+**Ensuite** — Les 36 maquettes de la refonte v10 sont désormais toutes intégrées au code frontend et validées par `check-tokens.mjs` et `vite build`. Recette globale et retours utilisateurs.
+
 ## 2026-09-09 — Lot 23 : Migrations 29 et 30, profils et classements (Écrans 28 à 32)
 
 **Fait** —

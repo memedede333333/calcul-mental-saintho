@@ -40,12 +40,13 @@ export default function Practice({
     const initialGlobalTimer = mode === 'countdown' ? (config?.timer || modeMeta.globalTimer || 120) : 0;
     const questionDuration = mode === 'sprint' ? (config?.timer || modeMeta.qTimer || 3) : 0;
 
-    const initialPhase = tablesInitiales?.length
+    const effectiveTables = tablesInitiales?.length ? tablesInitiales : (config?.tables?.length ? config.tables : null);
+    const initialPhase = effectiveTables?.length
         ? (isLibre ? 'libre-quiz' : 'quiz')
         : (isLibre ? 'libre-intro' : 'setup');
 
     const [phase, setPhase] = useState(initialPhase);
-    const [picked, setPicked] = useState(tablesInitiales?.length ? tablesInitiales : DEFAULT_TABLES.filter(t => t <= plafond));
+    const [picked, setPicked] = useState(effectiveTables?.length ? effectiveTables : DEFAULT_TABLES.filter(t => t <= plafond));
     const [length, setLength] = useState(initialLength);
     const [globalTimer, setGlobalTimer] = useState(initialGlobalTimer);
     const [result, setResult] = useState(null);

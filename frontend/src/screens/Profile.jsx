@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { monProfil, monProfilProf, changerAvatar, listeClasses, definirMesClasses } from '../api';
+import { monProfil, monProfilProf, changerAvatar, changerAvatarProf, listeClasses, definirMesClasses } from '../api';
 import { cleFait } from '../logic/mastery';
 import MasteryGrid from '../components/MasteryGrid';
 import { IconSprint, IconChrono, IconSansFaute, IconMontee } from '../components/Icons';
+import { ModalAvatar } from '../components/Modals';
 
 /**
  * Profile — Aiguille vers ProfileEleve (Écran 29) ou ProfileProf (Écran 30)
@@ -35,6 +36,12 @@ function ProfileProf({ onBack, onLogout, onGo }) {
     const [editingClasses, setEditingClasses] = useState(false);
     const [selectedClasses, setSelectedClasses] = useState([]);
     const [savingClasses, setSavingClasses] = useState(false);
+    const [showAvatarPickerProf, setShowAvatarPickerProf] = useState(false);
+
+    const handleChangerAvatarProf = async (emoji) => {
+        setProfil(p => ({ ...p, avatar_emoji: emoji }));
+        await changerAvatarProf(emoji);
+    };
 
     const charger = useCallback(async () => {
         setLoading(true);
@@ -142,13 +149,19 @@ function ProfileProf({ onBack, onLogout, onGo }) {
                 boxShadow: 'var(--ombre-carte)', padding: 26,
                 display: 'flex', alignItems: 'center', gap: 22,
             }}>
-                <div style={{
-                    width: 104, height: 104, borderRadius: 32,
-                    background: 'var(--surface-alt)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
-                    color: 'var(--indigo)', flexShrink: 0,
-                }}>
+                <div
+                    onClick={() => setShowAvatarPickerProf(true)}
+                    style={{
+                        width: 104, height: 104, borderRadius: 32,
+                        background: 'var(--surface-alt)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
+                        color: 'var(--indigo)', flexShrink: 0,
+                        cursor: 'pointer',
+                        transition: 'transform 0.15s ease',
+                    }}
+                    title="Changer d'avatar (emoji ou initiales)"
+                >
                     {profil?.avatar_emoji ? (
                         <span style={{ fontSize: 52 }}>{profil.avatar_emoji}</span>
                     ) : (
@@ -382,6 +395,16 @@ function ProfileProf({ onBack, onLogout, onGo }) {
             >
                 Se déconnecter
             </button>
+
+            {showAvatarPickerProf && (
+                <ModalAvatar
+                    initialAvatar={profil?.avatar_emoji}
+                    estProf={true}
+                    initiales={profil?.initiales}
+                    onClose={() => setShowAvatarPickerProf(false)}
+                    onSave={handleChangerAvatarProf}
+                />
+            )}
         </div>
     );
 }
@@ -588,29 +611,13 @@ function ProfileEleve({ onBack, identite, onLogout, onGo }) {
                 </div>
             </div>
 
-            {/* Sélecteur d'avatar (déplié au clic sur le crayon) */}
+            {/* Modale Choisir mon avatar (Écran 36a) */}
             {showAvatarPicker && (
-                <div style={{
-                    background: 'var(--surface)', borderRadius: 20, padding: 16,
-                    boxShadow: 'var(--ombre-carte)', display: 'flex',
-                    gap: 12, justifyContent: 'center', flexWrap: 'wrap',
-                }}>
-                    {AVATAR_OPTIONS.map(em => (
-                        <button
-                            key={em}
-                            type="button"
-                            onClick={() => handleChangerAvatar(em)}
-                            style={{
-                                fontSize: 36, width: 60, height: 60, borderRadius: 16,
-                                border: avatar === em ? '3px solid var(--action)' : '2px solid var(--bordure)',
-                                background: avatar === em ? 'var(--ciel-pale)' : 'var(--surface)',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
-                            {em}
-                        </button>
-                    ))}
-                </div>
+                <ModalAvatar
+                    initialAvatar={avatar}
+                    onClose={() => setShowAvatarPicker(false)}
+                    onSave={handleChangerAvatar}
+                />
             )}
 
             {/* 2. Carte Grille de maîtrise (les 4 comptes vérifiés) */}

@@ -5,9 +5,8 @@
 > celui-ci renvoie.
 >
 > Dernière mise à jour : **9 septembre 2026** — **30 migrations, 167 cas
-> de test verts**. L'application s'appelle `matHo`. **La refonte visuelle est
-> appliquée dans le code** : les lots 13 à 16 bis sont livrés et vérifiés
-> (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
+> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
+> Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
 > **Le lot 18 est livré** (maîtrise au temps de réponse côté serveur, seuil 3s).
 > **Le lot 19 est livré** : la **migration 27 est appliquée** sur `calcul-mental-dev`,
@@ -21,7 +20,8 @@
 > (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) sont refaites sur les maquettes Claude Design.
 > **Le lot 22 est livré** : **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur).
 > **Le lot 23 est livré** : migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées, types TypeScript régénérés, écrans 28 (Mes défis passés), 29 (Profil élève), 30 (Profil enseignant), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales), correction du dénominateur `/20` dans `JoinChallenge.jsx`.
-> **Prochaine étape** : Lot 24 (Écran 35 Apprendre, Écran 36 Modales).
+> **Le lot 24 est livré** : Écran 35 (`Learn.jsx`) entièrement reconstruit (sélecteur borné par `plafond_tables`, multiplicateur 1 à 10, carte 1 commutativité avec animation de rotation « Faire tourner » et ronds persistants, carte 2 règle de « La coupure en deux » 5+n ou 10+n masquée pour ≤ 5 et 10, bouton direct libre, aucun enregistrement ni scoring). Écran 36 (`Modals.jsx`) avec les 4 modales unifiées sur voile indigo 55% : a) avatar élève (8 emojis fermés) et enseignant (emojis / initiales), b) changer classe d'un élève avec mention d'audit trail, c) désactiver élève avec garantie de conservation des résultats, d) aperçu d'import CSV branché sur `apercu_import_eleves` (RPC `apercuImportEleves` dans `api.js`) avec 4 compteurs serveur stricts, raisons de rejet serveur mot pour mot, et séparation stricte entre prévisualisation et écriture en base.
+> **Jalon atteint** : **Les 36 maquettes de la refonte v10 sont dans le code.**
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
 > Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
@@ -807,6 +807,7 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
 11. ✅ **Lot 21** : Migration 28 (`populations_classements`) appliquée en base (146 cas verts), types TypeScript régénérés, écrans 22 (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) refaits sur les maquettes Claude Design. Mot « actif » banni pour qualifier les joueurs, ligne sticky avec rang et écart calculé au serveur (`ecart_au_dessus`), état vide du lundi matin, en-tête de classe (`entete_classe`), tables fragiles triées par part de classe en difficulté, ouverture collective de plafond. Fait le 08/09.
 12. ✅ **Lot 22** : Code projeté plein écran, accueil professeur et rejoindre un défi. **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur). Fait le 09/09.
 13. ✅ **Lot 23** : Migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées en base (167 cas de test verts). Types TypeScript régénérés (`database.ts`). Écrans 28 (Mes défis passés avec distinction rejoints/terminés et bi-jauge), 29 (Profil élève avec 4 comptes de grille = `plafond × plafond`, jours d'entraînement all-time et date déduite de Montée), 30 (Profil enseignant avec avatar emoji ou initiales, classes favorites et stats ce mois), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales). Correction du dénominateur `/20` dans `JoinChallenge.jsx`. Fait le 09/09.
+14. ✅ **Lot 24** : Écran 35 (Apprendre les tables) et Écran 36 (les 4 modales unifiées sur voile indigo 55%). Branchement d'`apercu_import_eleves` (`apercuImportEleves` dans `api.js`), respects des règles de comptage serveur (`creations + mises_a_jour + ignorees = lignes_lues`, `dont_reactivations` sous-ensemble, `actifs_absents_du_fichier` sur la base), affichage littéral des motifs de rejet serveur, commutativité animée avec rotation sans disparition des ronds, coupure en deux algorithmique, sélecteur de table borné par `plafond_tables`, zéro écriture en mode apprentissage. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.** Fait le 09/09.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

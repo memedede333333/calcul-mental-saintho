@@ -378,7 +378,7 @@ export default function App() {
                     }}
                 />
             )}
-            {screen === 'learn' && <Learn onBack={goHome} />}
+            {screen === 'learn' && <Learn onBack={goHome} onGo={handleGo} profil={profil} />}
             {screen === 'play' && (
                 <Practice
                     onBack={goHome}

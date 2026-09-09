@@ -2,8 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
     listeEleves, listeProfs, creerProf, modifierProf, desactiverProf,
-    importerEleves, reparerRattachements, journalAdmin,
+    apercuImportEleves, importerEleves, reparerRattachements, journalAdmin,
 } from '../api.js';
+import {
+    ModalChangerClasse,
+    ModalDesactiverEleve,
+    ModalApercuImport,
+    ModalFrame,
+} from '../components/Modals';
 
 /**
  * Admin — Écran d'administration (Maquette 25)
@@ -600,143 +606,18 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
  * MODALS ET COMPOSANTS UTILITAIRES
  * ================================================================= */
 
-function ModalChangerClasse({ eleve, classes, onClose, onConfirm, busy }) {
-    const [nouvelleClasse, setNouvelleClasse] = useState(eleve.classe || '');
-
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="screen-enter"
-                style={{
-                    background: 'var(--surface)', borderRadius: 20, padding: 24,
-                    width: '100%', maxWidth: 440, border: '1px solid var(--bordure)',
-                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 16
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
-                        Changer de classe
-                    </h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
-                        ✕
-                    </button>
-                </div>
-
-                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 15, color: 'var(--gris)', fontWeight: 600 }}>
-                    Élève : <b style={{ color: 'var(--indigo)' }}>{eleve.prenom} {eleve.nom}</b><br />
-                    Classe actuelle : <b style={{ color: 'var(--indigo)' }}>{eleve.classe}</b>
-                </p>
-
-                <div>
-                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 8, textTransform: 'uppercase' }}>
-                        Nouvelle classe :
-                    </label>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {classes.map(c => (
-                            <button
-                                key={c.classe}
-                                type="button"
-                                className={`admin-class-pill${nouvelleClasse === c.classe ? ' admin-class-pill--active' : ''}`}
-                                onClick={() => setNouvelleClasse(c.classe)}
-                            >
-                                {c.classe}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 8, justifyContent: 'flex-end' }}>
-                    <button
-                        type="button"
-                        className="admin-btn-table"
-                        onClick={onClose}
-                        disabled={busy}
-                    >
-                        Annuler
-                    </button>
-                    <button
-                        type="button"
-                        className="admin-btn-action-main"
-                        style={{ height: 38, padding: '0 16px', fontSize: 14 }}
-                        onClick={() => onConfirm(eleve.eleve_id, nouvelleClasse)}
-                        disabled={busy || nouvelleClasse === eleve.classe}
-                    >
-                        {busy ? 'Enregistrement…' : 'Valider le changement'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function ModalDesactiverEleve({ eleve, onClose, onConfirm, busy }) {
-    const [motif, setMotif] = useState('');
-
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="screen-enter"
-                style={{
-                    background: 'var(--surface)', borderRadius: 20, padding: 24,
-                    width: '100%', maxWidth: 460, border: '1px solid var(--bordure)',
-                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 14
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--rouge)' }}>
-                    Désactiver {eleve.prenom} {eleve.nom} ?
-                </h3>
-
-                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 14, lineHeight: 1.5, color: 'var(--gris)', fontWeight: 600 }}>
-                    On ne supprime jamais un élève en cours d'année. On le désactive : <b>ses résultats restent, son accès s'arrête</b>. Il sera rangé en fin de liste et pourra être réactivé à tout moment.
-                </p>
-
-                <div>
-                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 6 }}>
-                        Motif (optionnel) :
-                    </label>
-                    <input
-                        type="text"
-                        placeholder="ex. Départ de l'établissement"
-                        value={motif}
-                        onChange={e => setMotif(e.target.value)}
-                        style={{
-                            width: '100%', padding: '10px 12px', borderRadius: 10,
-                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
-                            fontSize: 14, color: 'var(--indigo)', outline: 'none'
-                        }}
-                    />
-                </div>
-
-                <div style={{ display: 'flex', gap: 10, marginTop: 10, justifyContent: 'flex-end' }}>
-                    <button
-                        type="button"
-                        className="admin-btn-table"
-                        onClick={onClose}
-                        disabled={busy}
-                    >
-                        Annuler
-                    </button>
-                    <button
-                        type="button"
-                        className="admin-btn-table admin-btn-table--desactiver"
-                        style={{ height: 38, padding: '0 16px', fontSize: 14, fontWeight: 700 }}
-                        onClick={() => onConfirm(eleve.eleve_id, motif.trim() || null)}
-                        disabled={busy}
-                    >
-                        {busy ? 'Désactivation…' : `Désactiver ${eleve.prenom}`}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
+/* ===================================================================
+ * MODALS ET COMPOSANTS UTILITAIRES
+ * ================================================================= */
 
 function ModalImport({ onClose, onSuccess }) {
     const [csv, setCsv] = useState('');
+    const [nomFichier, setNomFichier] = useState('eleves.csv');
+    const [apercuData, setApercuData] = useState(null);
+    const [parsedEleves, setParsedEleves] = useState([]);
     const [resultat, setResultat] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [busyImport, setBusyImport] = useState(false);
     const [busyRattachement, setBusyRattachement] = useState(false);
     const [msgRattachement, setMsgRattachement] = useState('');
     const fileRef = useRef(null);
@@ -744,37 +625,66 @@ function ModalImport({ onClose, onSuccess }) {
     const handleFile = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setNomFichier(file.name);
         const reader = new FileReader();
-        reader.onload = (ev) => setCsv(ev.target.result);
+        reader.onload = (ev) => {
+            const content = ev.target.result || '';
+            setCsv(content);
+        };
         reader.readAsText(file);
     };
 
-    const handleImport = async () => {
+    const handleGenererApercu = async () => {
         if (!csv.trim()) return;
         setBusy(true);
         setResultat(null);
 
-        const lines = csv.trim().split('\n').filter(l => l.trim());
+        const lines = csv.trim().split('\n');
         const eleves = [];
-        for (const line of lines) {
+        let lineIdx = 0;
+        for (const rawLine of lines) {
+            lineIdx++;
+            const line = rawLine.trim();
+            if (!line) continue;
             const parts = line.split(/[,;\t]/).map(s => s.trim());
-            if (parts.length < 4) continue;
-            if (parts[0].toLowerCase() === 'email') continue;
-            eleves.push({ email: parts[0], nom: parts[1], prenom: parts[2], classe: parts[3] });
+            if (parts[0].toLowerCase() === 'email' && lineIdx === 1) continue;
+            eleves.push({
+                ligne: lineIdx,
+                email: parts[0] || '',
+                nom: parts[1] || '',
+                prenom: parts[2] || '',
+                classe: parts[3] || '',
+            });
         }
 
         if (eleves.length === 0) {
-            setResultat({ ok: false, error: 'Aucun élève trouvé. Format requis : email, nom, prénom, classe' });
+            setResultat({ error: 'Aucun élève trouvé. Format requis : email, nom, prénom, classe' });
             setBusy(false);
             return;
         }
 
-        const res = await importerEleves(eleves);
-        setResultat(res.ok ? res.data : { error: res.error });
+        const res = await apercuImportEleves(eleves);
         if (res.ok) {
-            await onSuccess();
+            setApercuData(res.data);
+            setParsedEleves(eleves);
+        } else {
+            setResultat({ error: res.error || "Impossible de générer l'aperçu." });
         }
         setBusy(false);
+    };
+
+    const handleConfirmImport = async () => {
+        if (!parsedEleves.length) return;
+        setBusyImport(true);
+        const res = await importerEleves(parsedEleves);
+        if (res.ok) {
+            setApercuData(null);
+            setResultat(res.data);
+            await onSuccess();
+        } else {
+            alert(`Erreur d'import : ${res.error || 'Échec du traitement'}`);
+        }
+        setBusyImport(false);
     };
 
     const handleRepair = async () => {
@@ -794,106 +704,122 @@ function ModalImport({ onClose, onSuccess }) {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="screen-enter"
-                style={{
-                    background: 'var(--surface)', borderRadius: 20, padding: 24,
-                    width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto',
-                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
-                    display: 'flex', flexDirection: 'column', gap: 14
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
-                        Importer une classe
-                    </h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
-                        ✕
+        <>
+            <ModalFrame onClose={onClose} maxWidth={560}>
+                <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
+                            Importer une classe
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <p style={{ margin: 0, font: '600 15px var(--texte)', color: 'var(--gris)' }}>
+                        Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.<br />
+                        L'aperçu permet de vérifier les créations, mises à jour et rejets <b>avant</b> toute écriture.
+                    </p>
+
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".csv,.txt"
+                        onChange={handleFile}
+                        style={{ font: '600 14px var(--texte)' }}
+                    />
+
+                    <textarea
+                        rows={4}
+                        placeholder="Ou collez directement les lignes CSV ici..."
+                        value={csv}
+                        onChange={e => setCsv(e.target.value)}
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: 12,
+                            border: '1px solid var(--bordure)', font: '500 13px monospace',
+                            boxSizing: 'border-box', outline: 'none'
+                        }}
+                    />
+
+                    <button
+                        type="button"
+                        className="admin-btn-action-main"
+                        style={{ height: 48, font: '700 16px var(--texte)' }}
+                        onClick={handleGenererApercu}
+                        disabled={busy || !csv.trim()}
+                    >
+                        {busy ? 'Génération de l\'aperçu…' : 'Voir l\'aperçu avant d\'importer ›'}
                     </button>
-                </div>
 
-                <p style={{ margin: 0, fontFamily: 'var(--texte)', fontSize: 14, color: 'var(--gris)', fontWeight: 600 }}>
-                    Fichier CSV : <b>email, nom, prénom, classe</b> — un élève par ligne.<br />
-                    L'import ne désactive jamais personne.
-                </p>
-
-                <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ fontSize: 13 }} />
-
-                <textarea
-                    rows={4}
-                    placeholder="Ou collez directement les lignes CSV ici..."
-                    value={csv}
-                    onChange={e => setCsv(e.target.value)}
-                    style={{
-                        width: '100%', padding: '10px', borderRadius: 10,
-                        border: '1px solid var(--bordure)', fontFamily: 'monospace',
-                        fontSize: 12, outline: 'none'
-                    }}
-                />
-
-                <button
-                    type="button"
-                    className="admin-btn-action-main"
-                    onClick={handleImport}
-                    disabled={busy || !csv.trim()}
-                >
-                    {busy ? 'Import en cours…' : "Lancer l'import"}
-                </button>
-
-                {resultat && (
-                    <div style={{
-                        padding: 12, borderRadius: 10, background: 'var(--ivoire)',
-                        border: '1px solid var(--bordure)', fontFamily: 'var(--texte)', fontSize: 13
-                    }}>
-                        {resultat.error ? (
-                            <span style={{ color: 'var(--rouge)', fontWeight: 700 }}>❌ {resultat.error}</span>
-                        ) : (
-                            <div>
-                                <div style={{ color: 'var(--succes)', fontWeight: 700, marginBottom: 4 }}>
-                                    ✅ Import terminé
+                    {resultat && (
+                        <div style={{
+                            padding: 14, borderRadius: 12, background: 'var(--ivoire)',
+                            border: '1px solid var(--bordure)', font: '600 14px var(--texte)'
+                        }}>
+                            {resultat.error ? (
+                                <span style={{ color: 'var(--rouge)', fontWeight: 700 }}>❌ {resultat.error}</span>
+                            ) : (
+                                <div>
+                                    <div style={{ color: 'var(--vert)', fontWeight: 700, marginBottom: 4 }}>
+                                        ✅ Import terminé
+                                    </div>
+                                    <div style={{ color: 'var(--indigo)' }}>
+                                        {resultat.crees ?? 0} créé{(resultat.crees ?? 0) > 1 ? 's' : ''}, {resultat.mis_a_jour ?? 0} mis à jour.
+                                        {(resultat.rattaches ?? 0) > 0 && ` (${resultat.rattaches} rattachés)`}
+                                    </div>
                                 </div>
-                                <div style={{ color: 'var(--indigo)' }}>
-                                    {resultat.crees ?? 0} créé{(resultat.crees ?? 0) > 1 ? 's' : ''}, {resultat.mis_a_jour ?? 0} mis à jour.
-                                    {(resultat.rattaches ?? 0) > 0 && ` (${resultat.rattaches} rattachés)`}
-                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Section Rattachement Google */}
+                    <div style={{ borderTop: '1px solid var(--bordure)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ font: '700 14px var(--texte)', color: 'var(--indigo)' }}>
+                            Rattachement des comptes Google
+                        </div>
+                        <div style={{ font: '600 13px var(--texte)', color: 'var(--gris)' }}>
+                            À lancer après un import ou si un élève s'est connecté avant la création de sa fiche.
+                        </div>
+                        <button
+                            type="button"
+                            className="admin-btn-table"
+                            style={{ height: 38, font: '700 14px var(--texte)', alignSelf: 'flex-start' }}
+                            onClick={handleRepair}
+                            disabled={busyRattachement}
+                        >
+                            {busyRattachement ? 'Vérification…' : '🔄 Réparer les rattachements'}
+                        </button>
+                        {msgRattachement && (
+                            <div style={{ font: '700 13px var(--texte)', color: msgRattachement.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)' }}>
+                                {msgRattachement}
                             </div>
                         )}
                     </div>
-                )}
 
-                {/* Section Rattachement Google */}
-                <div style={{ borderTop: '1px solid var(--bordure)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--indigo)' }}>
-                        Rattachement des comptes Google
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <button type="button" className="admin-btn-table" onClick={onClose}>
+                            Fermer
+                        </button>
                     </div>
-                    <div style={{ fontFamily: 'var(--texte)', fontSize: 12, color: 'var(--gris)' }}>
-                        À lancer après un import ou si un élève s'est connecté avant la création de sa fiche.
-                    </div>
-                    <button
-                        type="button"
-                        className="admin-btn-table"
-                        style={{ height: 36, fontWeight: 700 }}
-                        onClick={handleRepair}
-                        disabled={busyRattachement}
-                    >
-                        {busyRattachement ? 'Vérification…' : '🔄 Réparer les rattachements'}
-                    </button>
-                    {msgRattachement && (
-                        <div style={{ fontFamily: 'var(--texte)', fontSize: 12, fontWeight: 700, color: msgRattachement.startsWith('❌') ? 'var(--rouge)' : 'var(--succes)' }}>
-                            {msgRattachement}
-                        </div>
-                    )}
                 </div>
+            </ModalFrame>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-                    <button type="button" className="admin-btn-table" onClick={onClose}>
-                        Fermer
-                    </button>
-                </div>
-            </div>
-        </div>
+            {/* Modale d'aperçu d'import (Écran 36d) */}
+            {apercuData && (
+                <ModalApercuImport
+                    apercu={apercuData}
+                    nomFichier={nomFichier}
+                    parsedRows={parsedEleves}
+                    onClose={() => setApercuData(null)}
+                    onConfirm={handleConfirmImport}
+                    busy={busyImport}
+                />
+            )}
+        </>
     );
 }
 
@@ -922,27 +848,23 @@ function ModalAjouterProf({ onClose, onSuccess }) {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="screen-enter"
-                style={{
-                    background: 'var(--surface)', borderRadius: 20, padding: 24,
-                    width: '100%', maxWidth: 420, border: '1px solid var(--bordure)',
-                    boxShadow: 'var(--ombre-carte)', display: 'flex', flexDirection: 'column', gap: 14
-                }}
-                onClick={e => e.stopPropagation()}
-            >
+        <ModalFrame onClose={onClose} maxWidth={440}>
+            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)' }}>
+                    <h3 style={{ margin: 0, font: '700 22px var(--titre)', color: 'var(--indigo)' }}>
                         Ajouter un enseignant
                     </h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                    >
                         ✕
                     </button>
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 4 }}>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
                         Nom :
                     </label>
                     <input
@@ -952,14 +874,14 @@ function ModalAjouterProf({ onClose, onSuccess }) {
                         onChange={e => setNom(e.target.value)}
                         style={{
                             width: '100%', padding: '10px 12px', borderRadius: 10,
-                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
-                            fontSize: 14, outline: 'none'
+                            border: '1px solid var(--bordure)', font: '600 14px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none'
                         }}
                     />
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 4 }}>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
                         Email Google :
                     </label>
                     <input
@@ -969,14 +891,14 @@ function ModalAjouterProf({ onClose, onSuccess }) {
                         onChange={e => setEmail(e.target.value)}
                         style={{
                             width: '100%', padding: '10px 12px', borderRadius: 10,
-                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
-                            fontSize: 14, outline: 'none'
+                            border: '1px solid var(--bordure)', font: '600 14px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none'
                         }}
                     />
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--gris)', marginBottom: 6 }}>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 6 }}>
                         Rôle :
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -1000,7 +922,7 @@ function ModalAjouterProf({ onClose, onSuccess }) {
                 </div>
 
                 {msg && (
-                    <div style={{ fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700, color: 'var(--rouge)' }}>
+                    <div style={{ font: '700 13px var(--texte)', color: 'var(--rouge)' }}>
                         {msg}
                     </div>
                 )}
@@ -1012,7 +934,7 @@ function ModalAjouterProf({ onClose, onSuccess }) {
                     <button
                         type="button"
                         className="admin-btn-action-main"
-                        style={{ height: 38, padding: '0 16px', fontSize: 14 }}
+                        style={{ height: 38, padding: '0 16px', font: '700 14px var(--texte)' }}
                         onClick={handleAdd}
                         disabled={busy}
                     >
@@ -1020,7 +942,7 @@ function ModalAjouterProf({ onClose, onSuccess }) {
                     </button>
                 </div>
             </div>
-        </div>
+        </ModalFrame>
     );
 }
 

@@ -612,6 +612,15 @@ export async function definirMesClasses(classes) {
  * désactivation en masse en un clic : un export raté couperait
  * l'accès à tout un niveau un lundi matin.
  */
+/**
+ * Aperçu de ce que le fichier CSV produirait. N'écrit rien, ne journalise rien.
+ * Renvoie : { lignes_lues, creations, mises_a_jour, dont_reactivations,
+ *             ignorees, rattachables, lignes_ignorees, actifs_absents_du_fichier }
+ */
+export async function apercuImportEleves(eleves) {
+    return rpc('apercu_import_eleves', { p_eleves: eleves });
+}
+
 export async function importerEleves(eleves) {
     return rpc('importer_eleves', { p_eleves: eleves });
 }
@@ -738,7 +747,7 @@ export const api = {
     // enseignant
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
-    importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
+    apercuImportEleves, importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
 };
