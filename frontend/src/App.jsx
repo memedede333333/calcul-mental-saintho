@@ -48,6 +48,7 @@ export default function App() {
 
     const estProf = identite?.type === 'prof';
     const estAdmin = identite?.admin === true;
+    const profil = identite?.profil;
 
     useEffect(() => {
         if (screen !== 'challenges') {
