@@ -57,6 +57,21 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Lot 25 : Clavier physique fermé dans les modes chronométrés
+
+**Fait** — Fermeture sélective de la saisie numérique au clavier physique sur ordinateur dans les modes où le temps détermine le score :
+- **3 modes fermés** : Sprint (`sprint`), Contre-la-montre (`countdown`) et Montée des tables (`climb` : chrono de 3 s par question et déblocage de plafond).
+- **Modes restant ouverts au clavier** : Sans faute (`flawless`), entraînement Libre (`libre`), Apprendre (`learn`), et la saisie du code de défi (écran 33).
+- **Touche Échap** : reste active en toute circonstance comme sortie de secours.
+- **Règle unique centralisée** : créée dans `frontend/src/logic/saisie.js` (`MODES_SANS_CLAVIER`, `clavierAutorise(mode)`).
+- **Communication élève** : mention discrète sur l'écran de préparation avant le lancement (« *Sur cette partie, on répond au doigt — pour que tout le monde soit à égalité.* ») et silence complet pendant la partie pour ne pas déconcentrer.
+
+**Décidé** — Ce choix est une mesure d'**équité** et non d'anti-triche : un clavier physique est beaucoup plus rapide qu'un doigt sur iPad, et les classements doivent comparer des conditions comparables. Fermé pour tout le monde sans réglage ni interrupteur ; les éventuelles dérogations individuelles (PAI, handicap moteur) viendront plus tard si le besoin se présente. ✅ *tranché par Aymeri le 09/09*
+
+**Constaté** — L'import initial des 310 élèves du collège a été exécuté avec succès via la nouvelle modale d'aperçu d'import.
+
+**Ensuite** — Poursuite des tests de recette et préparation de la mise en production.
+
 ## 2026-09-09 — Lot 24 : Apprendre les tables et les quatre modales (Écrans 35 et 36)
 
 **Fait** — Les deux derniers écrans de la refonte v10 sont livrés, parachevant l'intégration des 36 maquettes dans le code :

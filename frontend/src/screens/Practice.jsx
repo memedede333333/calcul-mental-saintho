@@ -6,6 +6,7 @@ import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
 import MasteryGrid from '../components/MasteryGrid';
 import { IconCadenas, IconSprint, IconSansFaute, IconChrono, IconMontee, IconMaGrille, IconAmpoule, IconLibre } from '../components/Icons';
+import { clavierAutorise } from '../logic/saisie';
 
 /**
  * Practice — Modes de jeu élève (Maquettes 1, 3, 7 + Écrans 18, 19, 20, 21)
@@ -1591,6 +1592,11 @@ function Setup({ onBack, picked, setPicked, mode, onStart, onShowGrid, plafond, 
 
             {/* 6. Bouton C'est parti ! */}
             <div style={{ marginTop: 10, marginBottom: 10 }}>
+                {!clavierAutorise(mode) && (
+                    <div style={{ textAlign: 'center', marginBottom: 12, fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                        Sur cette partie, on répond au doigt — pour que tout le monde soit à égalité.
+                    </div>
+                )}
                 <button
                     disabled={picked.length === 0}
                     onClick={onStart}
@@ -1835,13 +1841,14 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
 
     useEffect(() => {
         const h = (e) => {
+            if (e.key === 'Escape') { onQuit(); return; }
+            if (!clavierAutorise(mode)) return;
             if (e.key >= '0' && e.key <= '9') { e.preventDefault(); press(parseInt(e.key, 10)); }
             else if (e.key === 'Backspace') { e.preventDefault(); del(); }
-            else if (e.key === 'Escape') { onQuit(); }
         };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
-    }, [press, del, onQuit]);
+    }, [press, del, onQuit, mode]);
 
     const activeIndex = digits.findIndex(d => d === '');
     const currentQuestionNum = Math.min(answered + 1, length || answered + 1);

@@ -16,6 +16,7 @@ import {
 } from '../components/Icons';
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 import JoinChallenge from './JoinChallenge';
+import { clavierAutorise } from '../logic/saisie';
 
 /**
  * Challenges — Mode Défis
@@ -556,6 +557,12 @@ function ChallengeConfig({ type, setType, tables, setTables, plafond, estProf, o
                 )}
             </div>
 
+            {!clavierAutorise(type.id) && (
+                <div style={{ textAlign: 'center', marginBottom: 12, fontFamily: 'var(--texte)', fontSize: 14, fontWeight: 600, color: 'var(--gris)' }}>
+                    Sur cette partie, on répond au doigt — pour que tout le monde soit à égalité.
+                </div>
+            )}
+
             <button
                 className="btn btn--gold"
                 style={{ width: '100%', fontSize: 22, padding: 16 }}
@@ -997,7 +1004,7 @@ function ChallengePlay({ type, tables, maitrise, defiQuestions, defiDureeS, onQu
  * a question timer bar, and first-attempt scoring.
  * ================================================================ */
 
-function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
+function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions, mode }) {
     // En mode défi, les questions sont figées — pas de buildWeights, pas de newQuestion
     const isDefi = Array.isArray(defiQuestions) && defiQuestions.length > 0;
     const weights = useMemo(() => isDefi ? null : buildWeights(tables, maitrise || {}), [tables, maitrise, isDefi]);
@@ -1124,6 +1131,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions }) {
     // Keyboard handler
     const onKeyRef = useRef();
     onKeyRef.current = (e) => {
+        if (!clavierAutorise(mode)) return;
         if (e.key >= '0' && e.key <= '9') press(e.key);
         else if (e.key === 'Backspace') del();
     };
@@ -1205,7 +1213,7 @@ function renderQuestionTimer(active, expired) {
 /* --- Sprint : 20 questions, 3s/question --- */
 function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
     const total = defiQuestions?.length || 20;
-    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions });
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions, mode: 'sprint' });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
         score, answered,
@@ -1297,7 +1305,7 @@ function SprintPlay({ tables, maitrise, defiQuestions, onQuit, onDone }) {
 
 /* --- Sans faute : première erreur → fin, pas de chrono question --- */
 function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
-    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: false });
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: false, mode: 'flawless' });
     const { q, digits, setDigits, fb, setFb, word, setWord,
         lockRef, resultatsRef, numDigits, weights,
         streak, scoreRef, premierRef, answeredRef, maxStreakRef,
@@ -1368,7 +1376,7 @@ function FlawlessPlay({ tables, maitrise, onQuit, onDone }) {
 /* --- Contre-la-montre : 2 min, 3s/question --- */
 function CountdownPlay({ tables, maitrise, defiQuestions, defiDureeS, onQuit, onDone }) {
     const duration = defiDureeS || 120;
-    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions });
+    const engine = useQuizEngine({ tables, maitrise, hasQuestionTimer: true, defiQuestions, mode: 'countdown' });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits, weights,
         score,
@@ -1488,7 +1496,7 @@ function ClimbPlay({ onQuit, onDone }) {
     const [correctInLevel, setCorrectInLevel] = useState(0);
     const [levelMsg, setLevelMsg] = useState('');
 
-    const engine = useQuizEngine({ tables: [currentTable], maitrise: {}, hasQuestionTimer: true });
+    const engine = useQuizEngine({ tables: [currentTable], maitrise: {}, hasQuestionTimer: true, mode: 'climb' });
     const { q, digits, setDigits, fb, setFb, word, setWord, premierEssai, setPremierEssai,
         qTimerActive, qTimerExpired, lockRef, resultatsRef, numDigits,
         scoreRef, premierRef, answeredRef, maxStreakRef,
@@ -2198,6 +2206,15 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
                     Ton résultat apparaîtra dans le classement de la classe.<br />
                     Tu peux le rejouer, seul le premier essai compte.
                 </div>
+
+                {!clavierAutorise(modeKey) && (
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14,
+                        color: '#A9AFDE', marginTop: 12, textAlign: 'center',
+                    }}>
+                        Sur cette partie, on répond au doigt — pour que tout le monde soit à égalité.
+                    </div>
+                )}
 
                 {/* Boutons d'action */}
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 32 }}>

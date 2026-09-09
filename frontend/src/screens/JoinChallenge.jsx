@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { rejoindreDefi, avancementDefi, classementDefi } from '../api';
+import { clavierAutorise } from '../logic/saisie';
 
 /**
  * JoinChallenge — Écrans 33 & 34 (Refonte v10)
@@ -237,6 +238,11 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                     <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--ciel-pale)', textAlign: 'center' }}>
                         Seul ton premier essai compte au classement.
                     </div>
+                    {!clavierAutorise(defiData?.type) && (
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 14, fontWeight: 600, color: 'var(--ciel-pale)', textAlign: 'center', opacity: 0.9 }}>
+                            Sur cette partie, on répond au doigt — pour que tout le monde soit à égalité.
+                        </div>
+                    )}
                 </div>
             )}
 
