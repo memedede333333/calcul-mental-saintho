@@ -394,8 +394,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
                             <div className="admin-table-card">
                                 <div style={{
-                                    display: 'grid', gridTemplateColumns: '44px minmax(130px, 1fr) minmax(180px, 1.2fr) 90px minmax(100px, 1fr) 140px',
-                                    boxSizing: 'border-box', padding: '11px 16px', background: 'var(--ivoire)',
+                                    display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 130px',
+                                    minWidth: 480, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
                                     borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
                                     fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
                                     textTransform: 'uppercase', alignItems: 'center'
@@ -414,8 +414,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         <div
                                             key={p.prof_id}
                                             style={{
-                                                display: 'grid', gridTemplateColumns: '44px minmax(130px, 1fr) minmax(180px, 1.2fr) 90px minmax(100px, 1fr) 140px',
-                                                boxSizing: 'border-box', padding: '12px 16px', alignItems: 'center',
+                                                display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 130px',
+                                                minWidth: 480, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
                                                 borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
                                                 fontFamily: 'var(--texte)'
                                             }}
