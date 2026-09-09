@@ -274,6 +274,10 @@ dans aucune évaluation**. C'est ce dernier point qui dégonfle le problème.
 *(9 septembre 2026, Lot 25.)*
 Ce n'est pas une mesure anti-triche — c'est une mesure d'**équité**. Un clavier physique avec pavé numérique ou frappe à dix doigts sur l'ordinateur familial est nettement plus rapide qu'un doigt sur la vitre d'un iPad : dans les modes chronométrés, l'élève sur ordinateur battrait l'élève sur iPad sans avoir mieux appris ses tables. Le clavier physique (chiffres et retour arrière) est donc désactivé dans trois modes : **Sprint** (score au temps), **Contre-la-montre** (temps limité) et **Montée des tables** (chrono de 3 secondes par question pour survivre et débloquer les plafonds). Les modes Sans faute, Libre et Apprendre restent ouverts au clavier. La touche Échap reste active partout comme sortie de secours. Fermé pour tout le monde sans réglage ni interrupteur (les dérogations PAI/motricité viendront dans `logic/saisie.js` si le besoin apparaît).
 
+**La file d'attente hors-ligne protège aussi les défis.**
+*(9 septembre 2026, Lot 26.)*
+Jusqu'ici, seule `enregistrer_session` disposait d'un filet en cas de perte de réseau. Un défi terminé pendant une coupure de wifi était perdu en silence — particulièrement pénalisant en classe. `terminerDefi` est désormais branché sur la file locale `mettreEnAttente('terminer_defi', params)`. L'interface affiche la vérité : *« Ton résultat est gardé sur l'iPad. Il partira dès que le wifi revient. »* Le serveur protège contre les doublons via la clé primaire `(defi_id, eleve_id)` et la contrainte de participation unique. Limite assumée et documentée : les défis expirant sous 24 h, un résultat synchronisé après ce délai sera refusé et jeté par la file sans bloquer.
+
 ### Enseignants et administration
 
 **Un enseignant voit et gère TOUTES les classes**, pas seulement les siennes.

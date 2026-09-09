@@ -57,6 +57,16 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-09 — Lot 26 : file d'attente pour les défis et durée dynamique
+
+**Fait** — File d'attente hors-ligne étendue aux défis dans `src/api.js` (`terminerDefi`). Si le réseau coupe en fin de défi, la participation est mise en attente locale (`mettreEnAttente`) et rejouée dès le retour du wifi (`viderFile`), sans duplication possible grâce à la clé primaire `(defi_id, eleve_id)`. L'écran de résultat du défi affiche la vérité : *« Ton résultat est gardé sur l'iPad. Il partira dès que le wifi revient. »*. La durée du chrono est lue depuis le défi et formatée par une fonction centralisée (`logic/duree.js`), nettoyant les libellés en dur « 2 minutes ».
+
+**Décidé** — Limite acceptée des 24h documentée : un défi expire au bout de 24h ; si un iPad reste déconnecté plus de 24h, le serveur refusera le défi et la file jettera l'envoi au lieu de bloquer. ✅ *validé par Claude et Aymeri le 09/09*
+
+**Constaté** — Les défis joués par Lou lors de la session de 13h11 avaient été perdus suite à une déconnexion wifi sans filet, tandis que celui de 13h55 à 30s était bien inscrit en base mais n'apparaissait pas dans l'écran « Mes défis » car celui-ci ne liste que les défis créés par l'utilisateur connecté.
+
+**Ensuite** — Revue du diagnostic des performances de `classement_progression` avec Claude.
+
 ## 2026-09-09 — Recette terrain : défis en classe, fix page blanche et durée chrono
 
 **Fait** —

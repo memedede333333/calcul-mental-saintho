@@ -17,6 +17,7 @@ import {
 import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 import JoinChallenge from './JoinChallenge';
 import { clavierAutorise } from '../logic/saisie';
+import { formaterDuree } from '../logic/duree';
 
 /**
  * Challenges — Mode Défis
@@ -43,8 +44,8 @@ const CHALLENGE_TYPES = [
     },
     {
         id: 'countdown', emoji: '⏱', name: 'Contre-la-montre',
-        desc: '2 minutes — max de bonnes réponses',
-        color: '--sky', timer: 120, shareable: true,
+        desc: 'Max de bonnes réponses dans le temps imparti',
+        color: '--sky', dureeParDefaut: 60, shareable: true,
     },
     {
         id: 'climb', emoji: '🧗', name: 'Montée des tables',
@@ -162,7 +163,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             }
         }
         setEnvoiDefi(res.ok
-            ? { etat: 'ok' }
+            ? { etat: 'ok', enAttente: res.enAttente || false }
             : { etat: 'echec', message: res.error, payload }
         );
     }, [identite, onMaitriseMaj]);
@@ -222,7 +223,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             code: res.data.code,
             type: type.id,
             tables,
-            duree_s: type.id === 'countdown' ? (dureeS || 60) : 3,
+            duree_s: type.id === 'countdown' ? (dureeS || 60) : null,
         });
         setChallengeType(type);
         setPhase('defi-code');
@@ -554,7 +555,7 @@ function ChallengeConfig({ type, setType, tables, setTables, plafond, estProf, o
                 )}
                 {type.id === 'countdown' && (
                     <ul style={{ paddingLeft: 20, fontSize: 14, fontWeight: 600, lineHeight: 1.8, color: 'var(--gris)' }}>
-                        <li>2 minutes chrono, 3s par question</li>
+                        <li>Le temps s'écoule, 3s par question</li>
                         <li>1er essai = 1 pt, rattrapé = ½ pt</li>
                         <li>Maximum de points !</li>
                     </ul>
@@ -696,16 +697,8 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     // Tables disponibles (2 à 13)
     const availableTables = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
-    const formatDureeLabel = (s) => {
-        if (s === 30) return '30 s';
-        if (s === 60) return '1 min';
-        if (s === 90) return '1 min 30';
-        if (s === 120) return '2 min';
-        return `${s} s`;
-    };
-
     const modeLabel = currentModeId === 'sprint' ? 'Sprint' : 'Contre‑la‑montre';
-    const durationLabel = currentModeId === 'sprint' ? '20 questions' : formatDureeLabel(countdownDuration);
+    const durationLabel = currentModeId === 'sprint' ? '20 questions' : formaterDuree(countdownDuration);
     const sortedTables = [...tables].sort((a, b) => a - b);
     const summaryText = `${modeLabel} · table${sortedTables.length > 1 ? 's' : ''} ${sortedTables.join(', ')} · ${selectedClasse || 'Sans classe'} · ${durationLabel}`;
 
@@ -822,18 +815,13 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                             Durée du contre-la-montre
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                            {[
-                                { s: 30, label: '30 s' },
-                                { s: 60, label: '1 min' },
-                                { s: 90, label: '1 min 30' },
-                                { s: 120, label: '2 min' },
-                            ].map(opt => {
-                                const isSel = countdownDuration === opt.s;
+                            {[30, 60, 90, 120].map(s => {
+                                const isSel = countdownDuration === s;
                                 return (
                                     <button
-                                        key={opt.s}
+                                        key={s}
                                         type="button"
-                                        onClick={() => setCountdownDuration(opt.s)}
+                                        onClick={() => setCountdownDuration(s)}
                                         style={{
                                             height: 48, borderRadius: 12,
                                             border: isSel ? '2px solid var(--action)' : '1px solid var(--bordure)',
@@ -843,7 +831,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                                             cursor: 'pointer', transition: 'all 0.12s ease',
                                         }}
                                     >
-                                        {opt.label}
+                                        {formaterDuree(s)}
                                     </button>
                                 );
                             })}
@@ -1913,14 +1901,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
     const classe = avancement?.classe || defiInfo?.classe || null;
     const modeKey = defiInfo?.type || 'sprint';
     const dureeS = defiInfo?.duree_s || 60;
-    const formatDureeSimple = (s) => {
-        if (s === 30) return '30 s';
-        if (s === 60) return '1 min';
-        if (s === 90) return '1 min 30';
-        if (s === 120) return '2 min';
-        return `${s} s`;
-    };
-    const modeLabel = modeKey === 'countdown' ? `Contre‑la‑montre (${formatDureeSimple(dureeS)})` : 'Sprint';
+    const modeLabel = modeKey === 'countdown' ? `Contre‑la‑montre (${formaterDuree(dureeS)})` : 'Sprint';
 
     const formatTablesLabel = (tbls) => {
         if (!tbls || !tbls.length) return 'toutes les tables';
@@ -2474,6 +2455,18 @@ export function DefiLeaderboard({ defiId, defiInfo, result, type, estProf, envoi
                     <button className="btn btn--coral" style={{ fontSize: 14, padding: '8px 20px' }} onClick={onRetry}>
                         Réessayer
                     </button>
+                </div>
+            )}
+            {/* Résultat en attente de synchronisation wifi (Lot 26) */}
+            {envoiDefi?.enAttente && (
+                <div style={{
+                    background: 'var(--surface)', border: '2px solid var(--bordure)',
+                    borderRadius: 18, padding: '14px 16px', textAlign: 'center',
+                    boxShadow: 'var(--ombre-douce)',
+                }}>
+                    <p style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14, color: 'var(--gris)', margin: 0 }}>
+                        Ton résultat est gardé sur l'iPad. Il partira dès que le wifi revient.
+                    </p>
                 </div>
             )}
 

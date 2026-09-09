@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { rejoindreDefi, avancementDefi, classementDefi } from '../api';
 import { clavierAutorise } from '../logic/saisie';
+import { formaterDuree } from '../logic/duree';
 
 /**
  * JoinChallenge — Écrans 33 & 34 (Refonte v10)
@@ -208,8 +209,8 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                             <span style={{ width: 130, fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--ciel-pale)' }}>Mode</span>
                             <span style={{ fontFamily: 'var(--texte)', fontSize: 21, fontWeight: 700, color: 'var(--action-texte)' }}>
                                 {defiData.type === 'countdown'
-                                    ? 'Contre‑la‑montre · 2 min'
-                                    : `Sprint · ${Array.isArray(defiData.questions) ? defiData.questions.length : (typeof defiData.questions === 'number' ? defiData.questions : 20)} questions · ${defiData.duree_s || 3} s`}
+                                    ? `Contre‑la‑montre · ${formaterDuree(defiData.duree_s || 60)}`
+                                    : `Sprint · ${Array.isArray(defiData.questions) ? defiData.questions.length : (typeof defiData.questions === 'number' ? defiData.questions : 20)} questions`}
                             </span>
                         </div>
                         <div style={{ height: 2, background: 'rgba(255, 255, 255, 0.16)' }} />

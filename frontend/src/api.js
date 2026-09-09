@@ -444,7 +444,7 @@ export async function rejoindreDefi(code) {
 export async function terminerDefi({ defiId, score, tempsS, erreurs = 0,
                                      detail = {}, maitrise = {},
                                      scorePremierEssai = null, faits = null }) {
-    return rpc('terminer_defi', {
+    const params = {
         p_defi_id: defiId,
         p_score: score,
         p_temps_s: tempsS,
@@ -453,7 +453,20 @@ export async function terminerDefi({ defiId, score, tempsS, erreurs = 0,
         p_maitrise: maitrise,
         p_score_premier_essai: scorePremierEssai,
         p_faits: faits,
-    });
+    };
+
+    const r = await rpc('terminer_defi', params);
+
+    // Réseau coupé : on met de côté dans la file plutôt que de perdre le défi.
+    // Limite acceptée (Lot 26) : un défi expire au bout de 24 h. Si l'iPad reste
+    // hors-ligne jusqu'au lendemain, terminer_defi refusera « Ce défi est déjà terminé »
+    // et la file jettera l'entrée. C'est assumé : defis_participants a une clé primaire
+    // (defi_id, eleve_id) et refuse les doublons si la requête partait deux fois.
+    if (!r.ok && estPanneReseau(r.error)) {
+        mettreEnAttente('terminer_defi', params);
+        return { ok: true, enAttente: true, data: { maitrise: {} } };
+    }
+    return r;
 }
 
 export async function classementDefi(defiId) {
