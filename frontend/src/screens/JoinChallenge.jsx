@@ -83,7 +83,7 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                 } catch {
                     // Repli propre
                 }
-                setDefiData({ ...d, termines });
+                setDefiData({ ...d, code: code.trim().toUpperCase(), termines });
                 setStatus('valide');
             } else {
                 const raison = res.data?.raison || res.raison || 'inconnu';
@@ -99,7 +99,7 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                         } catch {}
                     }
                     setMoiResult(moi);
-                    setDefiData({ defi_id: defiId, ...(res.data || {}) });
+                    setDefiData({ defi_id: defiId, code: code.trim().toUpperCase(), ...(res.data || {}) });
                     setStatus('deja_joue');
                 } else if (raison === 'ferme') {
                     setStatus('ferme');
@@ -207,7 +207,9 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                             <span style={{ width: 130, fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--ciel-pale)' }}>Mode</span>
                             <span style={{ fontFamily: 'var(--texte)', fontSize: 21, fontWeight: 700, color: 'var(--action-texte)' }}>
-                                {defiData.type === 'countdown' ? 'Contre‑la‑montre' : 'Sprint'} · {defiData.questions || 20} questions · {defiData.duree_s || 3} s
+                                {defiData.type === 'countdown'
+                                    ? 'Contre‑la‑montre · 2 min'
+                                    : `Sprint · ${Array.isArray(defiData.questions) ? defiData.questions.length : (typeof defiData.questions === 'number' ? defiData.questions : 20)} questions · ${defiData.duree_s || 3} s`}
                             </span>
                         </div>
                         <div style={{ height: 2, background: 'rgba(255, 255, 255, 0.16)' }} />
