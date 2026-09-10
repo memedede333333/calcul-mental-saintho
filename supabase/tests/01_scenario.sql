@@ -11,9 +11,10 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 176 cas, numérotés jusqu'à 179. Les numéros 29 à 31 ont
+-- COMPTE EXACT : 183 cas, numérotés jusqu'à 182. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
--- les migrations continuent de désigner le même test.
+-- les migrations continuent de désigner le même test ; les cas 38b à 38d et 180b
+-- complètent les cas 38 et 180.
 -- =====================================================================
 \set ALICE '11111111-1111-1111-1111-111111111111'
 \set BOB   '22222222-2222-2222-2222-222222222222'
@@ -201,12 +202,51 @@ select ajouter_eleve('arrivee.novembre@demo.saintho.fr','Tardif','Marie','6B')->
 \echo '=== 37. ADMIN : plafond de toute une classe ==='
 select definir_plafond_classe('6A', 12::smallint)->>'message' as resultat;
 
-\echo '=== 38. ADMIN : correction d email interdite apres connexion ==='
+\echo '=== 38. ADMIN : corriger l adresse d un eleve DEJA CONNECTE (migration 35) ==='
+-- Avant la migration 35 c etait refuse : « desactive cette fiche et
+-- cree-en une nouvelle ». Excessif. Un renommage dans Google Workspace
+-- doit etre transparent pour l eleve. Le controle qui compte est que
+-- `user_id` ne bouge pas : c est lui, et pas l adresse, qui relie
+-- l eleve a son historique.
+select id as alice_id, user_id as alice_uid,
+       (select count(*) from sessions_jeu sj where sj.eleve_id = e.id) as alice_parties
+  from eleves e where email='alice.dupont@demo.saintho.fr' \gset
+select modifier_eleve(:'alice_id'::uuid,
+         p_email=>'alice.dupont-corrige@demo.saintho.fr')->>'email_change' as change;
+select case when (select user_id from eleves where id = :'alice_id'::uuid)
+                 = :'alice_uid'::uuid
+             and (select count(*) from sessions_jeu
+                   where eleve_id = :'alice_id'::uuid) = :alice_parties
+             and (select email   from eleves where id = :'alice_id'::uuid)
+                 = 'alice.dupont-corrige@demo.saintho.fr'
+            then 'OK : adresse changee, compte et parties intacts'
+            else 'ECHEC : l eleve a perdu son rattachement ou ses parties' end as verdict;
+
+\echo '=== 38b. L eleve reste reconnu apres le changement d adresse ==='
+-- Il se reconnecte avec le MEME compte Google, seulement renomme :
+-- aucune ligne nouvelle dans auth.users, donc rien ne rattacherait une
+-- fiche qu on aurait detachee. Elle ne l est pas.
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when public.eleve_courant() = :'alice_id'::uuid
+            then 'OK : toujours reconnue par son compte, pas par son adresse'
+            else 'ECHEC : eleve connectee et sans fiche' end as verdict;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+
+\echo '=== 38c. Une adresse deja prise est refusee, et on dit par qui ==='
 do $$ declare v uuid; begin
-  select id into v from eleves where email='alice.dupont@demo.saintho.fr';
-  perform modifier_eleve(v, p_email=>'autre@demo.saintho.fr');
-  raise notice 'ECHEC : email change alors que l eleve s est connecte !';
+  select id into v from eleves where email='alice.dupont-corrige@demo.saintho.fr';
+  perform modifier_eleve(v, p_email=>'bob.martin@demo.saintho.fr');
+  raise notice 'ECHEC : deux fiches ont pu porter la meme adresse !';
 exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 38d. Retour a l adresse d origine, meme fiche ==='
+-- On remet en etat : la suite du scenario connait Alice sous son adresse.
+select modifier_eleve(:'alice_id'::uuid,
+         p_email=>'alice.dupont@demo.saintho.fr')->>'ok' as retour;
+select case when (select user_id from eleves where id = :'alice_id'::uuid)
+                 = :'alice_uid'::uuid
+            then 'OK : aller-retour sans coupure'
+            else 'ECHEC : rattachement perdu au retour' end as verdict;
 
 \echo '=== 39. ADMIN : desactivation conserve les resultats ==='
 do $$ declare v uuid; n int; begin
@@ -1776,3 +1816,66 @@ select case when public.ping() = 'ok'
              and (select count(*) from public.eleves) > 0
             then 'OK : meme reponse quel que soit l effectif'
             else 'ECHEC : la reponse depend des donnees' end as verdict;
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 35 — la fiche eleve se corrige vraiment
+-- ---------------------------------------------------------------------
+
+\echo '=== 180. Un prof NON admin modifie VRAIMENT une fiche ==='
+-- Le defaut corrige : le declencheur `eleves_protection` remettait les
+-- anciennes valeurs pour tout appelant non administrateur, alors que
+-- `modifier_eleve` renvoyait {"ok": true}. Une professeure corrigeait une
+-- coquille, l application lui disait que c etait fait, et rien ne bougeait.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+select id as bob_id from eleves where email='bob.martin@demo.saintho.fr' \gset
+select modifier_eleve(:'bob_id'::uuid, p_prenom=>'Bobby')->>'ok' as retour;
+select case when public.est_admin() = false
+             and (select prenom from eleves where id = :'bob_id'::uuid) = 'Bobby'
+            then 'OK : un prof non admin modifie pour de vrai'
+            else 'ECHEC : modification annulee en silence' end as verdict;
+select modifier_eleve(:'bob_id'::uuid, p_prenom=>'Bob')->>'ok' as remise_en_etat;
+
+\echo '=== 180b. ... mais il ne touche PAS a l adresse ==='
+-- Un prof ne peut pas renommer une adresse dans la console Google : la
+-- changer ici seulement ne corrigerait rien, elle fabriquerait un
+-- desaccord entre les deux cotes. Et tant qu un eleve ne s est jamais
+-- connecte, son adresse est sa porte d entree.
+do $$ declare v uuid; begin
+  select id into v from eleves where email='bob.martin@demo.saintho.fr';
+  perform modifier_eleve(v, p_email=>'bob.autre@demo.saintho.fr');
+  raise notice 'ECHEC : un prof non admin a change une adresse !';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+select case when (select email from eleves where id = :'bob_id'::uuid)
+                 = 'bob.martin@demo.saintho.fr'
+            then 'OK : l adresse est restee celle d origine'
+            else 'ECHEC : l adresse a change malgre le refus' end as verdict;
+
+\echo '=== 181. Un ELEVE ne peut toujours pas se changer de classe ==='
+-- La raison d etre du declencheur. Elle ne doit pas avoir bouge.
+select set_config('request.jwt.claim.sub', :'BOB', false);
+update public.eleves set classe = '3A', email = 'pirate@demo.saintho.fr'
+ where id = :'bob_id'::uuid;
+select case when (select classe from eleves where id = :'bob_id'::uuid) = '6A'
+             and (select email  from eleves where id = :'bob_id'::uuid)
+                 = 'bob.martin@demo.saintho.fr'
+            then 'OK : l eleve reste a sa place'
+            else 'ECHEC : un eleve a change sa classe ou son adresse' end as verdict;
+
+\echo '=== 182. Fiche non rattachee + compte deja existant : on rattache ==='
+-- Cas reel : l eleve s est connecte avant qu on corrige son adresse.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (ajouter_eleve('faute.de.frappe@demo.saintho.fr','Frappe','Leo','6A')
+        ->>'eleve_id')::uuid as leo_id \gset
+reset role;
+insert into auth.users (id, email)
+values ('66666666-6666-6666-6666-666666666666','leo.frappe@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_eleve(:'leo_id'::uuid, p_email=>'leo.frappe@demo.saintho.fr')
+       ->>'rattache' as rattache;
+select case when (select user_id from eleves where id = :'leo_id'::uuid)
+                 = '66666666-6666-6666-6666-666666666666'::uuid
+            then 'OK : la fiche corrigee retrouve son compte Google'
+            else 'ECHEC : fiche orpheline apres correction' end as verdict;
+reset role;

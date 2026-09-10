@@ -57,6 +57,36 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 35 : corriger la fiche d'un élève en cours d'année
+
+**Fait** — Migration 35 (`20260910210000_modifier_eleve.sql`). `modifier_eleve`
+accepte le changement d'adresse même après la première connexion, refuse une
+adresse déjà prise en nommant la fiche concernée, et journalise l'avant **et**
+l'après. Le déclencheur `eleves_protection` laisse passer un professeur, plus
+seulement un administrateur. Cas 38 réécrit (aller-retour complet sur un élève
+connecté) et cas 180 à 182 ajoutés. 183 cas verts. Le nom, le prénom et la classe sont ouverts à tout professeur ; l adresse reste réservée à l administrateur, parce qu un professeur ne peut pas la renommer dans la console Google.
+
+**Décidé** — On ne détache jamais `user_id`. Un renommage dans Google Workspace
+garde le même compte Google, donc la même ligne `auth.users` : le trigger
+`on_auth_user_created` ne se déclenche pas et rien ne rattacherait une fiche
+détachée. L'élève arriverait connecté et sans fiche. Comme `eleve_courant()`
+résout par `user_id` et jamais par l'adresse, ne rien toucher suffit et il n'y a
+même pas de coupure. ✅ *validé par Aymeri le 10/09 : « si je change le mail,
+c'est que je le change aussi sur la console d'admin, ça doit être transparent »*
+
+**Constaté** — Défaut trouvé en préparant la migration, reproduit par exécution
+sur la base locale : un professeur non administrateur appelant `modifier_eleve`
+recevait `{"ok": true}` et le nom en base ne changeait pas. Le déclencheur
+`eleves_protection` annulait l'écriture en silence, alors que la fonction
+l'autorisait et que le cas de test 47 affirme qu'un professeur gère les élèves
+de toute classe. Deux règles se contredisaient, la plus discrète gagnait.
+Non atteignable par un utilisateur aujourd'hui — l'écran Administration est
+réservé aux administrateurs — mais le piège se serait refermé sur la première
+modale « Modifier » ouverte aux professeurs.
+
+**Ensuite** — Antigravity : bouton « + Ajouter un élève » et modale
+« Modifier » dans l'onglet Élèves.
+
 ## 2026-09-10 — Migration 34 : `ping()`, pour que la base ne s'endorme jamais
 
 **Fait** — Migration 34 (`20260910190000_ping_reveil.sql`) et

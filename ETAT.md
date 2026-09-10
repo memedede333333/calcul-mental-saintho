@@ -4,9 +4,8 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **34 migrations, 176 cas
-> de test verts** (numérotés jusqu'à 179 : les numéros 29 à 31 ont été retirés
-> et ne sont pas réattribués). L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
+> Dernière mise à jour : **10 septembre 2026** — **35 migrations, 183 cas
+> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
 > Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
 > **Le lot 18 est livré** (maîtrise au temps de réponse côté serveur, seuil 3s).
@@ -332,6 +331,43 @@ l'interface affiche le badge d'initiales calculé par `initiales_de()` et jamais
 un emoji par défaut.
 
 
+
+**Corriger l'adresse d'un élève ne casse rien, et ne détache rien.**
+*(10 septembre 2026, migration 35.)*
+`modifier_eleve` refusait de changer une adresse dès que l'élève s'était
+connecté — « désactive cette fiche et crée-en une nouvelle ». C'était excessif :
+quand une adresse est renommée dans Google Workspace, l'administrateur la
+corrige des deux côtés et l'élève ne doit rien voir. Un élève connecté n'est
+**pas** reconnu par son adresse : `eleve_courant()` cherche
+`user_id = auth.uid()`, et toutes les tables pointent sur `eleves.id`.
+⚠️ Et c'est pour cela qu'on **ne touche pas à `user_id`**. « Détacher puis
+rattacher » serait un piège : un renommage Google Workspace garde le même
+compte Google, donc la même ligne `auth.users`, donc le trigger
+`on_auth_user_created` ne se déclenche jamais et rien ne rattacherait la fiche.
+L'élève arriverait avec une session valide et sans fiche : plus de points, plus
+de grille. Seule exception, une fiche qui n'est encore attachée à personne :
+`rattacher_par_email` est alors tentée sur la nouvelle adresse.
+
+**Une modification faite par un professeur en modifiait vraiment une.**
+*(10 septembre 2026, migration 35.)*
+Le déclencheur `eleves_protection` remettait les anciennes valeurs pour tout
+appelant qui n'est pas administrateur, alors que `modifier_eleve` et
+`ajouter_eleve` autorisent tout professeur — le cas de test 47 l'affirme.
+Vérifié par exécution : un professeur non administrateur recevait `{"ok": true}`
+et le nom en base ne bougeait pas. Le déclencheur laisse désormais passer un
+**professeur**, plus seulement un administrateur ; il continue de bloquer les
+élèves, ce qui est sa seule raison d'être.
+
+**L'adresse est réservée à l'administrateur, le reste est ouvert aux professeurs.**
+*(10 septembre 2026, migration 35.)*
+Nom, prénom, classe, ajout, désactivation : tout professeur. L'adresse e-mail :
+administrateur seul. La raison n'est pas la méfiance, elle est mécanique — un
+professeur ne peut pas renommer une adresse dans la console Google Workspace.
+S'il la change dans matHo seulement, il ne corrige rien : il fabrique un
+désaccord entre les deux côtés. Et tant qu'un élève ne s'est jamais connecté,
+son adresse **est** sa porte d'entrée : une faute de frappe le laisse dehors
+sans que personne comprenne pourquoi. Celui qui change l'adresse doit être celui
+qui peut la changer des deux côtés.
 
 ### Contrat des fonctions
 
@@ -841,6 +877,15 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     (et jette le compte) pour que l'appel produise une vraie activité de base :
     un `select 1` peut être résolu sans toucher au stockage. Trois cas de test
     ajoutés, dont deux qui vérifient qu'`anon` ne peut toujours lire aucune table.
+18. ✅ **Migration 35 — corriger une fiche élève** — 10 septembre. L'adresse
+    e-mail devient modifiable même après la première connexion, sans toucher à
+    `user_id` : l'élève garde points, badges, maîtrise et historique, sans
+    coupure. Une adresse déjà portée par une autre fiche, active ou désactivée,
+    est refusée en nommant l'élève concerné. Et le défaut trouvé en chemin :
+    une modification faite par un professeur non administrateur renvoyait
+    `ok` sans rien changer. 183 cas de test verts. **Reste à faire côté écran
+    (Antigravity)** : le bouton « + Ajouter un élève » et la modale
+    « Modifier » dans l'onglet Élèves.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
