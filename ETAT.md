@@ -55,7 +55,7 @@ d'interface se juge à cette aune.
 | Base de données, sécurité, logique métier | ✅ **33 migrations**, 176 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
-| **Connexion Google (mode Interne)** | ✅ **configurée et validée en conditions réelles** |
+| **Connexion Google (mode Interne)** | ✅ **validée derrière le filtre MDM, le 10 septembre**, sur iPad et avec de vrais comptes élèves — après ajout de `accounts.google.fr` dans Jamf. Avant cet ajout, la connexion échouait pour TOUS les élèves : `accounts.google.com` seul ne suffit pas. |
 | Comptes réels inscrits | ✅ 2 enseignants, 2 élèves de bêta |
 | Écrans élève — démarrage, connexion, accueil | ✅ |
 | Écrans élève — apprendre, s'entraîner, profil, classements | ✅ |
@@ -69,8 +69,8 @@ d'interface se juge à cette aune.
 
 | | Pourquoi |
 |---|---|
-| ⬜ **Un défi joué à deux comptes simultanés** | Exige deux personnes en même temps — aucune relecture ne le remplace. C'est le dernier test fonctionnel du projet. |
-| ⬜ **Un usage réel en classe** | 24 iPads sur un même point d'accès. Rien ne prédit ce qui s'y passera. |
+| ✅ **Un défi joué à plusieurs, en vrai** | **10 septembre : défi joué avec une classe entière, ça passe.** C'était le dernier test fonctionnel du projet, et aucune relecture ne pouvait le remplacer. Reste à confirmer un chiffre : que le nombre d'élèves au classement égale le nombre d'élèves qui ont joué. C'est là que se logent les cinq bugs de population de ce projet, et l'erreur va toujours dans le sens rassurant. |
+| ✅ **Un usage réel en classe** | **10 septembre : une classe, sur le wifi du collège, sans incident.** Un seul essai ne prouve pas une rentrée à 350, mais il lève le doute de fond : 24 iPads sur un même point d'accès, ça tient. |
 | ✅ **Écran « Ma classe »** (maîtrise agrégée) | Livré le 1er septembre (`cc1e08a`), sur la migration 20. Relu dans le code : deux correctifs en attente (le tri, et `eleves_sans_trace` au bloc 2). C'est le seul écran fait pour les professeurs — celui qui décidera de l'adoption en salle des profs. Reste à voir en usage. |
 | ✅ **Écran « Mes défis »** | Livré par Antigravity le 31 août, points d'entrée côté prof et côté élève. Reste à voir en usage. |
 | ✅ **Origine du défi affichée** (prof / élève) | Migration 18 + écran `DefiIntro` livrés le 31 août. Reste à voir en usage. |
@@ -949,8 +949,19 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
       recevrait son code. Compte dédié + mot de passe d'application, puis
       remonter la limite d'envoi (30/heure par défaut).
       Contrainte : les élèves ne reçoivent que du domaine `saintho.fr`.
-- [ ] **Autoriser `*.supabase.co` dans Jamf** — le wildcard, pas l'adresse
-      exacte : elle changerait si le projet change.
+- [x] **Autoriser dans Jamf : `*.supabase.co` ET `accounts.google.fr`.**
+      Le wildcard pour Supabase, pas l'adresse exacte : elle changerait si le
+      projet change.
+      ⚠️ **`accounts.google.fr` est le piège découvert le 10 septembre**, sur un
+      iPad réel, avec un vrai compte élève : Safari affiche *« Website Not Allowed —
+      accounts.google.fr is a restricted website »* et la connexion s'arrête là.
+      Google fait passer une partie du parcours de connexion par le domaine
+      national, pas seulement par `accounts.google.com` — qui, lui, était bien
+      autorisé. Le filtre bloquait donc la connexion de TOUS les élèves, et le
+      §3 « la connexion Google est validée » ne l'avait pas vu : la validation
+      n'avait jamais été refaite derrière le filtre MDM.
+      Vérifier aussi `ssl.gstatic.com` et `www.gstatic.com`, servis par la page
+      de connexion Google.
 - [ ] **Réveil quotidien (keep-alive) — le workflow est écrit, il reste deux secrets à créer.**
       Sur l'offre gratuite, un projet inactif sept jours est suspendu, et **il ne
       redémarre pas tout seul** : il faut aller cliquer. Une semaine de vacances suffit.

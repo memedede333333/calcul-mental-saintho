@@ -57,6 +57,33 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — La connexion était bloquée par le filtre Jamf, et un défi de classe a tourné
+
+**Fait** — Ajout d'`accounts.google.fr` à la liste des sites autorisés dans Jamf.
+`accounts.google.com` y était depuis longtemps — il sert aux Google Forms — mais
+Google fait passer une partie du parcours de connexion par le domaine national.
+Dans la foulée, **un défi joué avec une classe entière, sur les iPad du collège :
+ça passe.**
+
+**Constaté** — Le symptôme était trompeur : « ce n'est pas autorisé » à la
+première connexion, puis ça marche après un rafraîchissement. J'ai d'abord
+cherché dans le code et trouvé un vrai défaut (aucun `onAuthStateChange` au
+démarrage) — mais ce n'était pas la cause. La capture d'écran a tranché en une
+seconde ce que le raisonnement sur le code n'aurait jamais trouvé : c'était
+Safari qui affichait *« Website Not Allowed — accounts.google.fr is a restricted
+website »*.
+
+**Décidé** — `ETAT.md` affirmait depuis le 27 août que la connexion Google était
+« validée en conditions réelles ». C'était faux : elle n'avait jamais été
+éprouvée **derrière le filtre MDM**. Le jour de la rentrée, les 350 élèves
+auraient eu cet écran en même temps, sans aucune trace dans l'application. La
+ligne est corrigée et la case Jamf porte désormais le piège en toutes lettres.
+Leçon de méthode : demander la capture d'écran **avant** d'expliquer un symptôme.
+
+**Ensuite** — Confirmer que le nombre d'élèves au classement du défi égale le
+nombre d'élèves qui ont joué. Puis le correctif du démarrage
+(`onAuthStateChange`), qui reste un défaut réel même s'il n'était pas celui-là.
+
 ## 2026-09-10 — Migration 36 : « Jamais connecté » disait deux choses fausses
 
 **Fait** — Migration 36 (`20260910230000_derniere_activite.sql`). Déclencheur
