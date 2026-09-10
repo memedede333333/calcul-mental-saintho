@@ -41,6 +41,9 @@ jobs:
             exit 1
           fi
 
+          # Nettoyage des retours à la ligne ou espaces accidentels dans le secret
+          DB_URL=$(echo "${DB_URL}" | tr -d '\r\n ')
+
           DATE_STR=$(date +"%Y-%m-%d_%Hh%M")
           GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "inconnu")
 
