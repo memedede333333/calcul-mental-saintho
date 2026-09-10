@@ -21,8 +21,13 @@
  *
  *   node frontend/scripts/check-api.mjs
  */
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join } from 'path';
+
+// Si lancé depuis frontend/, remonter à la racine du dépôt
+if (!existsSync('frontend') && existsSync('../frontend')) {
+    process.chdir('..');
+}
 
 const API = 'frontend/src/api.js';
 const SRC = 'frontend/src';

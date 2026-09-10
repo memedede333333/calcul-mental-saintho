@@ -688,10 +688,6 @@ export async function definirPlafondClasse(classe, plafond) {
     return rpc('definir_plafond_classe', { p_classe: classe, p_plafond: plafond });
 }
 
-/** Qui n'a jamais réussi à se connecter — la question des deux premières semaines. */
-export async function elevesSansConnexion(classe = null) {
-    return rpc('eleves_sans_connexion', { p_classe: classe });
-}
 
 /** Les élèves d'une classe — actifs ET désactivés. */
 export async function listeEleves(classe = null) {
@@ -761,7 +757,7 @@ export const api = {
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
     apercuImportEleves, importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
-    desactiverEleve, reactiverEleve, definirPlafondClasse, elevesSansConnexion, listeEleves,
+    desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
 };
 

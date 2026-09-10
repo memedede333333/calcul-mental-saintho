@@ -39,6 +39,9 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
     // Filtres onglet Élèves
     const [classeFiltre, setClasseFiltre] = useState('Toutes');
+    const [filtreJamaisConnecte, setFiltreJamaisConnecte] = useState(false);
+    const [triColonne, setTriColonne] = useState('prenom'); // 'prenom' | 'statut'
+    const [triSens, setTriSens] = useState('asc'); // 'asc' | 'desc'
     const [recherche, setRecherche] = useState('');
 
     // Modals
@@ -79,10 +82,12 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     // Le total vient de la longueur de la liste et ne tient que tant que liste_eleves renvoie tout sans pagination.
     const totalInscrits = eleves.length;
     const totalDesactives = eleves.filter(e => !e.actif).length;
+    const totalJamaisConnectes = eleves.filter(e => e.actif && !e.deja_connecte).length;
 
-    // Filtrage local des élèves (classe + recherche)
+    // Filtrage et tri local des élèves (classe + recherche + jamais connecté + tri)
     const elevesFiltres = eleves.filter(e => {
         if (classeFiltre !== 'Toutes' && e.classe !== classeFiltre) return false;
+        if (filtreJamaisConnecte && (!e.actif || e.deja_connecte)) return false;
         if (recherche.trim()) {
             const q = recherche.trim().toLowerCase();
             const nomComplet = `${e.prenom || ''} ${e.nom || ''}`.toLowerCase();
@@ -90,6 +95,16 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             if (!nomComplet.includes(q) && !nomInverse.includes(q)) return false;
         }
         return true;
+    }).sort((a, b) => {
+        if (triColonne === 'statut') {
+            // Ordre par défaut (asc) : Jamais connecté (0) -> Actif (1) -> Désactivé (2)
+            const getPoids = (e) => (!e.actif ? 2 : !e.deja_connecte ? 0 : 1);
+            const diff = getPoids(a) - getPoids(b);
+            if (diff !== 0) return triSens === 'asc' ? diff : -diff;
+        }
+        const nomA = `${a.prenom || ''} ${a.nom || ''}`.toLowerCase();
+        const nomB = `${b.prenom || ''} ${b.nom || ''}`.toLowerCase();
+        return nomA.localeCompare(nomB, 'fr');
     });
 
     // Actions Élèves
@@ -260,6 +275,23 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                             {c.classe}
                                         </button>
                                     ))}
+                                    <button
+                                        className={`admin-class-pill${filtreJamaisConnecte ? ' admin-class-pill--active' : ''}`}
+                                        style={filtreJamaisConnecte ? {
+                                            background: 'var(--orange)',
+                                            borderColor: 'var(--orange)',
+                                            color: '#FFFFFF',
+                                            fontWeight: 700,
+                                        } : {
+                                            color: totalJamaisConnectes > 0 ? 'var(--orange)' : 'var(--gris)',
+                                            borderColor: totalJamaisConnectes > 0 ? 'var(--orange)' : 'var(--bordure)',
+                                            fontWeight: 600,
+                                        }}
+                                        onClick={() => setFiltreJamaisConnecte(v => !v)}
+                                        title={filtreJamaisConnecte ? "Désactiver le filtre" : "Afficher uniquement les élèves jamais connectés"}
+                                    >
+                                        Jamais connectés ({totalJamaisConnectes})
+                                    </button>
                                 </div>
 
                                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -305,10 +337,30 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             <div className="admin-table-card">
                                 <div className="admin-table-grid-header">
                                     <span />
-                                    <span>Nom</span>
+                                    <span
+                                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                                        onClick={() => { setTriColonne('prenom'); setTriSens('asc'); }}
+                                        title="Trier par prénom"
+                                    >
+                                        Nom {triColonne === 'prenom' ? '▲' : ''}
+                                    </span>
                                     <span>Classe</span>
                                     <span>Plafond</span>
-                                    <span>Statut</span>
+                                    <span
+                                        style={{ cursor: 'pointer', userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                        onClick={() => {
+                                            if (triColonne === 'statut') {
+                                                if (triSens === 'asc') setTriSens('desc');
+                                                else { setTriColonne('prenom'); setTriSens('asc'); }
+                                            } else {
+                                                setTriColonne('statut');
+                                                setTriSens('asc');
+                                            }
+                                        }}
+                                        title="Cliquer pour trier par statut (Jamais connecté en premier)"
+                                    >
+                                        Statut {triColonne === 'statut' ? (triSens === 'asc' ? '▲' : '▼') : '↕'}
+                                    </span>
                                     <span style={{ textAlign: 'right' }}>Actions</span>
                                 </div>
 
@@ -337,11 +389,19 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                     {e.classe}
                                                 </span>
                                                 <span className="admin-cell-muted">
-                                                    Table {e.plafond_tables || 10}
+                                                    Table {e.plafond_tables}
                                                 </span>
-                                                <span className={estInactif ? 'admin-status-badge--inactive' : 'admin-status-badge--active'}>
-                                                    {estInactif ? 'Désactivé' : 'Actif'}
-                                                </span>
+                                                {!e.actif ? (
+                                                    <span className="admin-status-badge--inactive">Désactivé</span>
+                                                ) : !e.deja_connecte ? (
+                                                    <span className="admin-status-badge--never" title={e.derniere_connexion ? `Dernière connexion le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
+                                                        Jamais connecté
+                                                    </span>
+                                                ) : (
+                                                    <span className="admin-status-badge--active" title={e.derniere_connexion ? `Dernière connexion le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
+                                                        Actif
+                                                    </span>
+                                                )}
                                                 <span className="admin-cell-actions">
                                                     <button
                                                         className="admin-btn-table"
@@ -377,7 +437,9 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             <div className="admin-footer-count">
                                 {elevesFiltres.length} ligne{elevesFiltres.length > 1 ? 's' : ''} sur {totalInscrits} inscrits
                                 {totalDesactives > 0 && ` · ${totalDesactives} désactivé${totalDesactives > 1 ? 's' : ''}`}
-                                {' '}· trié par prénom
+                                {totalJamaisConnectes > 0 && ` · ${totalJamaisConnectes} jamais connecté${totalJamaisConnectes > 1 ? 's' : ''}`}
+                                {filtreJamaisConnecte && ' · filtre « Jamais connecté » actif'}
+                                {triColonne === 'statut' ? ' · trié par statut' : ' · trié par prénom'}
                             </div>
                             <div style={{ flex: 1 }} />
                         </>

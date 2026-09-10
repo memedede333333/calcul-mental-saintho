@@ -1,6 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join } from 'path';
+
+// Si lancé depuis frontend/, remonter à la racine du dépôt
+if (!existsSync('frontend') && existsSync('../frontend')) {
+    process.chdir('..');
+}
 
 // 1. Extraire toutes les variables définies dans tokens.css
 const tokensContent = readFileSync('frontend/src/styles/tokens.css', 'utf-8');

@@ -1054,7 +1054,7 @@ input, textarea, select, button { touch-action: manipulation; }
 
 .admin-table-grid-header {
   display: grid;
-  grid-template-columns: 36px minmax(110px, 1fr) 56px 78px 66px 156px;
+  grid-template-columns: 36px minmax(110px, 1fr) 56px 78px 126px 156px;
   box-sizing: border-box;
   padding: 11px 12px;
   background: var(--ivoire);
@@ -1066,19 +1066,19 @@ input, textarea, select, button { touch-action: manipulation; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   align-items: center;
-  min-width: 500px;
+  min-width: 560px;
 }
 
 .admin-table-grid-row {
   display: grid;
-  grid-template-columns: 36px minmax(110px, 1fr) 56px 78px 66px 156px;
+  grid-template-columns: 36px minmax(110px, 1fr) 56px 78px 126px 156px;
   box-sizing: border-box;
   padding: 11px 12px;
   align-items: center;
   border-bottom: 1px solid var(--bordure);
   background: var(--surface);
   transition: background 0.1s ease;
-  min-width: 500px;
+  min-width: 560px;
 }
 
 .admin-table-grid-row:last-child {
@@ -1118,6 +1118,13 @@ input, textarea, select, button { touch-action: manipulation; }
   font-weight: 700;
   font-size: 14px;
   color: var(--succes);
+}
+
+.admin-status-badge--never {
+  font-family: var(--texte);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--orange);
 }
 
 .admin-status-badge--inactive {
