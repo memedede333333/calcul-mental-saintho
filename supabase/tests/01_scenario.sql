@@ -1717,6 +1717,15 @@ select case when (select nb_questions from mes_defis() where code = :'code_m32b'
             then 'OK : 15 questions, et pas de duree hors Contre-la-montre'
             else 'ECHEC : le nombre de questions est fantaisiste' end as verdict;
 
+\echo '=== 176. nb_questions est NULL sur un Contre-la-montre ==='
+-- `creer_defi` fige 120 questions en reserve pour un chrono : personne
+-- n en fait 120 en 30 secondes. Renvoyer ce nombre invitait l ecran a
+-- afficher « 120 questions » sur une partie de 30 secondes.
+select case when (select nb_questions from mes_defis() where code = :'code_m32') is null
+             and (select duree_s from mes_defis() where code = :'code_m32') = 30
+            then 'OK : chaque mode recoit le chiffre qui le decrit'
+            else 'ECHEC : une reserve de 120 questions remonte a l ecran' end as verdict;
+
 \echo '=== 175. mon_score est un NOMBRE DE BONNES REPONSES, pas des points ==='
 -- Le piege : l ecran affichait « {mon_score} pts ». Un eleve avec 6
 -- bonnes reponses gagne 40 points — lui annoncer « 6 pts » est faux.
