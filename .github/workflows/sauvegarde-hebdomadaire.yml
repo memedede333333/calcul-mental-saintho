@@ -59,42 +59,63 @@ jobs:
             fi
           fi
 
-          BACKUP_NAME="matho_db_${DATE_STR}_mig-${LAST_MIG}_git-${GIT_COMMIT}"
-          DUMP_FILE="${BACKUP_NAME}.sql"
+          BACKUP_BASE="matho_db_${DATE_STR}_mig-${LAST_MIG}_git-${GIT_COMMIT}"
+          RAW_COMPLET="${BACKUP_BASE}_complet.sql"
+          RAW_DONNEES="${BACKUP_BASE}_donnees.sql"
+          TMP_DATA="tmp_data_$$.sql"
 
-          echo "Extraction pg_dump depuis Supabase…"
+          echo "Extraction pg_dump 1/2 : Complet…"
           pg_dump "${DB_URL}" \
             --schema=public \
             --clean \
             --if-exists \
             --no-owner \
             --no-privileges \
-            --file="${DUMP_FILE}"
+            --file="${RAW_COMPLET}"
+
+          echo "Extraction pg_dump 2/2 : Données seules (prêt pour restauration)…"
+          pg_dump "${DB_URL}" \
+            --schema=public \
+            --data-only \
+            --no-owner \
+            --no-privileges \
+            --file="${TMP_DATA}"
+
+          # Envelopper les données pour session_replication_role
+          {
+            echo "-- Matho — Données seules pour restauration (RESTAURATION.md Étape 3)"
+            echo "-- Migration : ${LAST_MIG} | Commit : ${GIT_COMMIT} | Date : ${DATE_STR}"
+            echo "SET session_replication_role = replica;"
+            cat "${TMP_DATA}"
+            echo "SET session_replication_role = default;"
+          } > "${RAW_DONNEES}"
+          rm -f "${TMP_DATA}"
 
           # --- CONTRÔLES DE VALIDATION STRICTS ---
           echo "Vérification de l'intégrité du dump…"
 
-          if [ ! -f "${DUMP_FILE}" ]; then
-            echo "::error::Le fichier de dump ${DUMP_FILE} n'a pas été généré."
+          if [ ! -f "${RAW_COMPLET}" ] || [ ! -f "${RAW_DONNEES}" ]; then
+            echo "::error::Les fichiers de dump n'ont pas été générés."
             exit 1
           fi
 
-          FILE_SIZE=$(wc -c < "${DUMP_FILE}" | tr -d ' ')
-          if [ "${FILE_SIZE}" -lt 20000 ]; then
+          FILE_SIZE=$(wc -c < "${RAW_COMPLET}" | tr -d ' ')
+          DATA_SIZE=$(wc -c < "${RAW_DONNEES}" | tr -d ' ')
+          if [ "${FILE_SIZE}" -lt 20000 ] || [ "${DATA_SIZE}" -lt 20000 ]; then
             echo "::error::ALERTE : Dump anormalement petit (${FILE_SIZE} octets). Sauvegarde vide ou tronquée."
             exit 1
           fi
 
           for TABLE in "eleves" "sessions_jeu" "maitrise" "defis"; do
-            if ! grep -q -E "(COPY public\.${TABLE}|INSERT INTO public\.${TABLE})" "${DUMP_FILE}"; then
+            if ! grep -q -E "(COPY public\.${TABLE}|INSERT INTO public\.${TABLE})" "${RAW_DONNEES}"; then
               echo "::error::ALERTE : Table capitale 'public.${TABLE}' introuvable dans le dump."
               exit 1
             fi
           done
 
           NB_ELEVES=0
-          if grep -q "COPY public\.eleves " "${DUMP_FILE}"; then
-            NB_ELEVES=$(sed -n '/COPY public\.eleves /,/\\\./p' "${DUMP_FILE}" | grep -v '^COPY' | grep -v '^\\\.' | wc -l | tr -d ' ')
+          if grep -q "COPY public\.eleves " "${RAW_DONNEES}"; then
+            NB_ELEVES=$(sed -n '/COPY public\.eleves /,/\\\./p' "${RAW_DONNEES}" | grep -v '^COPY' | grep -v '^\\\.' | wc -l | tr -d ' ')
           fi
 
           if [ "${NB_ELEVES}" -lt 250 ]; then
@@ -102,18 +123,20 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Intégrité validée : ${FILE_SIZE} octets, ${NB_ELEVES} élèves présents, tables clés confirmées."
+          echo "✅ Intégrité validée : complet (${FILE_SIZE} octets), données (${DATA_SIZE} octets), ${NB_ELEVES} élèves présents."
 
           # Compression
-          gzip -c "${DUMP_FILE}" > "${BACKUP_NAME}.sql.gz"
-          rm -f "${DUMP_FILE}"
+          gzip -c "${RAW_COMPLET}" > "${BACKUP_BASE}_complet.sql.gz"
+          gzip -c "${RAW_DONNEES}" > "${BACKUP_BASE}_donnees.sql.gz"
+          rm -f "${RAW_COMPLET}" "${RAW_DONNEES}"
 
-          echo "BACKUP_FILE=${BACKUP_NAME}.sql.gz" >> $GITHUB_ENV
-          echo "BACKUP_NAME=${BACKUP_NAME}" >> $GITHUB_ENV
+          echo "BACKUP_BASE=${BACKUP_BASE}" >> $GITHUB_ENV
 
       - name: Archiver la sauvegarde dans GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BACKUP_NAME }}
-          path: ${{ env.BACKUP_FILE }}
+          name: ${{ env.BACKUP_BASE }}
+          path: |
+            ${{ env.BACKUP_BASE }}_complet.sql.gz
+            ${{ env.BACKUP_BASE }}_donnees.sql.gz
           retention-days: 90

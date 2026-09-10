@@ -71,17 +71,21 @@ if [ -d "${ROOT_DIR}/supabase/migrations" ]; then
     fi
 fi
 
-BACKUP_NAME="matho_db_${DATE_STR}_mig-${LAST_MIG}_git-${GIT_COMMIT}"
+BACKUP_BASE="matho_db_${DATE_STR}_mig-${LAST_MIG}_git-${GIT_COMMIT}"
 BACKUPS_DIR="${ROOT_DIR}/backups"
 mkdir -p "${BACKUPS_DIR}"
 
-RAW_SQL="${BACKUPS_DIR}/${BACKUP_NAME}.sql"
-GZ_SQL="${BACKUPS_DIR}/${BACKUP_NAME}.sql.gz"
+RAW_COMPLET="${BACKUPS_DIR}/${BACKUP_BASE}_complet.sql"
+GZ_COMPLET="${BACKUPS_DIR}/${BACKUP_BASE}_complet.sql.gz"
 
-echo -e "📦 Préparation du dump pour ${GRAS}${BACKUP_NAME}${NC}…"
+RAW_DONNEES="${BACKUPS_DIR}/${BACKUP_BASE}_donnees.sql"
+GZ_DONNEES="${BACKUPS_DIR}/${BACKUP_BASE}_donnees.sql.gz"
+TMP_DATA="${BACKUPS_DIR}/tmp_data_$$.sql"
+
+echo -e "📦 Préparation des dumps pour ${GRAS}${BACKUP_BASE}${NC}…"
 
 # ---------------------------------------------------------------------
-# 3. Extraction via pg_dump
+# 3. Extraction via pg_dump (1. Complet + 2. Données seules)
 # ---------------------------------------------------------------------
 PG_DUMP_BIN="pg_dump"
 if [ -f "/opt/homebrew/bin/pg_dump" ]; then
@@ -93,66 +97,88 @@ if ! command -v "${PG_DUMP_BIN}" >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "⏳ Connexion à Supabase et extraction des données…"
+echo "⏳ Extraction 1/2 : Dump complet (structure + données)…"
 "${PG_DUMP_BIN}" "${DB_URL}" \
     --schema=public \
     --clean \
     --if-exists \
     --no-owner \
     --no-privileges \
-    --file="${RAW_SQL}"
+    --file="${RAW_COMPLET}"
+
+echo "⏳ Extraction 2/2 : Données seules (prêt à rejouer avec session_replication_role)…"
+"${PG_DUMP_BIN}" "${DB_URL}" \
+    --schema=public \
+    --data-only \
+    --no-owner \
+    --no-privileges \
+    --file="${TMP_DATA}"
+
+# Envelopper les données seules pour désactiver temporairement les contraintes et triggers
+{
+    echo "-- Matho — Données seules pour restauration (RESTAURATION.md Étape 3)"
+    echo "-- Migration : ${LAST_MIG} | Commit : ${GIT_COMMIT} | Date : ${DATE_STR}"
+    echo "SET session_replication_role = replica;"
+    cat "${TMP_DATA}"
+    echo "SET session_replication_role = default;"
+} > "${RAW_DONNEES}"
+rm -f "${TMP_DATA}"
 
 # ---------------------------------------------------------------------
 # 4. Contrôles de validation stricts (Anti-sauvegarde vide)
 # ---------------------------------------------------------------------
-echo "🔍 Vérification de l'intégrité du fichier généré…"
+echo "🔍 Vérification de l'intégrité des fichiers générés…"
 
 # Test 4.1 : Présence et taille minimale (> 20 Ko)
-if [ ! -f "${RAW_SQL}" ]; then
-    echo -e "${ROUGE}❌ Erreur fatale : Le fichier de dump n'a pas été créé.${NC}"
+if [ ! -f "${RAW_COMPLET}" ] || [ ! -f "${RAW_DONNEES}" ]; then
+    echo -e "${ROUGE}❌ Erreur fatale : Les fichiers de dump n'ont pas été créés.${NC}"
     exit 1
 fi
 
-FILE_SIZE=$(wc -c < "${RAW_SQL}" | tr -d ' ')
-if [ "${FILE_SIZE}" -lt 20000 ]; then
-    echo -e "${ROUGE}❌ ALERTE : Le fichier dump est anormalement petit (${FILE_SIZE} octets). Sauvegarde rejetée.${NC}"
-    rm -f "${RAW_SQL}"
+FILE_SIZE=$(wc -c < "${RAW_COMPLET}" | tr -d ' ')
+DATA_SIZE=$(wc -c < "${RAW_DONNEES}" | tr -d ' ')
+if [ "${FILE_SIZE}" -lt 20000 ] || [ "${DATA_SIZE}" -lt 20000 ]; then
+    echo -e "${ROUGE}❌ ALERTE : Le dump est anormalement petit (${FILE_SIZE} octets). Sauvegarde rejetée.${NC}"
+    rm -f "${RAW_COMPLET}" "${RAW_DONNEES}"
     exit 1
 fi
 
-# Test 4.2 : Vérification de la présence des tables clés
+# Test 4.2 : Vérification de la présence des tables clés dans les données
 for TABLE in "eleves" "sessions_jeu" "maitrise" "defis"; do
-    if ! grep -q -E "(COPY public\.${TABLE}|INSERT INTO public\.${TABLE})" "${RAW_SQL}"; then
+    if ! grep -q -E "(COPY public\.${TABLE}|INSERT INTO public\.${TABLE})" "${RAW_DONNEES}"; then
         echo -e "${ROUGE}❌ ALERTE : Table capitale 'public.${TABLE}' absente du dump ! Sauvegarde rejetée.${NC}"
-        rm -f "${RAW_SQL}"
+        rm -f "${RAW_COMPLET}" "${RAW_DONNEES}"
         exit 1
     fi
 done
 
 # Test 4.3 : Vérification du nombre d'élèves (> 250 attendus pour 313 inscrits)
 NB_ELEVES=0
-if grep -q "COPY public\.eleves " "${RAW_SQL}"; then
-    NB_ELEVES=$(sed -n '/COPY public\.eleves /,/\\\./p' "${RAW_SQL}" | grep -v '^COPY' | grep -v '^\\\.' | wc -l | tr -d ' ')
+if grep -q "COPY public\.eleves " "${RAW_DONNEES}"; then
+    NB_ELEVES=$(sed -n '/COPY public\.eleves /,/\\\./p' "${RAW_DONNEES}" | grep -v '^COPY' | grep -v '^\\\.' | wc -l | tr -d ' ')
 fi
 
 if [ "${NB_ELEVES}" -lt 250 ]; then
-    echo -e "${ROUGE}❌ ALERTE : Nombre d'élèves anormalement bas dans le dump (${NB_ELEVES} élèves trouvés, minimum 250 requis). Sauvegarde rejetée.${NC}"
-    rm -f "${RAW_SQL}"
+    echo -e "${ROUGE}❌ ALERTE : Nombre d'élèves anormalement bas (${NB_ELEVES} élèves trouvés, minimum 250 requis). Sauvegarde rejetée.${NC}"
+    rm -f "${RAW_COMPLET}" "${RAW_DONNEES}"
     exit 1
 fi
 
-echo -e "   ✅ Taille valide : ${FILE_SIZE} octets"
+echo -e "   ✅ Taille validée : complet (${FILE_SIZE} octets), données (${DATA_SIZE} octets)"
 echo -e "   ✅ Tables clés présentes : eleves, sessions_jeu, maitrise, defis"
 echo -e "   ✅ Population vérifiée : ${GRAS}${NB_ELEVES} élèves${NC} comptabilisés"
 
 # ---------------------------------------------------------------------
 # 5. Compression gzip
 # ---------------------------------------------------------------------
-gzip -c "${RAW_SQL}" > "${GZ_SQL}"
-rm -f "${RAW_SQL}"
+gzip -c "${RAW_COMPLET}" > "${GZ_COMPLET}"
+gzip -c "${RAW_DONNEES}" > "${GZ_DONNEES}"
+rm -f "${RAW_COMPLET}" "${RAW_DONNEES}"
 
-GZ_SIZE_KB=$(du -k "${GZ_SQL}" | cut -f1)
-echo -e "   ✅ Archive compressée : ${GRAS}${BACKUP_NAME}.sql.gz${NC} (${GZ_SIZE_KB} Ko)"
+GZ_COMPLET_KB=$(du -k "${GZ_COMPLET}" | cut -f1)
+GZ_DONNEES_KB=$(du -k "${GZ_DONNEES}" | cut -f1)
+echo -e "   ✅ Archive complète : ${GRAS}${BACKUP_BASE}_complet.sql.gz${NC} (${GZ_COMPLET_KB} Ko)"
+echo -e "   ✅ Archive données  : ${GRAS}${BACKUP_BASE}_donnees.sql.gz${NC} (${GZ_DONNEES_KB} Ko) — ${VERT}PRÊT POUR RESTAURATION${NC}"
 
 # ---------------------------------------------------------------------
 # 6. Copie vers Google Drive (si monté sur le Mac)
@@ -161,9 +187,10 @@ GDRIVE_DIR="${HOME}/Google Drive/Mon Drive/Sauvegardes Matho"
 
 if [ -d "${HOME}/Google Drive/Mon Drive" ]; then
     mkdir -p "${GDRIVE_DIR}"
-    cp "${GZ_SQL}" "${GDRIVE_DIR}/"
-    echo -e "${VERT}   ☁️  Copie déposée dans Google Drive :${NC}"
-    echo -e "      ${GDRIVE_DIR}/${BACKUP_NAME}.sql.gz"
+    cp "${GZ_COMPLET}" "${GZ_DONNEES}" "${GDRIVE_DIR}/"
+    echo -e "${VERT}   ☁️  Copies déposées dans Google Drive :${NC}"
+    echo -e "      ${GDRIVE_DIR}/${BACKUP_BASE}_complet.sql.gz"
+    echo -e "      ${GDRIVE_DIR}/${BACKUP_BASE}_donnees.sql.gz"
 else
     echo -e "${JAUNE}   ⚠️ Dossier Google Drive non détecté à ${HOME}/Google Drive/Mon Drive. Sauvegarde conservée uniquement en local.${NC}"
 fi
