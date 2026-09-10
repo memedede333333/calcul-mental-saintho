@@ -394,11 +394,11 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                 {!e.actif ? (
                                                     <span className="admin-status-badge--inactive">Désactivé</span>
                                                 ) : !e.deja_connecte ? (
-                                                    <span className="admin-status-badge--never" title={e.derniere_connexion ? `Dernière connexion le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
+                                                    <span className="admin-status-badge--never" title={e.derniere_connexion ? `Dernière activité le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
                                                         Jamais connecté
                                                     </span>
                                                 ) : (
-                                                    <span className="admin-status-badge--active" title={e.derniere_connexion ? `Dernière connexion le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
+                                                    <span className="admin-status-badge--active" title={e.derniere_connexion ? `Dernière activité le ${new Date(e.derniere_connexion).toLocaleDateString('fr-FR')}` : undefined}>
                                                         Actif
                                                     </span>
                                                 )}
