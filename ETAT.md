@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **31 migrations, 172 cas
+> Dernière mise à jour : **10 septembre 2026** — **32 migrations, 175 cas
 > de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
 > Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
@@ -23,7 +23,7 @@
 > **Le lot 24 est livré** : Écran 35 (`Learn.jsx`) entièrement reconstruit (sélecteur borné par `plafond_tables`, multiplicateur 1 à 10, carte 1 commutativité avec animation de rotation « Faire tourner » et ronds persistants, carte 2 règle de « La coupure en deux » 5+n ou 10+n masquée pour ≤ 5 et 10, bouton direct libre, aucun enregistrement ni scoring). Écran 36 (`Modals.jsx`) avec les 4 modales unifiées sur voile indigo 55% : a) avatar élève (8 emojis fermés) et enseignant (emojis / initiales), b) changer classe d'un élève avec mention d'audit trail, c) désactiver élève avec garantie de conservation des résultats, d) aperçu d'import CSV branché sur `apercu_import_eleves` (RPC `apercuImportEleves` dans `api.js`) avec 4 compteurs serveur stricts, raisons de rejet serveur mot pour mot, et séparation stricte entre prévisualisation et écriture en base.
 > **Le lot 25 est livré** : fermeture du clavier physique dans les trois modes où le temps compte (Sprint, Contre-la-montre, Montée) pour garantir l'équité entre ordinateurs et iPads. Règle centralisée dans `logic/saisie.js`, touche Échap préservée, phrase d'information sur les écrans de préparation. Clavier maintenu sur Sans faute, Libre, Apprendre et saisie de code.
 > **Le lot 26 est livré** : file d'attente hors-ligne étendue aux défis (`terminerDefi` → `mettreEnAttente`), durée dynamique lue du défi et formatée (`logic/duree.js`), suppression des libellés en dur « 2 min ».
-> **Migration 31 livrée** : `20260909170000_mes_defis_joues.sql` appliquée, types `database.ts` régénérés, `MesDefis.jsx` affiche les défis joués par l'élève avec son score et le podium, « Projeter au tableau » réservé au créateur.
+> **Migrations 31 & 32 livrées** : `mes_defis` renvoie les défis joués, la vraie durée (`duree_s`), le nombre réel de questions (`nb_questions`), et le score sous forme de bonnes réponses pour éviter toute confusion avec les points. Types `database.ts` régénérés, `MesDefis.jsx` aligné.
 > **Jalon atteint** : **Les 36 maquettes de la refonte v10 sont dans le code.**
 >
 > *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
@@ -280,9 +280,9 @@ Ce n'est pas une mesure anti-triche — c'est une mesure d'**équité**. Un clav
 *(9 septembre 2026, Lot 26.)*
 Jusqu'ici, seule `enregistrer_session` disposait d'un filet en cas de perte de réseau. Un défi terminé pendant une coupure de wifi était perdu en silence — particulièrement pénalisant en classe. `terminerDefi` est désormais branché sur la file locale `mettreEnAttente('terminer_defi', params)`. L'interface affiche la vérité : *« Ton résultat est gardé sur l'iPad. Il partira dès que le wifi revient. »* Le serveur protège contre les doublons via la clé primaire `(defi_id, eleve_id)` et la contrainte de participation unique. Limite assumée et documentée : les défis expirant sous 24 h, un résultat synchronisé après ce délai sera refusé et jeté par la file sans bloquer.
 
-**Les élèves revoient les défis qu'ils ont JOUÉS dans « Mes défis » (Migration 31).**
+**Les élèves revoient les défis qu'ils ont JOUÉS dans « Mes défis » (Migrations 31 & 32).**
 *(10 septembre 2026.)*
-`mes_defis()` ne renvoyait que les défis dont l'utilisateur était l'auteur (`d.cree_par_eleve`). Un élève qui jouait le défi de son professeur en classe n'avait aucun chemin de retour vers son résultat après avoir quitté l'écran. La migration 31 ouvre `mes_defis()` aux défis participés (`defis_participants`), et renvoie deux faits distincts : `je_suis_createur` et `j_ai_joue`, ainsi que `mon_score` (explicitement null si pas joué, jamais 0) et `mon_temps_s`. L'écran affiche le score de l'élève et le lien vers le podium. Le bouton « Projeter au tableau » est réservé au créateur du défi.
+`mes_defis()` ne renvoyait que les défis dont l'utilisateur était l'auteur (`d.cree_par_eleve`). Un élève qui jouait le défi de son professeur en classe n'avait aucun chemin de retour vers son résultat après avoir quitté l'écran. La migration 31 a ouvert `mes_defis()` aux défis participés (`defis_participants`), et renvoie deux faits distincts : `je_suis_createur` et `j_ai_joue`, ainsi que `mon_score` (explicitement null si pas joué, jamais 0) et `mon_temps_s`. La migration 32 a complété en renvoyant `duree_s` et `nb_questions` pour éliminer tout chiffre en dur dans l'écran : `mon_score` est libellé en « bonnes réponses » (et non en « pts » pour éviter toute confusion avec les points de session/classement), « 6 bonnes réponses en 30 s » ou « 18 sur 20 · 45 s ». Le bouton « Projeter au tableau » est réservé au créateur du défi.
 
 ### Enseignants et administration
 

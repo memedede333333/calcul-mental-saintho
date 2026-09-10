@@ -57,6 +57,16 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 32 : mes_defis renvoie duree_s et nb_questions, libellé exact du score
+
+**Fait** — Migration 32 (`20260910080000_mes_defis_duree.sql`) appliquée en base de dev. `mes_defis()` renvoie désormais la vraie durée (`duree_s`, null hors Contre-la-montre) et le nombre réel de questions (`nb_questions`, lu sur la liste figée dans `defis.questions`). Types TypeScript régénérés dans `database.ts`. Dans `MesDefis.jsx`, le libellé personnel du score ne ment plus : « 6 bonnes réponses en 30 s » pour un Contre-la-montre, « 18 sur 20 · 45 s » pour un Sprint (plus de confusion avec les points). Les libellés en dur « chrono » et « 20 questions » sont remplacés par la lecture directe des colonnes serveur.
+
+**Décidé** — Un chiffre en dur dans un écran trahit presque toujours une valeur absente du contrat serveur : corriger à la source dans le SQL plutôt que de bricoler dans l'écran, ce qui supprime le défaut partout. `mon_score` est un compte de réponses justes, pas de points. ✅ *validé par Claude et Aymeri le 10/09*
+
+**Constaté** — L'écran « Mes défis » affiche désormais la durée exacte de chaque Contre-la-montre (30 s, 1 min, etc.) et le score sous sa forme réelle et compréhensible pour l'élève.
+
+**Ensuite** — Poursuite des recettes terrain.
+
 ## 2026-09-10 — Migration 31 : les défis joués remontent dans Mes défis
 
 **Fait** — Migration 31 (`20260909170000_mes_defis_joues.sql`) appliquée en base de dev. La fonction `mes_defis()` renvoie désormais aussi les défis auxquels l'élève a participé (`defis_participants`), et expose deux faits distincts : `je_suis_createur`, `j_ai_joue`, ainsi que `mon_score` (null si pas joué) et `mon_temps_s`. Dans `MesDefis.jsx`, les élèves voient désormais les défis lancés par leur professeur, leur score personnel et le lien « Voir le podium ». Le bouton « Projeter au tableau » est réservé au créateur du défi (`je_suis_createur`). Types TypeScript régénérés dans `database.ts`.

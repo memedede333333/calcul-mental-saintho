@@ -765,12 +765,14 @@ export type Database = {
           code: string
           cree_le: string
           defi_id: string
+          duree_s: number
           encore_ouvert: boolean
           expire_le: string
           j_ai_joue: boolean
           je_suis_createur: boolean
           mon_score: number
           mon_temps_s: number
+          nb_questions: number
           origine: string
           participants: number
           participants_classe: number

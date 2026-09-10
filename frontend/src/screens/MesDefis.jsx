@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { mesDefis } from '../api';
 import { DefiLeaderboard } from './Challenges';
+import { formaterDuree } from '../logic/duree';
 
 /**
  * MesDefis — Écran 28 : Mes défis passés
@@ -332,7 +333,7 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
                                         fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
                                     }}>
-                                        {typeInfo.label} · {d.type === 'countdown' ? 'chrono' : '20 questions'}
+                                        {typeInfo.label} · {d.type === 'countdown' ? formaterDuree(d.duree_s || 60) : `${d.nb_questions || 20} questions`}
                                     </span>
                                     <span style={{
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
@@ -356,7 +357,7 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                     </span>
                                 </div>
 
-                                {/* Mon score personnel si j'ai joué */}
+                                {/* Mon résultat personnel si j'ai joué */}
                                 {d.j_ai_joue && d.mon_score != null && (
                                     <div style={{
                                         background: 'var(--surface-alt)', borderRadius: 16, padding: '12px 18px',
@@ -366,14 +367,23 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <span style={{ fontSize: 20 }}>⚡</span>
                                             <span style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700, color: 'var(--indigo)' }}>
-                                                Ton score : <b style={{ color: 'var(--action)' }}>{d.mon_score} pts</b>
+                                                {d.type === 'countdown' ? (
+                                                    <>
+                                                        Ton résultat : <b style={{ color: 'var(--action)' }}>
+                                                            {d.mon_score} {d.mon_score === 1 ? 'bonne réponse' : 'bonnes réponses'}
+                                                        </b>
+                                                        {d.mon_temps_s != null && ` en ${formaterTemps(d.mon_temps_s)}`}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        Ton résultat : <b style={{ color: 'var(--action)' }}>
+                                                            {d.mon_score} sur {d.nb_questions || 20}
+                                                        </b>
+                                                        {d.mon_temps_s != null && ` · ${formaterTemps(d.mon_temps_s)}`}
+                                                    </>
+                                                )}
                                             </span>
                                         </div>
-                                        {d.mon_temps_s != null && (
-                                            <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--gris)' }}>
-                                                {formaterTemps(d.mon_temps_s)}
-                                            </span>
-                                        )}
                                     </div>
                                 )}
 
