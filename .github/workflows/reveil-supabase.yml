@@ -1,0 +1,89 @@
+# =====================================================================
+# Réveil quotidien de la base Supabase
+#
+# POURQUOI. Sur l'offre gratuite, un projet resté sept jours sans
+# activité est suspendu — et il ne redémarre PAS tout seul : il faut
+# aller cliquer dans le tableau de bord. Une semaine de vacances
+# suffit. Ce workflow appelle la base une fois par jour pour qu'elle
+# ne s'endorme jamais.
+#
+# CE QU'IL APPELLE. La fonction `ping()` (migration 34), qui renvoie
+# toujours « ok » et ne divulgue rien.
+#
+# ⚠️ LA CLÉ. On utilise la clé **anon**, celle qui est déjà publique
+# puisqu'elle est embarquée dans l'application. JAMAIS la clé
+# `service_role` : elle ouvre toute la base sans RLS, et un secret
+# GitHub reste lisible par quiconque peut modifier le dépôt.
+#
+# LES SECRETS À CRÉER (Settings › Secrets and variables › Actions) :
+#   SUPABASE_URL           https://lkukdlspcgqtiimvwlsd.supabase.co
+#   SUPABASE_ANON_KEY      la clé anon du projet de développement
+#   SUPABASE_URL_PROD      (plus tard, quand la production existera)
+#   SUPABASE_ANON_KEY_PROD (idem — tant qu'ils sont vides, l'étape
+#                           production ne fait rien et ne casse pas)
+#
+# ⚠️ LA LIMITE À CONNAÎTRE. GitHub désactive les workflows planifiés
+# d'un dépôt resté 60 jours sans le moindre commit. C'est exactement
+# la durée des vacances d'été. Deux parades, au choix :
+#   — relancer ce workflow à la main une fois pendant l'été
+#     (onglet Actions › Run workflow), ce qui suffit à le réarmer ;
+#   — ou doubler avec un service extérieur (cron-job.org, UptimeRobot)
+#     pointé sur la même adresse.
+# =====================================================================
+
+name: Réveil quotidien Supabase
+
+on:
+  schedule:
+    # 05h17 UTC — une heure creuse, et une minute qui n'est pas ronde :
+    # GitHub retarde les tâches planifiées aux minutes les plus chargées.
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  reveil:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Développement
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${URL}" ] || [ -z "${KEY}" ]; then
+            echo "::error::Les secrets SUPABASE_URL et SUPABASE_ANON_KEY ne sont pas renseignés."
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/reponse.txt -w '%{http_code}' \
+                   -X POST "${URL}/rest/v1/rpc/ping" \
+                   -H "apikey: ${KEY}" \
+                   -H "Authorization: Bearer ${KEY}" \
+                   -H "Content-Type: application/json" \
+                   -d '{}')
+          echo "HTTP ${code} — $(cat /tmp/reponse.txt)"
+          if [ "${code}" != "200" ]; then
+            echo "::error::La base de développement n'a pas répondu (HTTP ${code})."
+            exit 1
+          fi
+
+      - name: Production
+        env:
+          URL: ${{ secrets.SUPABASE_URL_PROD }}
+          KEY: ${{ secrets.SUPABASE_ANON_KEY_PROD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${URL}" ] || [ -z "${KEY}" ]; then
+            echo "Pas encore de production : rien à réveiller."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/reponse.txt -w '%{http_code}' \
+                   -X POST "${URL}/rest/v1/rpc/ping" \
+                   -H "apikey: ${KEY}" \
+                   -H "Authorization: Bearer ${KEY}" \
+                   -H "Content-Type: application/json" \
+                   -d '{}')
+          echo "HTTP ${code} — $(cat /tmp/reponse.txt)"
+          if [ "${code}" != "200" ]; then
+            echo "::error::La base de production n'a pas répondu (HTTP ${code})."
+            exit 1
+          fi

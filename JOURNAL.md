@@ -57,6 +57,30 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 34 : `ping()`, pour que la base ne s'endorme jamais
+
+**Fait** — Migration 34 (`20260910190000_ping_reveil.sql`) et
+`.github/workflows/reveil-supabase.yml`. Une fonction `ping()` ouverte au
+visiteur non connecté, appelée une fois par jour à 05h17 UTC avec la clé anon.
+Trois cas de test ajoutés (177 à 179) : elle répond, elle n'ouvre aucune table
+à `anon`, et sa réponse ne varie pas avec l'effectif du collège. Suite complète
+au vert. Reste à Aymeri : créer les secrets `SUPABASE_URL` et
+`SUPABASE_ANON_KEY` dans GitHub, puis un « Run workflow » de contrôle.
+
+**Décidé** — Un appel RPC plutôt qu'une requête HTTP sur `/rest/v1/` : cette
+dernière peut être servie par le cache de schéma de PostgREST sans que
+PostgreSQL soit sollicité, et l'objectif est précisément de produire de
+l'activité de base. Pour la même raison `ping()` compte les élèves puis jette
+le compte : un `select 1` peut être résolu sans toucher au stockage.
+
+**Constaté** — Ce qui a déclenché le sujet : sur l'offre gratuite, un projet
+inactif sept jours est suspendu et **ne redémarre pas tout seul**. Une semaine
+de vacances suffit à trouver l'application morte le lundi de la rentrée.
+Deuxième piège, moins connu : GitHub désactive les workflows planifiés d'un
+dépôt resté 60 jours sans commit — la durée exacte des vacances d'été.
+
+**Ensuite** — Les secrets GitHub, puis le passage en production.
+
 ## 2026-09-10 — Migration 33 : nb_questions est null hors Sprint
 
 **Fait** — Migration 33 (`20260910100000_nb_questions_sprint.sql`) appliquée en base de dev. `nb_questions` renvoie désormais `null` pour les Contre-la-montre (seuls les Sprints reçoivent leur compte réel de questions). Types TypeScript régénérés dans `database.ts`. Côté `MesDefis.jsx`, le branchement conditionnel par type (`d.type === 'countdown' ? ... : ...`) protégeait déjà l'affichage, aucun risque d'afficher un null ou les 120 questions de réserve sur un chrono de 30 s. Suite de tests `01_scenario.sql` mise à jour (176 cas verts).

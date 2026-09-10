@@ -4,8 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **33 migrations, 176 cas
-> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
+> Dernière mise à jour : **10 septembre 2026** — **34 migrations, 176 cas
+> de test verts** (numérotés jusqu'à 179 : les numéros 29 à 31 ont été retirés
+> et ne sont pas réattribués). L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
 > Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
 > **Le lot 18 est livré** (maîtrise au temps de réponse côté serveur, seuil 3s).
@@ -825,6 +826,21 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
 13. ✅ **Lot 23** : Migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées en base (167 cas de test verts). Types TypeScript régénérés (`database.ts`). Écrans 28 (Mes défis passés avec distinction rejoints/terminés et bi-jauge), 29 (Profil élève avec 4 comptes de grille = `plafond × plafond`, jours d'entraînement all-time et date déduite de Montée), 30 (Profil enseignant avec avatar emoji ou initiales, classes favorites et stats ce mois), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales). Correction du dénominateur `/20` dans `JoinChallenge.jsx`. Fait le 09/09.
 14. ✅ **Lot 24** : Écran 35 (Apprendre les tables) et Écran 36 (les 4 modales unifiées sur voile indigo 55%). Branchement d'`apercu_import_eleves` (`apercuImportEleves` dans `api.js`), respects des règles de comptage serveur (`creations + mises_a_jour + ignorees = lignes_lues`, `dont_reactivations` sous-ensemble, `actifs_absents_du_fichier` sur la base), affichage littéral des motifs de rejet serveur, commutativité animée avec rotation sans disparition des ronds, coupure en deux algorithmique, sélecteur de table borné par `plafond_tables`, zéro écriture en mode apprentissage. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.** Fait le 09/09.
 15. ✅ **Lot 25** : Clavier physique fermé dans les trois modes chronométrés (Sprint, Contre-la-montre, Montée). Règle d'équité (ordinateur vs iPad) centralisée dans `frontend/src/logic/saisie.js`. Touche Échap préservée en sortie de secours. Clavier laissé ouvert en Libre, Sans faute, Apprendre et saisie du code de défi. Phrase explicative discrète sur les écrans de préparation. Fait le 09/09.
+16. ✅ **Lot 26 et migrations 31 à 33** — 9 et 10 septembre. La file d'attente
+    hors-ligne couvre désormais les défis : `terminerDefi` bascule dans
+    `mettreEnAttente('terminer_defi', params)` sur panne réseau, et l'écran dit
+    la vérité — « Ton résultat est gardé sur l'iPad. Il partira dès que le wifi
+    revient », jamais « enregistré ». C'était la cause des deux résultats perdus
+    au test de recette. Côté serveur, `mes_defis()` renvoie les défis **joués**
+    et plus seulement créés (31), la durée réelle du défi (32), et `nb_questions`
+    null hors Sprint (33) — les 120 questions d'un Contre-la-montre sont une
+    réserve, pas un objectif. 176 cas de test verts.
+17. ✅ **Migration 34 et réveil quotidien** — 10 septembre. `ping()`, une fonction
+    qui renvoie « ok » et rien d'autre, ouverte au visiteur non connecté, appelée
+    chaque matin par `.github/workflows/reveil-supabase.yml`. Elle lit une table
+    (et jette le compte) pour que l'appel produise une vraie activité de base :
+    un `select 1` peut être résolu sans toucher au stockage. Trois cas de test
+    ajoutés, dont deux qui vérifient qu'`anon` ne peut toujours lire aucune table.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
@@ -838,14 +854,22 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
       Contrainte : les élèves ne reçoivent que du domaine `saintho.fr`.
 - [ ] **Autoriser `*.supabase.co` dans Jamf** — le wildcard, pas l'adresse
       exacte : elle changerait si le projet change.
-- [ ] **Mettre en place un outil de réveil quotidien automatique (keep-alive)** :
-      Sur l'offre gratuite de Supabase, un projet inactif pendant 7 jours est suspendu.
-      Configurer un ping automatique quotidien (ex. workflow GitHub Actions planifié chaque matin
-      avec un appel HTTP/curl sur l'API Supabase, ou service UptimeRobot / cron-job.org) sur
-      `calcul-mental-dev` et sur la production pour éviter toute mise en veille pendant les vacances ou périodes calmes.
+- [ ] **Réveil quotidien (keep-alive) — le workflow est écrit, il reste deux secrets à créer.**
+      Sur l'offre gratuite, un projet inactif sept jours est suspendu, et **il ne
+      redémarre pas tout seul** : il faut aller cliquer. Une semaine de vacances suffit.
+      `.github/workflows/reveil-supabase.yml` appelle `ping()` (migration 34) une fois
+      par jour. À faire : *Settings › Secrets and variables › Actions* et créer
+      `SUPABASE_URL` et `SUPABASE_ANON_KEY` — **la clé anon, jamais `service_role`**.
+      Puis *Actions › Réveil quotidien Supabase › Run workflow* pour vérifier tout de
+      suite qu'il répond `HTTP 200 — "ok"`.
+      Deux secrets de plus, `SUPABASE_URL_PROD` et `SUPABASE_ANON_KEY_PROD`, quand la
+      production existera : tant qu'ils sont vides l'étape passe son tour sans échouer.
+      ⚠️ GitHub désactive les workflows planifiés d'un dépôt resté 60 jours sans commit
+      — exactement la durée des vacances d'été. Un « Run workflow » à la main en juillet
+      le réarme, ou bien doubler avec cron-job.org sur la même adresse.
 - [ ] **Préparer et déployer le passage en production** :
       1. Créer le projet Supabase dédié `calcul-mental-prod` en région européenne (Francfort).
-      2. Appliquer les 30 migrations SQL dans l'ordre strict (`supabase/migrations/`), **aucun seed de démo**.
+      2. Appliquer les **33** migrations SQL dans l'ordre strict (`supabase/migrations/`), **aucun seed de démo**.
       3. Configurer l'OAuth Google (mode Interne domaine `@saintho.fr`) et le modèle OTP (`{{ .Token }}`).
       4. Mettre à jour les variables d'environnement de production sur Vercel (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
       5. Réaliser l'import des 350 élèves via la modale d'aperçu CSV (Écran 36d).

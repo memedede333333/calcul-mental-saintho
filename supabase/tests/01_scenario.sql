@@ -10,6 +10,10 @@
 -- données d'un autre élève).
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
+--
+-- COMPTE EXACT : 176 cas, numérotés jusqu'à 179. Les numéros 29 à 31 ont
+-- été retirés et ne sont pas réattribués, pour que les numéros cités dans
+-- les migrations continuent de désigner le même test.
 -- =====================================================================
 \set ALICE '11111111-1111-1111-1111-111111111111'
 \set BOB   '22222222-2222-2222-2222-222222222222'
@@ -1741,3 +1745,34 @@ select case when (select mon_score from mes_defis() where code = :'code_m32') = 
             then 'OK : le score et les points sont deux nombres differents'
             else 'ECHEC : score et points confondus' end as verdict;
 reset role;
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 34 — le reveil quotidien de la base
+-- ---------------------------------------------------------------------
+
+\echo '=== 177. ping() repond « ok » a un visiteur non connecte ==='
+-- Sans cette fonction, le reveil devrait s authentifier ; avec elle, un
+-- simple appel HTTP quotidien suffit a empecher la mise en veille.
+set role anon;
+select case when public.ping() = 'ok'
+            then 'OK : la base repond au reveil'
+            else 'ECHEC : le reveil quotidien ne repondra pas' end as verdict;
+reset role;
+
+\echo '=== 178. ping() n ouvre AUCUNE autre porte a anon ==='
+-- C est la seule fonction accessible sans compte. On verifie qu elle
+-- n a pas ete accompagnee d un droit de lecture sur les tables.
+select case when has_table_privilege('anon', 'public.eleves', 'select')
+             or has_table_privilege('anon', 'public.sessions_jeu', 'select')
+             or has_table_privilege('anon', 'public.maitrise', 'select')
+            then 'ECHEC : anon peut lire une table'
+            else 'OK : anon ne peut toujours rien lire en direct' end as verdict;
+
+\echo '=== 179. ping() ne divulgue rien, base pleine ou base vide ==='
+-- Elle compte les eleves puis jette le compte. Le mot renvoye ne doit
+-- pas varier avec l effectif, sans quoi la cle publique laisserait
+-- suivre les inscriptions du college.
+select case when public.ping() = 'ok'
+             and (select count(*) from public.eleves) > 0
+            then 'OK : meme reponse quel que soit l effectif'
+            else 'ECHEC : la reponse depend des donnees' end as verdict;
