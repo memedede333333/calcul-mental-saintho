@@ -209,7 +209,7 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                             <span style={{ width: 130, fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--ciel-pale)' }}>Mode</span>
                             <span style={{ fontFamily: 'var(--texte)', fontSize: 21, fontWeight: 700, color: 'var(--action-texte)' }}>
                                 {defiData.type === 'countdown'
-                                    ? `Contre‑la‑montre · ${formaterDuree(defiData.duree_s || 60)}`
+                                    ? `Contre‑la‑montre · ${formaterDuree(defiData.duree_s)}`
                                     : `Sprint · ${Array.isArray(defiData.questions) ? defiData.questions.length : (typeof defiData.questions === 'number' ? defiData.questions : 20)} questions`}
                             </span>
                         </div>
