@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 183 cas, numérotés jusqu'à 182. Les numéros 29 à 31 ont
+-- COMPTE EXACT : 186 cas, numérotés jusqu'à 185. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
 -- les migrations continuent de désigner le même test ; les cas 38b à 38d et 180b
 -- complètent les cas 38 et 180.
@@ -1878,4 +1878,52 @@ select case when (select user_id from eleves where id = :'leo_id'::uuid)
                  = '66666666-6666-6666-6666-666666666666'::uuid
             then 'OK : la fiche corrigee retrouve son compte Google'
             else 'ECHEC : fiche orpheline apres correction' end as verdict;
+reset role;
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 36 — « jamais connecte » dit la verite
+-- ---------------------------------------------------------------------
+
+\echo '=== 183. Chaque partie met a jour la date d activite ==='
+-- Avant, `derniere_connexion` n etait ecrite qu UNE fois dans une vie,
+-- au premier rattachement. Un eleve jouant tous les jours affichait
+-- encore la date de septembre.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select id as act_id, derniere_connexion as act_avant
+  from eleves where email='alice.dupont@demo.saintho.fr' \gset
+reset role;
+update public.eleves set derniere_connexion = timestamptz '2026-01-01'
+ where id = :'act_id'::uuid;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select enregistrer_session(
+  p_mode => 'libre', p_tables => '{2}'::smallint[],
+  p_nb_questions => 5, p_score => 5, p_duree_s => 30) is not null as partie_enregistree;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select derniere_connexion from eleves where id = :'act_id'::uuid)
+                 > timestamptz '2026-06-01'
+            then 'OK : la date suit les parties'
+            else 'ECHEC : la date est restee celle du rattachement' end as verdict;
+
+\echo '=== 184. Un compte Google supprime ne fait pas « jamais connecte » ==='
+-- `eleves.user_id` est `on delete set null` : les comptes des partants
+-- sont supprimes en juillet, les fiches restent actives jusqu a l import
+-- de septembre. Sans cette regle, toute une promotion reapparaitrait en
+-- « jamais connecte » a la rentree.
+reset role;
+update public.eleves set user_id = null where id = :'act_id'::uuid;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select deja_connecte from liste_eleves() where eleve_id = :'act_id'::uuid)
+            then 'OK : la trace d activite survit au compte Google'
+            else 'ECHEC : un eleve parti serait relance a la rentree' end as verdict;
+
+\echo '=== 185. Un eleve qui n a vraiment jamais joue reste « jamais connecte » ==='
+select (ajouter_eleve('jamais.vu@demo.saintho.fr','Vu','Jamais','6A')
+        ->>'eleve_id')::uuid as jamais_id \gset
+select case when (select deja_connecte from liste_eleves() where eleve_id = :'jamais_id'::uuid) = false
+             and (select derniere_connexion from liste_eleves() where eleve_id = :'jamais_id'::uuid) is null
+            then 'OK : celui-la, il faut aller le chercher'
+            else 'ECHEC : un eleve jamais venu passe pour connecte' end as verdict;
 reset role;

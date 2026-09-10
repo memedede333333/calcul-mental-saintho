@@ -57,6 +57,33 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 36 : « Jamais connecté » disait deux choses fausses
+
+**Fait** — Migration 36 (`20260910230000_derniere_activite.sql`). Déclencheur
+`sessions_jeu_activite` : chaque partie enregistrée met à jour
+`eleves.derniere_connexion`. Et `deja_connecte` devient « rattaché aujourd'hui
+**ou** portant une trace d'activité ». Cas 183 à 185 ajoutés, 186 cas verts.
+
+**Constaté** — Deux défauts, trouvés en relisant l'écran Administration livré le
+matin même, pas en raisonnant sur le code. (1) `derniere_connexion` n'était
+écrite que par le trigger `on_auth_user_created`, au tout premier rattachement,
+et jamais ensuite : l'infobulle « Dernière connexion le … » aurait annoncé la
+date de septembre à un élève jouant tous les jours. (2) `deja_connecte` valait
+`user_id is not null`, et `eleves.user_id` est `on delete set null` : la
+suppression des comptes Google des partants en juillet aurait fait réapparaître
+toute une promotion en « Jamais connecté » à la rentrée, dans la pastille de
+filtrage comme dans la liste.
+
+**Décidé** — Le déclencheur est posé sur la TABLE, pas dans les fonctions. Cinq
+migrations contiennent un `insert into sessions_jeu` ; ajouter la ligne dans
+chacune, c'est se préparer à en oublier une — la faute exacte de la migration 26,
+où `p_faits` avait été ajouté à `enregistrer_session` sans être relayé par
+`terminer_defi`. La table est le seul point par où tout passe.
+
+**Ensuite** — Antigravity : appliquer la migration 36, régénérer `database.ts`.
+Rien à changer à l'écran, les deux colonnes gardent leur nom et leur sens
+s'améliore.
+
 ## 2026-09-10 — Audit du pont entre le SQL et les écrans
 
 **Fait** — Audit complet : 55 fonctions ouvertes à l'application, 41 RPC

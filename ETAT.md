@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **35 migrations, 183 cas
+> Dernière mise à jour : **10 septembre 2026** — **36 migrations, 186 cas
 > de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
 > Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
@@ -924,6 +924,20 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     Administration reçoit ces deux colonnes et ne les affiche pas, alors que
     « qui n'a jamais ouvert l'application » est la question de la rentrée.
     Garde-fou ajouté : `frontend/scripts/check-api.mjs`.
+20. ✅ **Migration 36 — « Jamais connecté » dit la vérité** — 10 septembre.
+    Deux défauts trouvés en relisant l'écran livré le matin même.
+    `derniere_connexion` n'était écrite qu'**une fois dans une vie**, au premier
+    rattachement du compte Google : en décembre, l'infobulle aurait annoncé
+    « Dernière connexion le 3 septembre » à un élève jouant tous les jours. Un
+    déclencheur sur `sessions_jeu` la met désormais à jour à chaque partie —
+    déclencheur et non ligne ajoutée dans chaque fonction, parce que cinq
+    migrations contiennent un `insert into sessions_jeu` et qu'on en aurait
+    oublié une, comme `p_faits` à la migration 26. Et `deja_connecte` reposait
+    sur `user_id`, qui est `on delete set null` : à la rentrée, toute la
+    promotion partie en juin — comptes Google supprimés en juillet, fiches
+    encore actives — se serait affichée « Jamais connecté », et
+    l'administrateur serait allé relancer des élèves qui ont quitté le collège.
+    186 cas de test verts.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
