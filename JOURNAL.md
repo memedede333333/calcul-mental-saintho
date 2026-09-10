@@ -57,6 +57,16 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 31 : les défis joués remontent dans Mes défis
+
+**Fait** — Migration 31 (`20260909170000_mes_defis_joues.sql`) appliquée en base de dev. La fonction `mes_defis()` renvoie désormais aussi les défis auxquels l'élève a participé (`defis_participants`), et expose deux faits distincts : `je_suis_createur`, `j_ai_joue`, ainsi que `mon_score` (null si pas joué) et `mon_temps_s`. Dans `MesDefis.jsx`, les élèves voient désormais les défis lancés par leur professeur, leur score personnel et le lien « Voir le podium ». Le bouton « Projeter au tableau » est réservé au créateur du défi (`je_suis_createur`). Types TypeScript régénérés dans `database.ts`.
+
+**Décidé** — Un élève peut être créateur ET joueur : deux faits, deux colonnes booléennes distinctes plutôt qu'un rôle synthétique unique. `mon_score` vaut explicitement null si non joué, jamais 0. ✅ *validé par Claude et Aymeri le 10/09*
+
+**Constaté** — Le défi lancé par Aymeri et joué par Lou à 13h55 (`U9WG2`) remonte désormais immédiatement dans l'écran « Mes défis » de Lou avec son score (6 pts en 30 s), comblant le manque de chemin de retour.
+
+**Ensuite** — Poursuite de la recette terrain avec les classes.
+
 ## 2026-09-09 — Lot 26 : file d'attente pour les défis et durée dynamique
 
 **Fait** — File d'attente hors-ligne étendue aux défis dans `src/api.js` (`terminerDefi`). Si le réseau coupe en fin de défi, la participation est mise en attente locale (`mettreEnAttente`) et rejouée dès le retour du wifi (`viderFile`), sans duplication possible grâce à la clé primaire `(defi_id, eleve_id)`. L'écran de résultat du défi affiche la vérité : *« Ton résultat est gardé sur l'iPad. Il partira dès que le wifi revient. »*. La durée du chrono est lue depuis le défi et formatée par une fonction centralisée (`logic/duree.js`), nettoyant les libellés en dur « 2 minutes ».

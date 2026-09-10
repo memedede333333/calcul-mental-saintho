@@ -49,6 +49,15 @@ function formatDateRelative(iso) {
     return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${heure}`;
 }
 
+function formaterTemps(tempsS) {
+    if (tempsS == null) return '';
+    const total = Math.round(Number(tempsS));
+    const m = Math.floor(total / 60);
+    const sec = total % 60;
+    if (m > 0) return `${m} min ${sec < 10 ? '0' : ''}${sec}`;
+    return `${sec} s`;
+}
+
 function formatTables(tables) {
     if (!tables || !tables.length) return 'Toutes tables';
     if (tables.length === 1) return `Table de ${tables[0]}`;
@@ -303,11 +312,27 @@ export default function MesDefis({ onBack, estProf, onGo }) {
 
                                 {/* Ligne des tags / chips */}
                                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                    {!d.je_suis_createur && d.auteur_nom && (
+                                        <span style={{
+                                            background: 'var(--ciel-pale)', padding: '8px 14px', borderRadius: 10,
+                                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 700, color: 'var(--indigo)',
+                                        }}>
+                                            Par {d.auteur_nom}
+                                        </span>
+                                    )}
+                                    {d.je_suis_createur && (
+                                        <span style={{
+                                            background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
+                                            fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 700, color: 'var(--indigo)',
+                                        }}>
+                                            Créé par moi
+                                        </span>
+                                    )}
                                     <span style={{
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
                                         fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
                                     }}>
-                                        {typeInfo.label} · {d.type === 'countdown' ? '2 min' : '20 questions'}
+                                        {typeInfo.label} · {d.type === 'countdown' ? 'chrono' : '20 questions'}
                                     </span>
                                     <span style={{
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
@@ -330,6 +355,27 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                         {formatDateRelative(d.cree_le)}
                                     </span>
                                 </div>
+
+                                {/* Mon score personnel si j'ai joué */}
+                                {d.j_ai_joue && d.mon_score != null && (
+                                    <div style={{
+                                        background: 'var(--surface-alt)', borderRadius: 16, padding: '12px 18px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        border: '1px solid var(--bordure)',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <span style={{ fontSize: 20 }}>⚡</span>
+                                            <span style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700, color: 'var(--indigo)' }}>
+                                                Ton score : <b style={{ color: 'var(--action)' }}>{d.mon_score} pts</b>
+                                            </span>
+                                        </div>
+                                        {d.mon_temps_s != null && (
+                                            <span className="font-display" style={{ fontSize: 16, fontWeight: 700, color: 'var(--gris)' }}>
+                                                {formaterTemps(d.mon_temps_s)}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Populations : rejoints et participants (DEUX POPULATIONS, DEUX VERBES) */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -360,26 +406,28 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                     >
                                         Voir le podium
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (onGo) {
-                                                onGo('challenges', { projecteurDefi: d });
-                                            } else {
-                                                setSelectedDefi(d);
-                                            }
-                                        }}
-                                        style={{
-                                            flex: 1, height: 66, borderRadius: 18,
-                                            background: 'var(--action)', border: 'none',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
-                                            color: 'var(--action-texte)', cursor: 'pointer',
-                                            boxShadow: '0 4px 14px rgba(35, 164, 217, 0.25)',
-                                        }}
-                                    >
-                                        Projeter au tableau
-                                    </button>
+                                    {d.je_suis_createur && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (onGo) {
+                                                    onGo('challenges', { projecteurDefi: d });
+                                                } else {
+                                                    setSelectedDefi(d);
+                                                }
+                                            }}
+                                            style={{
+                                                flex: 1, height: 66, borderRadius: 18,
+                                                background: 'var(--action)', border: 'none',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                                color: 'var(--action-texte)', cursor: 'pointer',
+                                                boxShadow: '0 4px 14px rgba(35, 164, 217, 0.25)',
+                                            }}
+                                        >
+                                            Projeter au tableau
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

@@ -767,6 +767,10 @@ export type Database = {
           defi_id: string
           encore_ouvert: boolean
           expire_le: string
+          j_ai_joue: boolean
+          je_suis_createur: boolean
+          mon_score: number
+          mon_temps_s: number
           origine: string
           participants: number
           participants_classe: number
