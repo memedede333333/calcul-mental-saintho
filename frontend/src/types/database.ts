@@ -809,6 +809,7 @@ export type Database = {
       palier_de_plafond: { Args: { p_plafond: number }; Returns: string }
       palier_tables: { Args: { p_tables: number[] }; Returns: string }
       peut_administrer_classe: { Args: { p_classe: string }; Returns: boolean }
+      ping: { Args: never; Returns: string }
       plafond_par_defaut: { Args: { p_classe: string }; Returns: number }
       poids_fait: { Args: { p_a: number; p_b: number }; Returns: number }
       poids_moyen: { Args: { p_tables: number[] }; Returns: number }

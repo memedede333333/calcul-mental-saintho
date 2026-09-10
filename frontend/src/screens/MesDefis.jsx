@@ -333,7 +333,7 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
                                         fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)',
                                     }}>
-                                        {typeInfo.label} · {d.type === 'countdown' ? formaterDuree(d.duree_s || 60) : `${d.nb_questions || 20} questions`}
+                                        {typeInfo.label} · {d.type === 'countdown' ? formaterDuree(d.duree_s) : `${d.nb_questions} questions`}
                                     </span>
                                     <span style={{
                                         background: 'var(--surface-alt)', padding: '8px 14px', borderRadius: 10,
@@ -377,7 +377,7 @@ export default function MesDefis({ onBack, estProf, onGo }) {
                                                 ) : (
                                                     <>
                                                         Ton résultat : <b style={{ color: 'var(--action)' }}>
-                                                            {d.mon_score} sur {d.nb_questions || 20}
+                                                            {d.mon_score} sur {d.nb_questions}
                                                         </b>
                                                         {d.mon_temps_s != null && ` · ${formaterTemps(d.mon_temps_s)}`}
                                                     </>
