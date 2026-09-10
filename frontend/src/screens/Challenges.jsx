@@ -2140,11 +2140,12 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
     const tables = defiInfo?.tables || [2, 3, 4, 5, 6, 7, 8, 9, 10];
     const modeKey = challengeType?.id || defiInfo?.type || 'sprint';
 
+    const dureeTexte = formaterDuree(defiInfo?.duree_s);
     const modeLabels = {
         sprint: { name: 'Sprint', desc: '20 questions · 3 secondes chacune' },
         countdown: {
             name: 'Contre-la-montre',
-            desc: `${defiInfo?.duree_s === 30 ? '30 secondes' : defiInfo?.duree_s === 60 ? '1 minute' : defiInfo?.duree_s === 90 ? '1 min 30' : (defiInfo?.duree_s ? Math.round(defiInfo.duree_s / 60) + ' min' : '1 minute')} · max de bonnes réponses`,
+            desc: dureeTexte ? `${dureeTexte} · max de bonnes réponses` : 'Max de bonnes réponses',
         },
         flawless: { name: 'Sans faute', desc: 'Zéro erreur · la première te stoppe' },
         climb: { name: 'Montée', desc: 'Palier par palier' },
