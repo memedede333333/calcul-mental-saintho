@@ -460,7 +460,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                     >
                         Profil
                     </button>
-                    {estAdmin && (
+                    {(estAdmin || estProf) && (
                         <button
                             onClick={() => onGo('admin')}
                             style={{

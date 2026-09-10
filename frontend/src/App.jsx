@@ -432,7 +432,7 @@ export default function App() {
                     onGo={handleGo}
                 />
             )}
-            {screen === 'admin' && estAdmin && (
+            {screen === 'admin' && (estAdmin || estProf) && (
                 <Admin onBack={goHome} identite={identite} onIdentiteChange={refreshIdentite} />
             )}
         </Layout>

@@ -5,7 +5,6 @@ import {
     apercuImportEleves, importerEleves, reparerRattachements, journalAdmin,
 } from '../api.js';
 import {
-    ModalChangerClasse,
     ModalDesactiverEleve,
     ModalApercuImport,
     ModalFrame,
@@ -43,8 +42,9 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [recherche, setRecherche] = useState('');
 
     // Modals
-    const [modalClasseEleve, setModalClasseEleve] = useState(null);
+    const [modalModifierEleve, setModalModifierEleve] = useState(null);
     const [modalDesactiverEleve, setModalDesactiverEleve] = useState(null);
+    const [showAjoutEleveModal, setShowAjoutEleveModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showAjoutProfModal, setShowAjoutProfModal] = useState(false);
 
@@ -285,6 +285,12 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         )}
                                     </div>
 
+                                    <button
+                                        className="admin-btn-action-main"
+                                        onClick={() => setShowAjoutEleveModal(true)}
+                                    >
+                                        + Ajouter un élève
+                                    </button>
                                     {estAdmin && (
                                         <button
                                             className="admin-btn-action-main"
@@ -339,10 +345,10 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                 <span className="admin-cell-actions">
                                                     <button
                                                         className="admin-btn-table"
-                                                        onClick={() => setModalClasseEleve(e)}
+                                                        onClick={() => setModalModifierEleve(e)}
                                                         disabled={actionEnCours}
                                                     >
-                                                        Classe
+                                                        Modifier
                                                     </button>
                                                     {estInactif ? (
                                                         <button
@@ -558,14 +564,30 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
             {/* ===================== MODALS ===================== */}
 
-            {/* Modal Changer de classe */}
-            {modalClasseEleve && (
-                <ModalChangerClasse
-                    eleve={modalClasseEleve}
+            {/* Modal Modifier la fiche élève */}
+            {modalModifierEleve && (
+                <ModalModifierEleve
+                    eleve={modalModifierEleve}
                     classes={classes}
-                    onClose={() => setModalClasseEleve(null)}
-                    onConfirm={handleConfirmationChangerClasse}
-                    busy={actionEnCours}
+                    estAdmin={estAdmin}
+                    onClose={() => setModalModifierEleve(null)}
+                    onSuccess={async () => {
+                        await rechargerDonnees();
+                        setMessageFeedback('✅ Fiche élève mise à jour.');
+                    }}
+                />
+            )}
+
+            {/* Modal Ajouter un élève */}
+            {showAjoutEleveModal && (
+                <ModalAjouterEleve
+                    classes={classes}
+                    classeInitiale={classeFiltre !== 'Toutes' ? classeFiltre : (classes[0]?.classe || '')}
+                    onClose={() => setShowAjoutEleveModal(false)}
+                    onSuccess={async (nomComplet) => {
+                        await rechargerDonnees();
+                        setMessageFeedback(`✅ Élève ${nomComplet} ajouté avec succès.`);
+                    }}
                 />
             )}
 
@@ -606,9 +628,357 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
  * MODALS ET COMPOSANTS UTILITAIRES
  * ================================================================= */
 
-/* ===================================================================
- * MODALS ET COMPOSANTS UTILITAIRES
- * ================================================================= */
+function ModalAjouterEleve({ classes, classeInitiale, onClose, onSuccess }) {
+    const [prenom, setPrenom] = useState('');
+    const [nom, setNom] = useState('');
+    const [classe, setClasse] = useState(classeInitiale || (classes[0]?.classe || ''));
+    const [email, setEmail] = useState('');
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const handleAdd = async (e) => {
+        e?.preventDefault();
+        if (!prenom.trim() || !nom.trim() || !classe.trim() || !email.trim()) {
+            setMsg('❌ Tous les champs sont requis.');
+            return;
+        }
+        setBusy(true);
+        setMsg('');
+
+        const res = await ajouterEleve({
+            prenom: prenom.trim(),
+            nom: nom.trim(),
+            classe: classe.trim(),
+            email: email.trim(),
+        });
+
+        if (res.ok) {
+            await onSuccess(`${prenom.trim()} ${nom.trim()}`);
+            onClose();
+        } else {
+            setMsg(`❌ ${res.error || res.data?.message || "Erreur lors de l'ajout."}`);
+            setBusy(false);
+        }
+    };
+
+    return (
+        <ModalFrame onClose={onClose} maxWidth={520}>
+            <form onSubmit={handleAdd} style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
+                        Ajouter un élève
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                            Prénom :
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="ex. Léa"
+                            value={prenom}
+                            onChange={e => setPrenom(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: 10,
+                                border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                                boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                                background: 'var(--surface)',
+                            }}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                            Nom :
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="ex. Martin"
+                            value={nom}
+                            onChange={e => setNom(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: 10,
+                                border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                                boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                                background: 'var(--surface)',
+                            }}
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 6 }}>
+                        Classe :
+                    </label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {classes.map(c => {
+                            const val = typeof c === 'string' ? c : c.classe;
+                            const isSel = classe === val;
+                            return (
+                                <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setClasse(val)}
+                                    className={`admin-class-pill${isSel ? ' admin-class-pill--active' : ''}`}
+                                    style={{ padding: '8px 14px', fontSize: 14 }}
+                                >
+                                    {val}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                        Email scolaire Google :
+                    </label>
+                    <input
+                        type="email"
+                        placeholder="lea.martin@demo.saintho.fr"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                            background: 'var(--surface)',
+                        }}
+                        required
+                    />
+                    <div style={{
+                        marginTop: 6, font: '600 12px var(--texte)',
+                        color: 'var(--gris)', lineHeight: 1.4,
+                    }}>
+                        L'élève pourra se connecter avec son compte Google dès que sa fiche est créée.
+                    </div>
+                </div>
+
+                {msg && (
+                    <div style={{
+                        padding: 10, borderRadius: 10,
+                        background: msg.startsWith('❌') ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: `1px solid ${msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)'}`,
+                        font: '600 13px var(--texte)', color: msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)',
+                    }}>
+                        {msg}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        onClick={onClose}
+                        disabled={busy}
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="submit"
+                        className="admin-btn-action-main"
+                        style={{ height: 42, padding: '0 20px', fontSize: 15 }}
+                        disabled={busy}
+                    >
+                        {busy ? 'Ajout en cours…' : '+ Ajouter l\'élève'}
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    );
+}
+
+function ModalModifierEleve({ eleve, classes, estAdmin, onClose, onSuccess }) {
+    const [prenom, setPrenom] = useState(eleve?.prenom || '');
+    const [nom, setNom] = useState(eleve?.nom || '');
+    const [classe, setClasse] = useState(eleve?.classe || '');
+    const [email, setEmail] = useState(eleve?.email || '');
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const handleSave = async (e) => {
+        e?.preventDefault();
+        if (!prenom.trim() || !nom.trim() || !classe.trim()) {
+            setMsg('❌ Prénom, nom et classe requis.');
+            return;
+        }
+        if (estAdmin && !email.trim()) {
+            setMsg('❌ Adresse e-mail requise.');
+            return;
+        }
+        setBusy(true);
+        setMsg('');
+
+        const params = {
+            prenom: prenom.trim(),
+            nom: nom.trim(),
+            classe: classe.trim(),
+        };
+        // Seul l'administrateur transmet l'adresse e-mail
+        if (estAdmin && email.trim()) {
+            params.email = email.trim();
+        }
+
+        const res = await modifierEleve(eleve.eleve_id, params);
+        if (res.ok) {
+            await onSuccess();
+            onClose();
+        } else {
+            // Afficher le message du serveur mot pour mot, sans le reformuler
+            setMsg(`❌ ${res.error || res.data?.message || 'Erreur lors de la modification.'}`);
+            setBusy(false);
+        }
+    };
+
+    return (
+        <ModalFrame onClose={onClose} maxWidth={520}>
+            <form onSubmit={handleSave} style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
+                        Modifier la fiche élève
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                            Prénom :
+                        </label>
+                        <input
+                            type="text"
+                            value={prenom}
+                            onChange={e => setPrenom(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: 10,
+                                border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                                boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                                background: 'var(--surface)',
+                            }}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                            Nom :
+                        </label>
+                        <input
+                            type="text"
+                            value={nom}
+                            onChange={e => setNom(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: 10,
+                                border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                                boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                                background: 'var(--surface)',
+                            }}
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 6 }}>
+                        Classe :
+                    </label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {classes.map(c => {
+                            const val = typeof c === 'string' ? c : c.classe;
+                            const isSel = classe === val;
+                            return (
+                                <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setClasse(val)}
+                                    className={`admin-class-pill${isSel ? ' admin-class-pill--active' : ''}`}
+                                    style={{ padding: '8px 14px', fontSize: 14 }}
+                                >
+                                    {val}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                        Adresse e-mail scolaire :
+                    </label>
+                    <input
+                        type="email"
+                        value={email}
+                        disabled={!estAdmin}
+                        onChange={e => setEmail(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none',
+                            color: estAdmin ? 'var(--indigo)' : 'var(--gris-inerte)',
+                            background: estAdmin ? 'var(--surface)' : 'var(--surface-alt)',
+                            cursor: estAdmin ? 'text' : 'not-allowed',
+                        }}
+                        required
+                    />
+                    <div style={{
+                        marginTop: 6, font: '600 12px var(--texte)',
+                        color: estAdmin ? 'var(--gris)' : 'var(--gris-inerte)',
+                        lineHeight: 1.4,
+                    }}>
+                        {estAdmin
+                            ? "L'élève garde ses points et son historique. Pense à changer aussi l'adresse dans la console Google."
+                            : "Seul l'administrateur peut changer l'adresse, car elle doit être changée aussi dans la console Google."}
+                    </div>
+                </div>
+
+                {msg && (
+                    <div style={{
+                        padding: 10, borderRadius: 10,
+                        background: msg.startsWith('❌') ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: `1px solid ${msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)'}`,
+                        font: '600 13px var(--texte)', color: msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)',
+                    }}>
+                        {msg}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        onClick={onClose}
+                        disabled={busy}
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="submit"
+                        className="admin-btn-action-main"
+                        style={{ height: 42, padding: '0 20px', fontSize: 15 }}
+                        disabled={busy}
+                    >
+                        {busy ? 'Enregistrement…' : 'Enregistrer'}
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    );
+}
 
 function ModalImport({ onClose, onSuccess }) {
     const [csv, setCsv] = useState('');
@@ -959,7 +1329,7 @@ function formaterDateJournal(dateStr) {
 
 function formaterActionJournal(action) {
     switch (action) {
-        case 'modification_eleve': return 'Changement de classe';
+        case 'modification_eleve': return 'Fiche élève modifiée';
         case 'import_eleves': return 'Import de classe';
         case 'plafond_classe': return 'Plafond relevé';
         case 'desactivation': return 'Désactivation';
@@ -979,6 +1349,20 @@ function formaterDetailJournal(entry) {
     if (!detail && !cible) return '—';
     if (action === 'modification_eleve') {
         const avant = detail?.avant;
+        const apres = detail?.apres;
+        if (avant && apres) {
+            const changs = [];
+            if (avant.prenom !== apres.prenom || avant.nom !== apres.nom) {
+                changs.push(`${avant.prenom} ${avant.nom} → ${apres.prenom} ${apres.nom}`);
+            }
+            if (avant.classe !== apres.classe) {
+                changs.push(`classe ${avant.classe} → ${apres.classe}`);
+            }
+            if (avant.email !== apres.email) {
+                changs.push(`e-mail ${avant.email} → ${apres.email}`);
+            }
+            return changs.length > 0 ? changs.join(' · ') : `${apres.prenom} ${apres.nom} (${apres.classe})`;
+        }
         if (avant) {
             return `${avant.prenom || ''} ${avant.nom || ''} · ${avant.classe || ''} → ${cible || ''}`;
         }
