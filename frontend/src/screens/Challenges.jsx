@@ -796,7 +796,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                                 fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
                                 color: currentModeId === 'countdown' ? 'var(--ciel-pale)' : 'var(--gris)',
                             }}>
-                                {formatDureeLabel(countdownDuration)}
+                                {formaterDuree(countdownDuration)}
                             </div>
                         </div>
                     </div>

@@ -165,7 +165,10 @@ export async function connexionGoogle() {
 export async function demanderCode(email) {
     const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
-        options: { shouldCreateUser: true },
+        options: {
+            shouldCreateUser: true,
+            emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
     });
     if (error) {
         // Supabase limite à une demande par minute et par adresse
