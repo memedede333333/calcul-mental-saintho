@@ -57,6 +57,16 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Migration 33 : nb_questions est null hors Sprint
+
+**Fait** — Migration 33 (`20260910100000_nb_questions_sprint.sql`) appliquée en base de dev. `nb_questions` renvoie désormais `null` pour les Contre-la-montre (seuls les Sprints reçoivent leur compte réel de questions). Types TypeScript régénérés dans `database.ts`. Côté `MesDefis.jsx`, le branchement conditionnel par type (`d.type === 'countdown' ? ... : ...`) protégeait déjà l'affichage, aucun risque d'afficher un null ou les 120 questions de réserve sur un chrono de 30 s. Suite de tests `01_scenario.sql` mise à jour (176 cas verts).
+
+**Décidé** — Une valeur qui n'a pas de sens dans un contexte ne se renvoie pas avec un commentaire d'avertissement : elle se renvoie NULL. Un écran ne peut pas mal afficher ce qu'il ne reçoit pas. Les colonnes `duree_s` (null hors chrono) et `nb_questions` (null hors Sprint) sont désormais strictement symétriques. ✅ *validé par Claude et Aymeri le 10/09*
+
+**Constaté** — Sur le Contre-la-montre de Lou (30 s), `mes_defis()` renvoyait 120 (la réserve figée à la création par `creer_defi`). Le correctif à la source supprime l'incohérence partout.
+
+**Ensuite** — Poursuite des recettes terrain.
+
 ## 2026-09-10 — Migration 32 : mes_defis renvoie duree_s et nb_questions, libellé exact du score
 
 **Fait** — Migration 32 (`20260910080000_mes_defis_duree.sql`) appliquée en base de dev. `mes_defis()` renvoie désormais la vraie durée (`duree_s`, null hors Contre-la-montre) et le nombre réel de questions (`nb_questions`, lu sur la liste figée dans `defis.questions`). Types TypeScript régénérés dans `database.ts`. Dans `MesDefis.jsx`, le libellé personnel du score ne ment plus : « 6 bonnes réponses en 30 s » pour un Contre-la-montre, « 18 sur 20 · 45 s » pour un Sprint (plus de confusion avec les points). Les libellés en dur « chrono » et « 20 questions » sont remplacés par la lecture directe des colonnes serveur.
