@@ -1010,7 +1010,7 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
             const idx = prev.findIndex(x => x === '');
             if (idx === -1) return prev;
             const next = [...prev];
-            next[idx] = d;
+            next[idx] = String(d);
             if (idx === numDigits - 1) {
                 setTimeout(() => handleComplete(parseInt(next.join(''), 10)), 0);
             }
@@ -1035,7 +1035,7 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
     // Clavier physique
     useEffect(() => {
         const h = (e) => {
-            if (e.key >= '0' && e.key <= '9') { e.preventDefault(); press(parseInt(e.key, 10)); }
+            if (e.key >= '0' && e.key <= '9') { e.preventDefault(); press(e.key); }
             else if (e.key === 'Backspace') { e.preventDefault(); del(); }
             else if (e.key === 'Escape') { finish(); }
         };
@@ -1146,13 +1146,13 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
                                         width: 104, height: 122, borderRadius: 22,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 76,
-                                        background: isCorrect ? 'var(--vert)' : isWrong ? 'var(--rouge-pale)' : (d ? 'var(--surface)' : '#F6F2EA'),
+                                        background: isCorrect ? 'var(--vert)' : isWrong ? 'var(--rouge-pale)' : ((d !== '' && d != null) ? 'var(--surface)' : '#F6F2EA'),
                                         border: isCorrect ? 'none' : isWrong ? '4px solid var(--rouge-doux)' : (isCurrent ? '4px solid var(--action)' : '4px solid var(--bordure)'),
                                         color: isCorrect ? '#fff' : isWrong ? 'var(--rouge-doux)' : 'var(--indigo)',
                                         transition: 'all 0.1s ease',
                                     }}
                                 >
-                                    {d || (isCurrent ? <div style={{ width: 4, height: 50, background: 'var(--indigo-doux)', borderRadius: 2 }} className="caret" /> : '')}
+                                    {(d !== '' && d != null) ? d : (isCurrent ? <div style={{ width: 4, height: 50, background: 'var(--indigo-doux)', borderRadius: 2 }} className="caret" /> : '')}
                                 </div>
                             );
                         })}
@@ -1817,7 +1817,7 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
             const idx = prev.findIndex(x => x === '');
             if (idx === -1) return prev;
             const next = [...prev];
-            next[idx] = d;
+            next[idx] = String(d);
             if (idx === numDigits - 1) {
                 setTimeout(() => handleComplete(parseInt(next.join(''), 10)), 0);
             }
@@ -1843,7 +1843,7 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
         const h = (e) => {
             if (e.key === 'Escape') { onQuit(); return; }
             if (!clavierAutorise(mode)) return;
-            if (e.key >= '0' && e.key <= '9') { e.preventDefault(); press(parseInt(e.key, 10)); }
+            if (e.key >= '0' && e.key <= '9') { e.preventDefault(); press(e.key); }
             else if (e.key === 'Backspace') { e.preventDefault(); del(); }
         };
         window.addEventListener('keydown', h);
@@ -1978,13 +1978,13 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
                                         width: 96, height: 116, borderRadius: 22,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 72,
-                                        background: isCorrect ? 'var(--vert)' : isWrong ? 'var(--rouge-pale)' : (d ? 'var(--surface)' : '#F6F2EA'),
+                                        background: isCorrect ? 'var(--vert)' : isWrong ? 'var(--rouge-pale)' : ((d !== '' && d != null) ? 'var(--surface)' : '#F6F2EA'),
                                         border: isCorrect ? 'none' : isWrong ? '4px solid var(--rouge-doux)' : (isCurrent ? '4px solid var(--action)' : '4px solid var(--bordure)'),
                                         color: isCorrect ? '#fff' : isWrong ? 'var(--rouge-doux)' : 'var(--indigo)',
                                         transition: 'all 0.1s ease',
                                     }}
                                 >
-                                    {d || (isCurrent ? <div style={{ width: 4, height: 50, background: 'var(--indigo-doux)', borderRadius: 2 }} className="caret" /> : '')}
+                                    {(d !== '' && d != null) ? d : (isCurrent ? <div style={{ width: 4, height: 50, background: 'var(--indigo-doux)', borderRadius: 2 }} className="caret" /> : '')}
                                 </div>
                             );
                         })}

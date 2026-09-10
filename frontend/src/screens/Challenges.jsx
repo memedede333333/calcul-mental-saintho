@@ -1160,7 +1160,7 @@ function useQuizEngine({ tables, maitrise, hasQuestionTimer, defiQuestions, mode
                 setQTimerActive(true);
             }
             const next = [...prev];
-            next[idx] = d;
+            next[idx] = String(d);
             return next;
         });
     }, [fb, hasQuestionTimer]);
@@ -1231,7 +1231,7 @@ function renderDigitBoxes(digits, fb, numDigits) {
                         fb === 'reveal' ? 'digit-box--reveal' : '',
                     ].filter(Boolean).join(' ')}
                 >
-                    {d || (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
+                    {(d !== '' && d != null) ? d : (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
                 </div>
             ))}
         </div>

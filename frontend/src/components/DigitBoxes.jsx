@@ -51,7 +51,7 @@ export default function DigitBoxes({ numDigits, onComplete, onFirstKey, disabled
                 onFirstKey?.();
             }
             const next = [...prev];
-            next[idx] = d;
+            next[idx] = String(d);
 
             // Dernière case remplie → onComplete
             if (idx === numDigits - 1 && !completeCalled.current) {
@@ -102,7 +102,7 @@ export default function DigitBoxes({ numDigits, onComplete, onFirstKey, disabled
                         fb === 'reveal' ? 'digit-box--reveal' : '',
                     ].filter(Boolean).join(' ')}
                 >
-                    {d || (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
+                    {(d !== '' && d != null) ? d : (i === activeIndex && fb === 'idle' ? <span className="caret" /> : '')}
                 </div>
             ))}
         </div>
@@ -146,7 +146,7 @@ export function useDigitBoxes(numDigits, onComplete, onFirstKey, fb, disabled) {
                 onFirstKey?.();
             }
             const next = [...prev];
-            next[idx] = d;
+            next[idx] = String(d);
             if (idx === numDigits - 1 && !completeCalled.current) {
                 completeCalled.current = true;
                 setTimeout(() => onComplete(parseInt(next.join(''), 10)), 0);
