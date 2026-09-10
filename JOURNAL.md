@@ -57,6 +57,30 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Audit du pont entre le SQL et les écrans
+
+**Fait** — Audit complet : 55 fonctions ouvertes à l'application, 41 RPC
+appelées par `api.js`, 53 fonctions exposées, croisées avec l'usage réel dans
+les écrans. Écriture de `frontend/scripts/check-api.mjs`, qui rejoue ce contrôle
+en trois secondes.
+
+**Constaté** — Aucune RPC fantôme : tout ce qu'`api.js` appelle existe en base.
+Les fonctions ouvertes et jamais appelées depuis le front sont des aides
+internes, appelées par d'autres fonctions SQL. Un seul vrai orphelin,
+`elevesSansConnexion`, sans écran depuis le 28 août — remplacé par
+`liste_eleves`, qui renvoie `deja_connecte` et `derniere_connexion`. Mais
+l'écran Administration reçoit ces deux colonnes et n'en affiche aucune : la
+question « qui n'a jamais ouvert l'application » n'a plus de réponse à l'écran.
+
+**Décidé** — Le contrôle entre dans le build, à côté de `check-tokens.mjs`. Il
+échoue sur une fonction exposée que plus aucun écran n'appelle : c'est
+exactement la forme qu'avait la disparition du bouton « ajouter un élève » au
+lot 20, invisible pendant trois lots parce que le SQL était intact et tous les
+tests au vert.
+
+**Ensuite** — Antigravity : brancher le script dans `npm run build`, afficher
+« jamais connecté » dans la liste des élèves, supprimer l'export orphelin.
+
 ## 2026-09-10 — Migration 35 : corriger la fiche d'un élève en cours d'année
 
 **Fait** — Migration 35 (`20260910210000_modifier_eleve.sql`). `modifier_eleve`

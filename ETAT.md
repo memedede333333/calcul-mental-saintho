@@ -700,6 +700,23 @@ Le mot « actif » disparaît de tous les écrans quand il parle de quelqu'un qu
 
 ### Méthode
 
+**Les tests SQL ne voient pas ce qui disparaît d'un écran.**
+*(10 septembre 2026.)*
+Le lot 20 a refait l'écran Administration sur la maquette 25 et a laissé tomber
+le formulaire « ajouter un élève ». `ajouterEleve` est resté importé en haut du
+fichier, plus une seule ligne ne l'appelait, et rien n'a bronché pendant trois
+lots : le SQL était intact, les 183 cas de test passaient au vert, le build
+aussi. C'est Aymeri qui l'a vu, en cherchant un bouton qu'il avait utilisé.
+Nos tests vérifient que le serveur répond juste. Ils ne vérifient jamais que
+quelqu'un l'appelle encore. D'où `frontend/scripts/check-api.mjs`, qui contrôle
+les trois coutures qui lâchent sans bruit : une RPC appelée qui n'existe pas en
+base, une fonction exposée que plus aucun écran n'appelle, un écran qui importe
+un nom qui n'est plus exporté. Les exceptions volontaires se déclarent dans le
+script, avec leur raison.
+Et à chaque refonte d'écran : demander à Antigravity la liste des appels serveur
+**avant** et **après**, avec la justification de chaque disparition.
+
+
 **Le jeu de démonstration (`seed.sql`) ne va que dans la base de dev.**
 La production démarre vide. Ce n'est pas du contenu, c'est un instrument de
 mesure : sans données, on ne distingue pas « ça marche mais c'est vide » de
@@ -883,9 +900,30 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     coupure. Une adresse déjà portée par une autre fiche, active ou désactivée,
     est refusée en nommant l'élève concerné. Et le défaut trouvé en chemin :
     une modification faite par un professeur non administrateur renvoyait
-    `ok` sans rien changer. 183 cas de test verts. **Reste à faire côté écran
-    (Antigravity)** : le bouton « + Ajouter un élève » et la modale
-    « Modifier » dans l'onglet Élèves.
+    `ok` sans rien changer. 183 cas de test verts. Écran livré le 10/09 (commit `a55d506`) :
+    bouton « + Ajouter un élève », modale « Modifier » complète, champ e-mail
+    grisé pour un professeur, et l'écran Administration ouvert à tout
+    professeur — l'import CSV et la gestion des enseignants restent à
+    l'administrateur. Vérifié par exécution que désactiver, réactiver et
+    réactiver-par-ajout fonctionnent enfin pour un professeur : ces trois
+    gestes-là aussi renvoyaient `ok` sans rien changer avant la migration 35.
+    LIMITE CONNUE : le sélecteur de classe est bâti sur `liste_classes()`,
+    qui déduit les classes des élèves existants — on ne peut donc pas créer à
+    la main le tout premier élève d'une classe qui n'existe pas encore.
+    L'import s'en charge ; aucun champ de texte libre, décision maintenue.
+19. ✅ **Audit du pont SQL ↔ écrans** — 10 septembre. Passé en revue les
+    55 fonctions ouvertes à l'application, les 41 RPC appelées par `api.js` et
+    les 53 fonctions qu'il expose. **Aucune RPC fantôme** : tout ce qu'`api.js`
+    appelle existe en base. Les 14 fonctions ouvertes et jamais appelées depuis
+    le front sont des aides internes appelées par d'autres fonctions SQL
+    (`poids_fait`, `points_session`, `progression_detail`…), plus `ping`, qui
+    est appelée par le workflow de réveil. Un seul vrai orphelin :
+    `elevesSansConnexion`, exposé et appelé nulle part depuis le 28 août —
+    `liste_eleves` le remplace et renvoie déjà `deja_connecte` et
+    `derniere_connexion`. **Défaut associé, à corriger** : l'écran
+    Administration reçoit ces deux colonnes et ne les affiche pas, alors que
+    « qui n'a jamais ouvert l'application » est la question de la rentrée.
+    Garde-fou ajouté : `frontend/scripts/check-api.mjs`.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
