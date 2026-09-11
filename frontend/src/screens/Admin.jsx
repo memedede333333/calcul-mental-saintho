@@ -463,7 +463,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
                             <div className="admin-table-card">
                                 <div style={{
-                                    display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 180px',
+                                    display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(180px, 1.4fr) 90px 180px',
                                     minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
                                     borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
                                     fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
@@ -473,7 +473,6 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                     <span>Nom</span>
                                     <span>Email</span>
                                     <span>Rôle</span>
-                                    <span>Classes</span>
                                     <span style={{ textAlign: 'right' }}>Actions</span>
                                 </div>
 
@@ -483,7 +482,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         <div
                                             key={p.prof_id}
                                             style={{
-                                                display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 180px',
+                                                display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(180px, 1.4fr) 90px 180px',
                                                 minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
                                                 borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
                                                 fontFamily: 'var(--texte)'
@@ -521,9 +520,6 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                         <option value="admin">Admin</option>
                                                     </select>
                                                 )}
-                                            </span>
-                                            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
-                                                {p.classes?.length > 0 ? p.classes.join(', ') : '—'}
                                             </span>
                                             <span style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                                                 {estAdmin && (
@@ -654,7 +650,6 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             {modalModifierProf && (
                 <ModalModifierProf
                     prof={modalModifierProf}
-                    classesDisponibles={classes}
                     estMoi={modalModifierProf.prof_id === monProfId}
                     onClose={() => setModalModifierProf(null)}
                     onSuccess={async () => {
@@ -1067,17 +1062,12 @@ function ModalModifierEleve({ eleve, classes, estAdmin, onClose, onSuccess }) {
     );
 }
 
-function ModalModifierProf({ prof, classesDisponibles, estMoi, onClose, onSuccess }) {
+function ModalModifierProf({ prof, estMoi, onClose, onSuccess }) {
     const [nom, setNom] = useState(prof?.nom || '');
     const [email, setEmail] = useState(prof?.email || '');
     const [role, setRole] = useState(prof?.role || 'prof');
-    const [classes, setClasses] = useState(prof?.classes || []);
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
-
-    const toggleClasse = (c) => {
-        setClasses(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c].sort());
-    };
 
     const handleSave = async (e) => {
         e?.preventDefault();
@@ -1095,7 +1085,6 @@ function ModalModifierProf({ prof, classesDisponibles, estMoi, onClose, onSucces
         const params = {
             nom: nom.trim(),
             email: email.trim(),
-            classes: classes,
         };
         // On ne peut pas changer son propre rôle
         if (!estMoi) {
@@ -1113,7 +1102,7 @@ function ModalModifierProf({ prof, classesDisponibles, estMoi, onClose, onSucces
     };
 
     return (
-        <ModalFrame onClose={onClose} maxWidth={520}>
+        <ModalFrame onClose={onClose} maxWidth={460}>
             <form onSubmit={handleSave} style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
@@ -1187,37 +1176,6 @@ function ModalModifierProf({ prof, classesDisponibles, estMoi, onClose, onSucces
                             <option value="prof">Professeur</option>
                             <option value="admin">Administrateur</option>
                         </select>
-                    </div>
-                )}
-
-                {classesDisponibles?.length > 0 && (
-                    <div>
-                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 6 }}>
-                            Classes attribuées :
-                        </label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {classesDisponibles.map(c => {
-                                const nomCl = c.classe || c;
-                                const isSelected = classes.includes(nomCl);
-                                return (
-                                    <button
-                                        type="button"
-                                        key={nomCl}
-                                        onClick={() => toggleClasse(nomCl)}
-                                        style={{
-                                            padding: '6px 12px', borderRadius: 8,
-                                            border: isSelected ? '2px solid var(--action)' : '1px solid var(--bordure)',
-                                            background: isSelected ? 'var(--action)' : 'var(--surface)',
-                                            color: isSelected ? 'var(--action-texte)' : 'var(--indigo)',
-                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        {nomCl}
-                                    </button>
-                                );
-                            })}
-                        </div>
                     </div>
                 )}
 
