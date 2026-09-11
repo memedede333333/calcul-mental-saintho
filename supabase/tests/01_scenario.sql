@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 192 cas, numérotés jusqu'à 192. Le 189 a été retiré
+-- COMPTE EXACT : 193 cas, numérotés jusqu'à 193. Le 189 a été retiré
 -- (remplacé par le 192, qui ne vaut qu'après la migration 38) ; les cas
 -- 29 à 31 l'ont été depuis longtemps ; 38b-38d et 180b complètent leurs aînés. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
@@ -2020,3 +2020,25 @@ select case when has_function_privilege('matho_sauvegarde','public.qui_suis_je()
              or has_function_privilege('matho_sauvegarde','public.modifier_eleve(uuid,text,text,text,text)','execute')
             then 'ECHEC : le role de sauvegarde peut appeler des RPC'
             else 'OK : il lit des tables, il n execute rien' end as verdict;
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 41 — le garde-fou du piege le plus repete du projet
+-- ---------------------------------------------------------------------
+
+\echo '=== 193. AUCUNE fonction n a deux signatures ==='
+-- `create or replace` ne sait pas ajouter un parametre : il cree une
+-- SECONDE fonction. PostgREST appelant toujours avec des arguments
+-- NOMMES, la base repond alors « function ... is not unique » et l ecran
+-- tombe. Ce piege s est referme SIX fois sur ce projet. Ce cas de test
+-- les aurait toutes attrapees — et attrapera la septieme.
+reset role;
+select coalesce(
+         (select string_agg(proname || ' (' || nb || ' signatures)', ', ')
+            from (select proname, count(*) as nb
+                    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                   where n.nspname = 'public'
+                   group by proname having count(*) > 1) d),
+         '') as doublons \gset
+select case when :'doublons' = ''
+            then 'OK : une fonction, une signature'
+            else 'ECHEC : signatures en double -> ' || :'doublons' end as verdict;

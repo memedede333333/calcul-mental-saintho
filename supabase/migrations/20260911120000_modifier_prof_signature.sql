@@ -1,0 +1,57 @@
+-- =====================================================================
+-- MIGRATION 41 — une seule `modifier_prof`, pas deux
+--
+-- CE QUI S'EST PASSE. La migration 40 a ajoute le parametre `p_email` a
+-- `modifier_prof` avec un simple `create or replace`. Or `create or
+-- replace` ne sait pas ajouter un parametre : il CREE UNE SECONDE
+-- FONCTION. La base en contient donc deux :
+--
+--     modifier_prof(uuid, text, text, text[])           -- l'ancienne
+--     modifier_prof(uuid, text, text, text[], text)     -- la nouvelle
+--
+-- ---------------------------------------------------------------------
+-- POURQUOI CA N'A PAS ENCORE CASSE, ET POURQUOI CA VA CASSER
+--
+-- PostgREST appelle toujours avec des arguments NOMMES. `api.js` envoie
+-- les cinq clefs a chaque fois, y compris `p_email: null` — un seul
+-- candidat correspond, l'appel passe. C'est de la chance, pas de la
+-- conception.
+--
+-- Verifie par execution sur la base de test :
+--
+--   appel a 5 arguments nommes  ->  {"ok": true}
+--   appel a 4 arguments nommes  ->  ERROR: function public.modifier_prof(
+--                                   p_prof_id => uuid, p_nom => unknown,
+--                                   p_role => unknown, p_classes => unknown)
+--                                   is not unique
+--
+-- Autrement dit : le jour ou un ecran appelle `modifierProf` sans
+-- passer `email`, ou ou quelqu'un simplifie `api.js` pour n'envoyer que
+-- les champs modifies — ce qui est le reflexe naturel — l'ecran
+-- Administration tombe, avec un message que personne ne comprendra.
+--
+-- Et en attendant, l'ANCIENNE fonction est toujours la, toujours
+-- accordee a `authenticated`, toujours appelable : une seconde porte
+-- vers la meme logique, sans le controle d'unicite de l'adresse ajoute
+-- par la migration 40.
+--
+-- ---------------------------------------------------------------------
+-- LA REGLE, POUR LA SIXIEME FOIS DANS CE PROJET
+--
+-- `create or replace function` ne peut NI changer un type de retour, NI
+-- ajouter ou retirer un parametre. Toute modification de signature
+-- commence par :
+--
+--     drop function if exists public.<nom>(<ancienne signature>);
+--
+-- Les cinq occurrences precedentes sont dans le journal. Le cas de test
+-- 193 ajoute ci-dessous verifie desormais qu'AUCUNE fonction du schema
+-- `public` n'a deux signatures — il aurait attrape les six.
+--
+-- NUMEROTATION : 20260911120000, l'heure reelle d'ecriture.
+-- =====================================================================
+
+drop function if exists public.modifier_prof(uuid, text, text, text[]);
+
+comment on function public.modifier_prof(uuid, text, text, text[], text) is
+  'Modifie un enseignant : nom, role, classes favorites et — depuis la migration 40 — adresse e-mail. Reservee aux administrateurs. NE TOUCHE JAMAIS A `user_id` : un prof connecte est reconnu par son compte Auth, pas par son adresse. ⚠️ SIGNATURE UNIQUE : la migration 40 avait cree un doublon a quatre parametres en utilisant `create or replace` pour ajouter `p_email` ; la 41 l''a supprime. Toute modification de signature doit commencer par un `drop function if exists`.';
