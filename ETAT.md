@@ -4,7 +4,7 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **36 migrations, 186 cas
+> Dernière mise à jour : **10 septembre 2026** — **38 migrations, 192 cas
 > de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
 > Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
 > **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
@@ -938,6 +938,19 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     encore actives — se serait affichée « Jamais connecté », et
     l'administrateur serait allé relancer des élèves qui ont quitté le collège.
     186 cas de test verts.
+21. ✅ **Migrations 37 et 38 — le rôle de sauvegarde, et la porte que PostgreSQL
+    laissait ouverte** — 10 septembre. Un rôle `matho_sauvegarde` en lecture
+    seule pour les sauvegardes, au lieu du compte `postgres` tout-puissant : il
+    lit tout (`bypassrls`, sans quoi RLS lui rendrait un dump **vide** sans une
+    erreur), il n'écrit rien, il n'exécute rien, et les tables créées plus tard
+    sont couvertes d'avance. En le testant, découverte du défaut le plus grave
+    du projet : `grant execute ... to authenticated` n'enlève pas le droit que
+    PostgreSQL donne à **PUBLIC**, si bien qu'un visiteur anonyme muni de la
+    seule clé publique lisait `classement_progression` et `classement_classes` —
+    prénom, initiale et classe de tous les élèves ayant joué. Fermé par la
+    migration 38, avec deux rattrapages indispensables : les cinq fonctions dont
+    RLS a besoin, et `enregistrer_session`, jamais accordée depuis la
+    migration 26. 192 cas de test verts.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 

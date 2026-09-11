@@ -11,7 +11,9 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 186 cas, numérotés jusqu'à 185. Les numéros 29 à 31 ont
+-- COMPTE EXACT : 192 cas, numérotés jusqu'à 192. Le 189 a été retiré
+-- (remplacé par le 192, qui ne vaut qu'après la migration 38) ; les cas
+-- 29 à 31 l'ont été depuis longtemps ; 38b-38d et 180b complètent leurs aînés. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
 -- les migrations continuent de désigner le même test ; les cas 38b à 38d et 180b
 -- complètent les cas 38 et 180.
@@ -1927,3 +1929,85 @@ select case when (select deja_connecte from liste_eleves() where eleve_id = :'ja
             then 'OK : celui-la, il faut aller le chercher'
             else 'ECHEC : un eleve jamais venu passe pour connecte' end as verdict;
 reset role;
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 37 — le role de sauvegarde en lecture seule
+-- ---------------------------------------------------------------------
+
+\echo '=== 186. Le role de sauvegarde VOIT toutes les lignes malgre RLS ==='
+-- LE test qui compte. Sans `bypassrls`, ce role obtiendrait zero ligne
+-- et le dump serait vide — sans la moindre erreur pour le signaler.
+reset role;
+select count(*) as reel from public.eleves \gset
+set role matho_sauvegarde;
+select case when (select count(*) from public.eleves) = :reel
+             and (select count(*) from public.maitrise) > 0
+             and (select count(*) from public.sessions_jeu) > 0
+            then 'OK : la sauvegarde verra toutes les lignes'
+            else 'ECHEC : le dump serait vide, en silence' end as verdict;
+reset role;
+
+\echo '=== 187. ... et il ne peut RIEN ecrire ==='
+select case when has_table_privilege('matho_sauvegarde','public.eleves','insert')
+             or has_table_privilege('matho_sauvegarde','public.eleves','update')
+             or has_table_privilege('matho_sauvegarde','public.eleves','delete')
+             or has_table_privilege('matho_sauvegarde','public.sessions_jeu','insert')
+            then 'ECHEC : le role de sauvegarde peut ecrire'
+            else 'OK : lecture seule, vraiment' end as verdict;
+
+\echo '=== 188. Une table creee DEMAIN sera dans la sauvegarde ==='
+-- Sans `alter default privileges`, la table ajoutee par une migration
+-- future sortirait absente de toutes les sauvegardes, sans un mot.
+create table public.table_future_test (id int);
+select case when has_table_privilege('matho_sauvegarde','public.table_future_test','select')
+            then 'OK : les tables futures sont couvertes'
+            else 'ECHEC : une table future disparaitrait des sauvegardes' end as verdict;
+drop table public.table_future_test;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 38 — un visiteur anonyme ne lit plus rien
+-- ---------------------------------------------------------------------
+
+\echo '=== 190. Un ANONYME ne peut plus lire le classement du college ==='
+-- Le defaut le plus grave du projet : `grant execute ... to authenticated`
+-- n enlevait pas le droit que PostgreSQL donne a PUBLIC. Avec la seule
+-- cle publique embarquee dans le JavaScript, n importe qui lisait le
+-- prenom, l initiale et la classe de tous les eleves ayant joue.
+reset role;
+set role anon;
+do $$
+declare n int; ouvert boolean := false;
+begin
+  begin
+    execute 'select count(*) from public.classement_progression(''tout'',''college'',''tous'',500)' into n;
+    ouvert := true;
+  exception when insufficient_privilege then null; end;
+  begin
+    execute 'select count(*) from public.classement_classes()' into n;
+    ouvert := true;
+  exception when insufficient_privilege then null; end;
+  if ouvert then
+    raise notice 'ECHEC : un visiteur sans compte lit encore les eleves';
+  else
+    raise notice 'OK : les classements exigent desormais un compte';
+  end if;
+end $$;
+reset role;
+
+\echo '=== 191. ... mais les politiques RLS fonctionnent toujours ==='
+-- Le piege du correctif : les politiques appellent est_prof(),
+-- eleve_courant() et prof_voit_classe(). Sans grant explicite, retirer
+-- PUBLIC fermait toutes les tables a tout le monde, profs compris.
+select case when has_function_privilege('authenticated','public.est_prof()','execute')
+             and has_function_privilege('authenticated','public.eleve_courant()','execute')
+             and has_function_privilege('authenticated','public.prof_voit_classe(text)','execute')
+             and has_function_privilege('anon','public.est_prof()','execute')
+            then 'OK : RLS garde ses outils'
+            else 'ECHEC : les politiques RLS vont refuser tout le monde' end as verdict;
+
+\echo '=== 192. Le role de sauvegarde n execute plus rien ==='
+select case when has_function_privilege('matho_sauvegarde','public.qui_suis_je()','execute')
+             or has_function_privilege('matho_sauvegarde','public.modifier_eleve(uuid,text,text,text,text)','execute')
+            then 'ECHEC : le role de sauvegarde peut appeler des RPC'
+            else 'OK : il lit des tables, il n execute rien' end as verdict;

@@ -57,6 +57,43 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-10 — Le rôle de sauvegarde a fait tomber le défaut le plus grave du projet
+
+**Fait** — Migrations 37 (`role_sauvegarde`) et 38 (`execute_public`). Un rôle
+`matho_sauvegarde` en lecture seule, avec `bypassrls` et sans mot de passe dans
+le dépôt. Et surtout : `execute` retiré à **PUBLIC** sur toutes les fonctions,
+présentes et futures. 192 cas de test verts.
+
+**Constaté** — En vérifiant que le rôle de sauvegarde ne pouvait appeler aucune
+fonction, le test a échoué : il le pouvait. PostgreSQL accorde `EXECUTE` à
+PUBLIC sur toute fonction créée, et `grant execute ... to authenticated`
+n'enlève pas ce droit — il s'ajoute à côté. Les 55 `grant` semés dans les
+37 migrations donnaient une fausse impression de fermeture.
+
+Mesuré en se faisant passer pour un visiteur anonyme :
+`classement_progression('tout','college','tous',500)` renvoyait **6 lignes**, et
+`classement_classes()` **3 lignes**. Autrement dit, avec la seule clé `anon` —
+publique par construction, embarquée dans le JavaScript — **n'importe qui sur
+Internet lisait le prénom, l'initiale et la classe de tous les élèves ayant
+joué**, sans compte. Ce sont des données de mineurs.
+
+**Décidé** — Deux pièges dans le correctif, tous deux trouvés par l'exécution et
+pas par la lecture. (1) Les politiques RLS appellent `est_prof()`,
+`eleve_courant()`, `prof_voit_classe()` : aucune n'avait de `grant` explicite,
+elles vivaient sur PUBLIC. Les retirer sans les rendre fermait toutes les tables
+à tout le monde. (2) `enregistrer_session` — **la fonction la plus appelée de
+l'application** — n'a jamais eu de `grant` non plus : la migration 26 lui avait
+ajouté `p_faits`, créant une signature que le `grant` d'une migration antérieure
+ne désignait plus.
+
+Et une leçon d'outillage : `has_function_privilege` répond « oui » dès que PUBLIC
+a le droit. Mon premier contrôle mesurait donc exactement ce que je cherchais à
+supprimer. Pour vérifier une fermeture, il faut lire `proacl`.
+
+**Ensuite** — Antigravity : appliquer 37 et 38, régénérer `database.ts`. Aymeri :
+réinitialiser le mot de passe de la base, puis poser celui du rôle de sauvegarde
+dans l'éditeur SQL Supabase.
+
 ## 2026-09-10 — La connexion était bloquée par le filtre Jamf, et un défi de classe a tourné
 
 **Fait** — Ajout d'`accounts.google.fr` à la liste des sites autorisés dans Jamf.
