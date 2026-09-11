@@ -16,3 +16,6 @@ docs/design/*.zip
 
 # Archives de backup locales
 backups/
+
+# Supabase temp
+supabase/.temp/

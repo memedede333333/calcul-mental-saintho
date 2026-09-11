@@ -4,9 +4,10 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **11 septembre 2026** — **38 migrations appliquées, 192 cas
+> Dernière mise à jour : **11 septembre 2026** — **41 migrations appliquées, 193 cas
 > de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont dans le code.**
 > **Sauvegarde & Sécurité finalisées** : rôle `matho_sauvegarde` opérationnel en lecture seule (migrations 37 & 38 appliquées, fuite PUBLIC colmatée), double dump (complet + données seules réinjectables) testé et validé par restauration à blanc (313 élèves revenus sans erreur). Double automatisme en place : sentinelle GitHub Actions le vendredi à 20h17 Paris et LaunchAgent Mac (`launchd`) le vendredi à 18h00 avec synchronisation Google Drive.
+> **Migrations 39 à 41 appliquées** : réveil quotidien Supabase anon restauré (migration 39, curl 200 et GitHub Actions vert), édition des professeurs par les admins avec maintien de `user_id` (migration 40), signature unique de `modifier_prof` (migration 41, 193 cas de test sans doublons). Défis étendus jusqu'à la table de 20 (`Challenges.jsx`), label corrigé dans `Practice.jsx`. Dump et backup complet + données synchronisés dans Google Drive.
 > Bug de saisie du chiffre `0` corrigé dans le frontend et déployé en production sur Vercel.
 > `enregistrer_session` et `terminer_defi` renvoient la clé `maitrise` des seuls faits touchés.
 > Le front répercute ce delta dans `App.jsx` (`handleMaitriseMaj`) et localement (`Practice.jsx`),

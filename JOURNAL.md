@@ -67,7 +67,11 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
   2. `matho_db_..._donnees.sql.gz` (données seules, encapsulées avec `set session_replication_role = replica;` pour restauration immédiate sans conflit de déclencheurs/clés étrangères).
 - **Sentinelle cloud GitHub Actions** (`.github/workflows/sauvegarde-hebdomadaire.yml`) : s'exécute chaque vendredi à 18h17 UTC (20h17 Paris), vérifie les tables maîtresses (*eleves*, *sessions_jeu*, *maitrise*, *defis*) et le quorum d'au moins 250 élèves. Alerte par e-mail en cas de défaillance. Testé live avec succès via `workflow_dispatch`.
 - **Automatisation hebdomadaire locale sur Mac (`launchd`)** : `com.matho.sauvegarde.plist` installé dans `~/Library/LaunchAgents/` pour une exécution silencieuse chaque vendredi à 18h00. Contournement des restrictions TCC de macOS via runner autonome dans `~/.matho/` et miroir de configuration dans `~/.config/matho/env`. Copie automatique dans `Google Drive/Mon Drive/Sauvegardes Matho/` et notification native macOS en fin d'archivage (313 élèves confirmés).
-- **Restauration à blanc** : documentée pas à pas dans `RESTAURATION.md` suite au test réel sur PostgreSQL vierge (313 élèves, 653 maîtrises, 91 parties, 24 défis, 0 erreur).
+- **Migration 39 (`ping_anon`)** : restitution d'EXECUTE sur `ping()` pour `anon`, le réveil quotidien Supabase GitHub Actions est testé et validé vert (HTTP 200).
+- **Migration 40 & 41 (`modifier_prof`)** : possibilité pour l'administrateur de modifier le nom, l'email et le rôle d'un enseignant avec conservation de `user_id` en cas de compte déjà rattaché. Suppression de l'ancienne signature à 4 arguments (migration 41) pour éliminer le doublon PostgREST. Garde-fou générique (cas 193) validé (0 doublon de signature en base).
+- **Modale d'édition enseignant** : ajout d'un bouton Modifier dans l'onglet Enseignants de l'Admin. Retrait du champ obsolète « Classes attribuées » (les profs accèdent à tout le collège et gèrent leurs classes favorites directement depuis leur profil).
+- **Correctifs ergonomiques** : affichage de toutes les tables de 2 à 20 dans la création de défi classe (`Challenges.jsx`), et remplacement du label « Combien de temps » par « Combien de questions » en mode entraînement (`Practice.jsx`).
+- **Sauvegarde vérifiée** : dump complet (84 Ko) et données seules (52 Ko) exécutés et synchronisés dans Google Drive.
 
 **Décidé**
 - Le rôle `matho_sauvegarde` remplace définitivement `postgres` pour les sauvegardes automatiques. Le mot de passe master de la base n'est plus requis dans le script de dump.
