@@ -694,8 +694,8 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
         }
     };
 
-    // Tables disponibles (2 à 13)
-    const availableTables = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+    // Tables disponibles (2 à 20 pour les défis profs)
+    const availableTables = ALL_TABLES.filter(t => t >= 2);
 
     const modeLabel = currentModeId === 'sprint' ? 'Sprint' : 'Contre‑la‑montre';
     const durationLabel = currentModeId === 'sprint' ? '20 questions' : formaterDuree(countdownDuration);

@@ -429,13 +429,13 @@ function LibreIntro({ onBack, tables, setTables, length, setLength, plafond, mas
                 </div>
             </div>
 
-            {/* 4. Section « Combien de temps » */}
+            {/* 4. Section « Combien de questions » */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
                 <div style={{
                     fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
                     color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
                 }}>
-                    Combien de temps
+                    Combien de questions
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                     {/* 10 questions */}
