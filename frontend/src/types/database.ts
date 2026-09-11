@@ -795,6 +795,7 @@ export type Database = {
       modifier_prof: {
         Args: {
           p_classes?: string[]
+          p_email?: string
           p_nom?: string
           p_prof_id: string
           p_role?: string
