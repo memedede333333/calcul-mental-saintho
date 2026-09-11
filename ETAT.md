@@ -4,12 +4,10 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **10 septembre 2026** — **38 migrations, 192 cas
-> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont désormais toutes dans le code.**
-> Les lots 13 à 16 bis sont livrés et vérifiés (accueil élève, mode libre, premier jour, création de défi, pavé numérique).
-> **Le lot 17 est livré** (code projeté, bouton « Voir qui »).
-> **Le lot 18 est livré** (maîtrise au temps de réponse côté serveur, seuil 3s).
-> **Le lot 19 est livré** : la **migration 27 est appliquée** sur `calcul-mental-dev`,
+> Dernière mise à jour : **11 septembre 2026** — **38 migrations appliquées, 192 cas
+> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont dans le code.**
+> **Sauvegarde & Sécurité finalisées** : rôle `matho_sauvegarde` opérationnel en lecture seule (migrations 37 & 38 appliquées, fuite PUBLIC colmatée), double dump (complet + données seules réinjectables) testé et validé par restauration à blanc (313 élèves revenus sans erreur). Double automatisme en place : sentinelle GitHub Actions le vendredi à 20h17 Paris et LaunchAgent Mac (`launchd`) le vendredi à 18h00 avec synchronisation Google Drive.
+> Bug de saisie du chiffre `0` corrigé dans le frontend et déployé en production sur Vercel.
 > `enregistrer_session` et `terminer_defi` renvoient la clé `maitrise` des seuls faits touchés.
 > Le front répercute ce delta dans `App.jsx` (`handleMaitriseMaj`) et localement (`Practice.jsx`),
 > la grille bouge immédiatement après chaque partie et les poids de tirage s'adaptent sans recharger.

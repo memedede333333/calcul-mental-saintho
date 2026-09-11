@@ -57,6 +57,28 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-11 — Automatisation complète des sauvegardes (Cloud + Mac) et clôture de la chaîne de restauration
+
+**Fait**
+- **Bugfix saisie du zéro** : le chiffre `0` était effacé ou ignoré dans les cases de réponse (`Practice.jsx`, `Challenges.jsx`, `DigitBoxes.jsx`) car évalué comme falsy (`d || ...`). Corrigé avec `(d !== '' && d != null) ? d : ...` et conversions strictes `String(d)`. Testé et déployé sur Vercel (commit `ea05d00`).
+- **Rôle `matho_sauvegarde` & application des migrations 37 et 38** : rôle en lecture seule dédié aux sauvegardes avec mot de passe posé dans Supabase (`ALTER ROLE matho_sauvegarde WITH PASSWORD ...;`), fermeture de PUBLIC sur toutes les fonctions (protection RGPD des données élèves).
+- **Double archive de sauvegarde** : `sauvegarder.sh` et le workflow GitHub produisent désormais deux fichiers :
+  1. `matho_db_..._complet.sql.gz` (structure DDL + données)
+  2. `matho_db_..._donnees.sql.gz` (données seules, encapsulées avec `set session_replication_role = replica;` pour restauration immédiate sans conflit de déclencheurs/clés étrangères).
+- **Sentinelle cloud GitHub Actions** (`.github/workflows/sauvegarde-hebdomadaire.yml`) : s'exécute chaque vendredi à 18h17 UTC (20h17 Paris), vérifie les tables maîtresses (*eleves*, *sessions_jeu*, *maitrise*, *defis*) et le quorum d'au moins 250 élèves. Alerte par e-mail en cas de défaillance. Testé live avec succès via `workflow_dispatch`.
+- **Automatisation hebdomadaire locale sur Mac (`launchd`)** : `com.matho.sauvegarde.plist` installé dans `~/Library/LaunchAgents/` pour une exécution silencieuse chaque vendredi à 18h00. Contournement des restrictions TCC de macOS via runner autonome dans `~/.matho/` et miroir de configuration dans `~/.config/matho/env`. Copie automatique dans `Google Drive/Mon Drive/Sauvegardes Matho/` et notification native macOS en fin d'archivage (313 élèves confirmés).
+- **Restauration à blanc** : documentée pas à pas dans `RESTAURATION.md` suite au test réel sur PostgreSQL vierge (313 élèves, 653 maîtrises, 91 parties, 24 défis, 0 erreur).
+
+**Décidé**
+- Le rôle `matho_sauvegarde` remplace définitivement `postgres` pour les sauvegardes automatiques. Le mot de passe master de la base n'est plus requis dans le script de dump.
+- Rétention fixée à 180 jours (6 mois) avec purge automatique en local et sur Google Drive.
+- `SUPABASE_DB_URL` configuré sur GitHub Secrets et dans `frontend/.env.local`.
+
+**Constaté**
+- Sous macOS, `launchd` bloque l'accès à `~/Documents` (erreur `Operation not permitted`) si un script tente d'y lire ou écrire en tâche de fond. Résolu en hébergeant le runner d'automatisation dans `~/.matho/` avec miroir de configuration dans `~/.config/matho/env`.
+
+**Ensuite** — Tout le chantier de sauvegarde, de sécurité et de résilience est achevé. L'application est prête pour la rentrée.
+
 ## 2026-09-10 — Le rôle de sauvegarde a fait tomber le défaut le plus grave du projet
 
 **Fait** — Migrations 37 (`role_sauvegarde`) et 38 (`execute_public`). Un rôle

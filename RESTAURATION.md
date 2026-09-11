@@ -91,9 +91,7 @@ les clés étrangères et les déclencheurs. Sans elle, l'ordre d'insertion des
 tables devient un casse-tête, et le déclencheur `sessions_jeu_activite`
 réécrirait une date d'activité par partie chargée.
 
-*(Le plus simple à l'usage : que `sauvegarder.command` produise directement un
-second fichier `--data-only` à côté du fichier complet. Le complet reste utile
-pour aller relire une valeur ; le `--data-only` est celui qu'on rejoue.)*
+*(Fait le 11/09 : `sauvegarder.command` et le workflow GitHub Actions produisent désormais systématiquement le second fichier `_donnees.sql.gz` à côté du fichier complet. Il est déjà encapsulé avec `set session_replication_role = replica;` et prêt à être réinjecté directement.)*
 
 ### Étape 4 — la vérification
 
