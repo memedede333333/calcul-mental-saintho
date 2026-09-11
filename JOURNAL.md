@@ -71,17 +71,23 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 - **Migration 40 & 41 (`modifier_prof`)** : possibilité pour l'administrateur de modifier le nom, l'email et le rôle d'un enseignant avec conservation de `user_id` en cas de compte déjà rattaché. Suppression de l'ancienne signature à 4 arguments (migration 41) pour éliminer le doublon PostgREST. Garde-fou générique (cas 193) validé (0 doublon de signature en base).
 - **Modale d'édition enseignant** : ajout d'un bouton Modifier dans l'onglet Enseignants de l'Admin. Retrait du champ obsolète « Classes attribuées » (les profs accèdent à tout le collège et gèrent leurs classes favorites directement depuis leur profil).
 - **Correctifs ergonomiques** : affichage de toutes les tables de 2 à 20 dans la création de défi classe (`Challenges.jsx`), et remplacement du label « Combien de temps » par « Combien de questions » en mode entraînement (`Practice.jsx`).
-- **Sauvegarde vérifiée** : dump complet (84 Ko) et données seules (52 Ko) exécutés et synchronisés dans Google Drive.
+- **Remise à zéro pré-lancement validée** : purge complète des tables de jeu et de test (`sessions_jeu`, `sessions_profs`, `defis`, `defis_participants`, `defis_presences`, `maitrise`, `badges` à 0 ligne). Remise à `null` des `derniere_connexion` sur les 313 élèves. Les comptes élèves (`public.eleves`) et professeurs (`public.profs`) restent intégralement préservés, de même que les liaisons `user_id` existantes pour garantir une reconnexion immédiate sans accroc.
+- **Sauvegarde d'état pré-reset** : exécutée à 17h36 (`matho_db_2026-09-11_17h36_mig-20260911120000_git-ef62f27_complet.sql.gz` et `_donnees.sql.gz`) et archivée dans Google Drive.
 
 **Décidé**
 - Le rôle `matho_sauvegarde` remplace définitivement `postgres` pour les sauvegardes automatiques. Le mot de passe master de la base n'est plus requis dans le script de dump.
 - Rétention fixée à 180 jours (6 mois) avec purge automatique en local et sur Google Drive.
 - `SUPABASE_DB_URL` configuré sur GitHub Secrets et dans `frontend/.env.local`.
+- **TODO prioritaire post-démarrage** :
+  1. *Restriction horaire (couvre-feu)* : verrouillage de la saisie de parties hors des plages scolaires/diurnes (ex: interdiction entre 20h30 et 7h00 avec message bienveillant).
+  2. *Mesure de temps de jeu effectif* : horodatage début/fin de sessions pour quantifier l'activité réelle sur iPad (sans attendre une déconnexion explicite).
+  3. *Import CSV professeurs* : ajout d'un import de masse des enseignants calqué sur celui des élèves.
+  4. *Défis entre collègues* : mode défi avec table dédiée `defis_participants_profs` pour une étanchéité absolue avec les élèves.
 
 **Constaté**
 - Sous macOS, `launchd` bloque l'accès à `~/Documents` (erreur `Operation not permitted`) si un script tente d'y lire ou écrire en tâche de fond. Résolu en hébergeant le runner d'automatisation dans `~/.matho/` avec miroir de configuration dans `~/.config/matho/env`.
 
-**Ensuite** — Tout le chantier de sauvegarde, de sécurité et de résilience est achevé. L'application est prête pour la rentrée.
+**Ensuite** — Tout le chantier de sauvegarde, de sécurité et de résilience est achevé. La base de données est remise à zéro, propre, et l'application est prête à être envoyée aux élèves.
 
 ## 2026-09-10 — Le rôle de sauvegarde a fait tomber le défaut le plus grave du projet
 
