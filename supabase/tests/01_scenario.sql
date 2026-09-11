@@ -1796,9 +1796,18 @@ reset role;
 -- Sans cette fonction, le reveil devrait s authentifier ; avec elle, un
 -- simple appel HTTP quotidien suffit a empecher la mise en veille.
 set role anon;
-select case when public.ping() = 'ok'
-            then 'OK : la base repond au reveil'
-            else 'ECHEC : le reveil quotidien ne repondra pas' end as verdict;
+-- ⚠️ Ce cas garde le reveil quotidien. Il a deja echoue une fois, quand
+-- la migration 38 a retire `execute` a `anon` sur TOUTES les fonctions :
+-- `ping()` est la seule du projet ouverte a `anon`, elle tombe avec.
+do $$
+begin
+  if public.ping() = 'ok'
+    then raise notice 'OK : la base repond au reveil';
+    else raise notice 'ECHEC : le reveil quotidien ne repondra pas';
+  end if;
+exception when insufficient_privilege then
+  raise notice 'ECHEC : anon ne peut plus appeler ping() — le reveil quotidien est casse, la base sera suspendue sous 7 jours';
+end $$;
 reset role;
 
 \echo '=== 178. ping() n ouvre AUCUNE autre porte a anon ==='
