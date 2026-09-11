@@ -13,6 +13,9 @@
 
 set -euo pipefail
 
+# Assure l'accès aux outils Homebrew (pg_dump, etc.) même sous launchd
+export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH:-/usr/bin:/bin}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -33,11 +36,22 @@ echo ""
 # 1. Récupération de l'URL de connexion PostgreSQL
 # ---------------------------------------------------------------------
 ENV_FILE="${ROOT_DIR}/frontend/.env.local"
+CONFIG_ENV="${HOME}/.config/matho/env"
 DB_URL="${SUPABASE_DB_URL:-}"
 
-if [ -z "${DB_URL}" ] && [ -f "${ENV_FILE}" ]; then
+if [ -z "${DB_URL}" ] && [ -r "${ENV_FILE}" ]; then
     # Extraction propre de SUPABASE_DB_URL si présent dans .env.local
     DB_URL=$(grep -E '^SUPABASE_DB_URL=' "${ENV_FILE}" | cut -d '=' -f2- | tr -d '"' | tr -d "'" || true)
+    # Met à jour le miroir ~/.config/matho/env (pour launchd)
+    if [ -n "${DB_URL}" ]; then
+        mkdir -p "${HOME}/.config/matho"
+        echo "SUPABASE_DB_URL=\"${DB_URL}\"" > "${CONFIG_ENV}"
+        chmod 600 "${CONFIG_ENV}" 2>/dev/null || true
+    fi
+fi
+
+if [ -z "${DB_URL}" ] && [ -f "${CONFIG_ENV}" ]; then
+    DB_URL=$(grep -E '^SUPABASE_DB_URL=' "${CONFIG_ENV}" | cut -d '=' -f2- | tr -d '"' | tr -d "'" || true)
 fi
 
 if [ -z "${DB_URL}" ]; then
@@ -47,7 +61,7 @@ if [ -z "${DB_URL}" ]; then
     echo "1. Ouvrez Supabase Dashboard › Project Settings › Database."
     echo "2. Dans la section « Connection string › URI », copiez l'adresse PostgreSQL."
     echo "3. Ajoutez cette ligne dans votre fichier frontend/.env.local :"
-    echo "   SUPABASE_DB_URL=\"postgresql://postgres:[VOTRE_MOT_DE_PASSE]@db.lkukdlspcgqtiimvwlsd.supabase.co:5432/postgres\""
+    echo "   SUPABASE_DB_URL=\"postgresql://matho_sauvegarde.lkukdlspcgqtiimvwlsd:[VOTRE_MOT_DE_PASSE]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres\""
     echo ""
     exit 1
 fi
@@ -73,7 +87,10 @@ fi
 
 BACKUP_BASE="matho_db_${DATE_STR}_mig-${LAST_MIG}_git-${GIT_COMMIT}"
 BACKUPS_DIR="${ROOT_DIR}/backups"
-mkdir -p "${BACKUPS_DIR}"
+if ! mkdir -p "${BACKUPS_DIR}" 2>/dev/null; then
+    BACKUPS_DIR="${HOME}/.matho/backups"
+    mkdir -p "${BACKUPS_DIR}"
+fi
 
 RAW_COMPLET="${BACKUPS_DIR}/${BACKUP_BASE}_complet.sql"
 GZ_COMPLET="${BACKUPS_DIR}/${BACKUP_BASE}_complet.sql.gz"
@@ -209,3 +226,8 @@ echo -e "${VERT}${GRAS}=========================================================
 echo -e "${VERT}${GRAS}   SUCCÈS : Sauvegarde terminée et validée avec succès !             ${NC}"
 echo -e "${VERT}${GRAS}=====================================================================${NC}"
 echo ""
+
+# Notification macOS discrète
+if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"${NB_ELEVES} élèves archivés avec succès dans Google Drive.\" with title \"Matho — Sauvegarde validée\"" 2>/dev/null || true
+fi

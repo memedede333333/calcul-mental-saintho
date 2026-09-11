@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.matho.sauvegarde</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/admin/.matho/sauvegarder.sh</string>
+    </array>
+
+    <!-- Déclenchement automatique chaque vendredi à 18h00 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>5</integer>
+        <key>Hour</key>
+        <integer>18</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Fichiers de log -->
+    <key>StandardOutPath</key>
+    <string>/Users/admin/Library/Logs/matho_sauvegarde.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/admin/Library/Logs/matho_sauvegarde_err.log</string>
+</dict>
+</plist>
