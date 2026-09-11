@@ -50,6 +50,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [showAjoutEleveModal, setShowAjoutEleveModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showAjoutProfModal, setShowAjoutProfModal] = useState(false);
+    const [modalModifierProf, setModalModifierProf] = useState(null);
 
     // État d'action en cours
     const [actionEnCours, setActionEnCours] = useState(false);
@@ -462,8 +463,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
                             <div className="admin-table-card">
                                 <div style={{
-                                    display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 130px',
-                                    minWidth: 480, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
+                                    display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 180px',
+                                    minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
                                     borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
                                     fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
                                     textTransform: 'uppercase', alignItems: 'center'
@@ -482,8 +483,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         <div
                                             key={p.prof_id}
                                             style={{
-                                                display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 130px',
-                                                minWidth: 480, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
+                                                display: 'grid', gridTemplateColumns: '36px minmax(110px, 1fr) minmax(150px, 1.2fr) 80px minmax(80px, 1fr) 180px',
+                                                minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
                                                 borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
                                                 fontFamily: 'var(--texte)'
                                             }}
@@ -524,7 +525,16 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                             <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
                                                 {p.classes?.length > 0 ? p.classes.join(', ') : '—'}
                                             </span>
-                                            <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <span style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                                                {estAdmin && (
+                                                    <button
+                                                        className="admin-btn-table"
+                                                        onClick={() => setModalModifierProf(p)}
+                                                        disabled={actionEnCours}
+                                                    >
+                                                        Modifier
+                                                    </button>
+                                                )}
                                                 {!estMoi && estAdmin && p.actif && (
                                                     <button
                                                         className="admin-btn-table admin-btn-table--desactiver"
@@ -636,6 +646,21 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                     onSuccess={async () => {
                         await rechargerDonnees();
                         setMessageFeedback('✅ Fiche élève mise à jour.');
+                    }}
+                />
+            )}
+
+            {/* Modal Modifier la fiche enseignant */}
+            {modalModifierProf && (
+                <ModalModifierProf
+                    prof={modalModifierProf}
+                    classesDisponibles={classes}
+                    estMoi={modalModifierProf.prof_id === monProfId}
+                    onClose={() => setModalModifierProf(null)}
+                    onSuccess={async () => {
+                        await rechargerDonnees();
+                        onIdentiteChange?.();
+                        setMessageFeedback('✅ Fiche enseignant mise à jour.');
                     }}
                 />
             )}
@@ -1007,6 +1032,194 @@ function ModalModifierEleve({ eleve, classes, estAdmin, onClose, onSuccess }) {
                             : "Seul l'administrateur peut changer l'adresse, car elle doit être changée aussi dans la console Google."}
                     </div>
                 </div>
+
+                {msg && (
+                    <div style={{
+                        padding: 10, borderRadius: 10,
+                        background: msg.startsWith('❌') ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                        border: `1px solid ${msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)'}`,
+                        font: '600 13px var(--texte)', color: msg.startsWith('❌') ? 'var(--rouge)' : 'var(--vert)',
+                    }}>
+                        {msg}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button
+                        type="button"
+                        className="admin-btn-table"
+                        onClick={onClose}
+                        disabled={busy}
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="submit"
+                        className="admin-btn-action-main"
+                        style={{ height: 42, padding: '0 20px', fontSize: 15 }}
+                        disabled={busy}
+                    >
+                        {busy ? 'Enregistrement…' : 'Enregistrer'}
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    );
+}
+
+function ModalModifierProf({ prof, classesDisponibles, estMoi, onClose, onSuccess }) {
+    const [nom, setNom] = useState(prof?.nom || '');
+    const [email, setEmail] = useState(prof?.email || '');
+    const [role, setRole] = useState(prof?.role || 'prof');
+    const [classes, setClasses] = useState(prof?.classes || []);
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const toggleClasse = (c) => {
+        setClasses(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c].sort());
+    };
+
+    const handleSave = async (e) => {
+        e?.preventDefault();
+        if (!nom.trim()) {
+            setMsg('❌ Le nom est requis.');
+            return;
+        }
+        if (!email.trim()) {
+            setMsg('❌ L\'adresse e-mail est requise.');
+            return;
+        }
+        setBusy(true);
+        setMsg('');
+
+        const params = {
+            nom: nom.trim(),
+            email: email.trim(),
+            classes: classes,
+        };
+        // On ne peut pas changer son propre rôle
+        if (!estMoi) {
+            params.role = role;
+        }
+
+        const res = await modifierProf(prof.prof_id, params);
+        if (res.ok) {
+            await onSuccess();
+            onClose();
+        } else {
+            setMsg(`❌ ${res.error || res.data?.message || 'Erreur lors de la modification.'}`);
+            setBusy(false);
+        }
+    };
+
+    return (
+        <ModalFrame onClose={onClose} maxWidth={520}>
+            <form onSubmit={handleSave} style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
+                        Modifier l'enseignant
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                        Nom complet :
+                    </label>
+                    <input
+                        type="text"
+                        value={nom}
+                        onChange={e => setNom(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                            background: 'var(--surface)',
+                        }}
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                        Adresse e-mail Google (@saintho.fr) :
+                    </label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        style={{
+                            width: '100%', padding: '10px 12px', borderRadius: 10,
+                            border: '1px solid var(--bordure)', font: '600 15px var(--texte)',
+                            boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                            background: 'var(--surface)',
+                        }}
+                        required
+                    />
+                    <div style={{
+                        marginTop: 6, font: '600 12px var(--texte)', color: 'var(--gris)', lineHeight: 1.4,
+                    }}>
+                        L'enseignant conserve ses accès et ses défis. Pense à changer aussi l'adresse dans la console Google Workspace si nécessaire.
+                    </div>
+                </div>
+
+                {!estMoi && (
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 4 }}>
+                            Rôle :
+                        </label>
+                        <select
+                            value={role}
+                            onChange={e => setRole(e.target.value)}
+                            style={{
+                                width: '100%', padding: '10px 12px', borderRadius: 10,
+                                border: '1px solid var(--bordure)', font: '700 14px var(--texte)',
+                                boxSizing: 'border-box', outline: 'none', color: 'var(--indigo)',
+                                background: 'var(--surface)', cursor: 'pointer',
+                            }}
+                        >
+                            <option value="prof">Professeur</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                )}
+
+                {classesDisponibles?.length > 0 && (
+                    <div>
+                        <label style={{ display: 'block', font: '700 13px var(--texte)', color: 'var(--gris)', marginBottom: 6 }}>
+                            Classes attribuées :
+                        </label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {classesDisponibles.map(c => {
+                                const nomCl = c.classe || c;
+                                const isSelected = classes.includes(nomCl);
+                                return (
+                                    <button
+                                        type="button"
+                                        key={nomCl}
+                                        onClick={() => toggleClasse(nomCl)}
+                                        style={{
+                                            padding: '6px 12px', borderRadius: 8,
+                                            border: isSelected ? '2px solid var(--action)' : '1px solid var(--bordure)',
+                                            background: isSelected ? 'var(--action)' : 'var(--surface)',
+                                            color: isSelected ? 'var(--action-texte)' : 'var(--indigo)',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {nomCl}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {msg && (
                     <div style={{

@@ -718,9 +718,9 @@ export async function creerProf({ email, nom, role = 'prof', classes = [] }) {
  * manœuvre enfermerait tout le monde dehors et il faudrait passer par
  * la console Supabase. Relaie le message d'erreur tel quel.
  */
-export async function modifierProf(profId, { nom = null, role = null, classes = null } = {}) {
+export async function modifierProf(profId, { nom = null, role = null, classes = null, email = null } = {}) {
     return rpc('modifier_prof', {
-        p_prof_id: profId, p_nom: nom, p_role: role, p_classes: classes,
+        p_prof_id: profId, p_nom: nom, p_role: role, p_classes: classes, p_email: email,
     });
 }
 
