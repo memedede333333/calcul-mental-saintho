@@ -495,6 +495,7 @@ export type Database = {
         Returns: Json
       }
       apercu_import_eleves: { Args: { p_eleves: Json }; Returns: Json }
+      apercu_import_profs: { Args: { p_profs: Json }; Returns: Json }
       auteur_defi: {
         Args: { p_defi_id: string }
         Returns: {
@@ -669,6 +670,7 @@ export type Database = {
       est_prof: { Args: never; Returns: boolean }
       generer_code_defi: { Args: never; Returns: string }
       importer_eleves: { Args: { p_eleves: Json }; Returns: Json }
+      importer_profs: { Args: { p_profs: Json }; Returns: Json }
       initiales_de: { Args: { p_nom: string }; Returns: string }
       journaliser: {
         Args: { p_action: string; p_cible: string; p_detail?: Json }
@@ -707,6 +709,7 @@ export type Database = {
           actif: boolean
           classes: string[]
           connecte: boolean
+          derniere_connexion: string
           email: string
           nom: string
           prof_id: string
@@ -863,6 +866,7 @@ export type Database = {
         Returns: Json
       }
       valider_lignes_import: { Args: { p_eleves: Json }; Returns: Json }
+      valider_lignes_import_profs: { Args: { p_profs: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

@@ -641,6 +641,17 @@ export async function importerEleves(eleves) {
     return rpc('importer_eleves', { p_eleves: eleves });
 }
 
+/**
+ * Aperçu de l'import CSV des professeurs. N'écrit rien. Réservé admin.
+ */
+export async function apercuImportProfs(profs) {
+    return rpc('apercu_import_profs', { p_profs: profs });
+}
+
+export async function importerProfs(profs) {
+    return rpc('importer_profs', { p_profs: profs });
+}
+
 /** Rejoue le rattachement pour toutes les fiches orphelines. Réservé admin. */
 export async function reparerRattachements() {
     return rpc('reparer_rattachements');
@@ -759,7 +770,7 @@ export const api = {
     // enseignant
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     // administration
-    apercuImportEleves, importerEleves, ajouterEleve, modifierEleve, reparerRattachements,
+    apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
 };

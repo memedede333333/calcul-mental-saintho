@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
     listeEleves, listeProfs, creerProf, modifierProf, desactiverProf,
-    apercuImportEleves, importerEleves, reparerRattachements, journalAdmin,
+    apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, reparerRattachements, journalAdmin,
 } from '../api.js';
 import {
     ModalDesactiverEleve,
@@ -50,6 +50,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [showAjoutEleveModal, setShowAjoutEleveModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showAjoutProfModal, setShowAjoutProfModal] = useState(false);
+    const [showImportProfModal, setShowImportProfModal] = useState(false);
     const [modalModifierProf, setModalModifierProf] = useState(null);
 
     // État d'action en cours
@@ -450,7 +451,17 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             <div className="admin-topbar">
                                 <h2 className="admin-heading">Enseignants</h2>
                                 {estAdmin && (
-                                    <div style={{ marginLeft: 'auto' }}>
+                                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+                                        <button
+                                            className="admin-btn-action-main"
+                                            style={{
+                                                background: 'var(--surface)', color: 'var(--indigo)',
+                                                border: '1.5px solid var(--bordure)', boxShadow: 'none'
+                                            }}
+                                            onClick={() => setShowImportProfModal(true)}
+                                        >
+                                            Importer des enseignants
+                                        </button>
                                         <button
                                             className="admin-btn-action-main"
                                             onClick={() => setShowAjoutProfModal(true)}
@@ -463,8 +474,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
 
                             <div className="admin-table-card">
                                 <div style={{
-                                    display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(180px, 1.4fr) 90px 180px',
-                                    minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
+                                    display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(170px, 1.2fr) 85px 140px 160px',
+                                    minWidth: 550, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
                                     borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
                                     fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
                                     textTransform: 'uppercase', alignItems: 'center'
@@ -473,6 +484,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                     <span>Nom</span>
                                     <span>Email</span>
                                     <span>Rôle</span>
+                                    <span>Connexion</span>
                                     <span style={{ textAlign: 'right' }}>Actions</span>
                                 </div>
 
@@ -482,8 +494,8 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         <div
                                             key={p.prof_id}
                                             style={{
-                                                display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(180px, 1.4fr) 90px 180px',
-                                                minWidth: 500, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
+                                                display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(170px, 1.2fr) 85px 140px 160px',
+                                                minWidth: 550, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
                                                 borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
                                                 fontFamily: 'var(--texte)'
                                             }}
@@ -519,6 +531,22 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                         <option value="prof">Prof</option>
                                                         <option value="admin">Admin</option>
                                                     </select>
+                                                )}
+                                            </span>
+                                            <span>
+                                                {!p.actif ? (
+                                                    <span className="admin-status-badge--inactive">Désactivé</span>
+                                                ) : p.connecte ? (
+                                                    <span
+                                                        className="admin-status-badge--active"
+                                                        title={p.derniere_connexion ? `Dernière connexion le ${new Date(p.derniere_connexion).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Compte Google rattaché'}
+                                                    >
+                                                        Rattaché
+                                                    </span>
+                                                ) : (
+                                                    <span className="admin-status-badge--never" title="En attente de première connexion Google">
+                                                        En attente
+                                                    </span>
                                                 )}
                                             </span>
                                             <span style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
@@ -697,6 +725,16 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             {showAjoutProfModal && (
                 <ModalAjouterProf
                     onClose={() => setShowAjoutProfModal(false)}
+                    onSuccess={async () => {
+                        await rechargerDonnees();
+                    }}
+                />
+            )}
+
+            {/* Modal Importer des enseignants */}
+            {showImportProfModal && (
+                <ModalImportProfs
+                    onClose={() => setShowImportProfModal(false)}
                     onSuccess={async () => {
                         await rechargerDonnees();
                     }}
@@ -1420,6 +1458,200 @@ function ModalImport({ onClose, onSuccess }) {
                     onClose={() => setApercuData(null)}
                     onConfirm={handleConfirmImport}
                     busy={busyImport}
+                />
+            )}
+        </>
+    );
+}
+
+function ModalImportProfs({ onClose, onSuccess }) {
+    const [csv, setCsv] = useState('');
+    const [nomFichier, setNomFichier] = useState('enseignants.csv');
+    const [apercuData, setApercuData] = useState(null);
+    const [parsedProfs, setParsedProfs] = useState([]);
+    const [resultat, setResultat] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [busyImport, setBusyImport] = useState(false);
+    const fileRef = useRef(null);
+
+    const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setNomFichier(file.name);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const content = ev.target.result || '';
+            setCsv(content);
+        };
+        reader.readAsText(file);
+    };
+
+    const handleGenererApercu = async () => {
+        if (!csv.trim()) return;
+        setBusy(true);
+        setResultat(null);
+
+        const lines = csv.trim().split('\n');
+        const profsList = [];
+        let lineIdx = 0;
+        for (const rawLine of lines) {
+            lineIdx++;
+            const line = rawLine.trim();
+            if (!line) continue;
+            const parts = line.split(/[,;\t]/).map(s => s.trim());
+            if ((parts[0].toLowerCase() === 'email' || parts[0].toLowerCase() === 'nom') && lineIdx === 1) continue;
+
+            let email = '';
+            let nom = '';
+            let role = 'prof';
+
+            if (parts[0].includes('@')) {
+                email = parts[0];
+                if (parts.length >= 4) {
+                    nom = `${parts[1]} ${parts[2]}`.trim();
+                    role = parts[3] || 'prof';
+                } else {
+                    nom = parts[1] || '';
+                    role = parts[2] || 'prof';
+                }
+            } else if (parts[1]?.includes('@')) {
+                email = parts[1];
+                nom = parts[0];
+                role = parts[2] || 'prof';
+            } else {
+                email = parts[0] || '';
+                nom = parts[1] || '';
+                role = parts[2] || 'prof';
+            }
+
+            profsList.push({
+                ligne: lineIdx,
+                email,
+                nom,
+                role: role.toLowerCase() === 'admin' ? 'admin' : 'prof',
+            });
+        }
+
+        if (profsList.length === 0) {
+            setResultat({ error: 'Aucun enseignant trouvé. Format requis : email, nom [, role]' });
+            setBusy(false);
+            return;
+        }
+
+        const res = await apercuImportProfs(profsList);
+        if (res.ok) {
+            setApercuData(res.data);
+            setParsedProfs(profsList);
+        } else {
+            setResultat({ error: res.error || "Impossible de générer l'aperçu." });
+        }
+        setBusy(false);
+    };
+
+    const handleConfirmImport = async () => {
+        if (!parsedProfs.length) return;
+        setBusyImport(true);
+        const res = await importerProfs(parsedProfs);
+        if (res.ok) {
+            setApercuData(null);
+            setResultat(res.data);
+            await onSuccess();
+        } else {
+            alert(`Erreur d'import : ${res.error || 'Échec du traitement'}`);
+        }
+        setBusyImport(false);
+    };
+
+    return (
+        <>
+            <ModalFrame onClose={onClose} maxWidth={560}>
+                <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, font: '700 24px var(--titre)', color: 'var(--indigo)' }}>
+                            Importer des enseignants
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--gris)' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <p style={{ margin: 0, font: '600 15px var(--texte)', color: 'var(--gris)' }}>
+                        Fichier CSV : <b>email, nom [, role]</b> — un enseignant par ligne.<br />
+                        Le rôle par défaut est <code>prof</code> (ou <code>admin</code>). L'aperçu permet de vérifier avant d'écrire.
+                    </p>
+
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".csv,.txt"
+                        onChange={handleFile}
+                        style={{ font: '600 14px var(--texte)' }}
+                    />
+
+                    <textarea
+                        rows={4}
+                        placeholder="Ou collez directement les lignes CSV ici (ex: marie.durand@saintho.fr, Marie Durand, prof)..."
+                        value={csv}
+                        onChange={e => setCsv(e.target.value)}
+                        style={{
+                            width: '100%', padding: '12px', borderRadius: 12,
+                            border: '1px solid var(--bordure)', font: '500 13px monospace',
+                            boxSizing: 'border-box', outline: 'none'
+                        }}
+                    />
+
+                    <button
+                        type="button"
+                        className="admin-btn-action-main"
+                        style={{ height: 48, font: '700 16px var(--texte)' }}
+                        onClick={handleGenererApercu}
+                        disabled={busy || !csv.trim()}
+                    >
+                        {busy ? 'Génération de l\'aperçu…' : 'Voir l\'aperçu avant d\'importer ›'}
+                    </button>
+
+                    {resultat && (
+                        <div style={{
+                            padding: 14, borderRadius: 12, background: 'var(--ivoire)',
+                            border: '1px solid var(--bordure)', font: '600 14px var(--texte)'
+                        }}>
+                            {resultat.error ? (
+                                <span style={{ color: 'var(--rouge)', fontWeight: 700 }}>❌ {resultat.error}</span>
+                            ) : (
+                                <div>
+                                    <div style={{ color: 'var(--vert)', fontWeight: 700, marginBottom: 4 }}>
+                                        ✅ Import terminé
+                                    </div>
+                                    <div style={{ color: 'var(--indigo)' }}>
+                                        {resultat.crees ?? 0} créé{(resultat.crees ?? 0) > 1 ? 's' : ''}, {resultat.mis_a_jour ?? 0} mis à jour.
+                                        {(resultat.rattaches ?? 0) > 0 && ` (${resultat.rattaches} rattachés immédiatement)`}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <button type="button" className="admin-btn-table" onClick={onClose}>
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </ModalFrame>
+
+            {apercuData && (
+                <ModalApercuImport
+                    apercu={apercuData}
+                    nomFichier={nomFichier}
+                    parsedRows={parsedProfs}
+                    onClose={() => setApercuData(null)}
+                    onConfirm={handleConfirmImport}
+                    busy={busyImport}
+                    type="profs"
                 />
             )}
         </>

@@ -147,10 +147,41 @@ du collège**, `maitrise_classe()` répond.
 
 ---
 
+---
+
+## 4 bis. Deuxième test, plus concluant que le premier — 11 septembre 2026
+
+La sauvegarde **pré-remise-à-zéro** (`mig-20260911120000` / commit `ef62f27`,
+17h36) est la plus précieuse du projet : c'est le seul exemplaire des données de
+bêta, effacées juste après. Elle a donc été restaurée à blanc elle aussi.
+
+Et cette fois **avec le fichier `_donnees.sql.gz` produit par le script**, pas
+avec une extraction faite à la main — c'est donc la procédure complète du §3 qui
+a été éprouvée, du début à la fin. **0 erreur.**
+
+| | |
+|---|---|
+| élèves | **313** |
+| cases de maîtrise | **931** |
+| parties jouées | **363** |
+| défis | **27** |
+| participations | **44** |
+| badges | **48** |
+| enseignants | **5** |
+
+Et l'application, interrogée en tant que professeur sur la base restaurée :
+**12 classes**, **313 élèves dont 32 déjà connectés**, **29 élèves au classement
+du collège**, `classement_classes()` répond sur les 12 classes, et aucune
+fonction n'a de signature en double (cas 193).
+
+**Ce qui est désormais prouvé** : le fichier que produit `sauvegarder.command`
+chaque semaine se remet en base tel quel, et l'application fonctionne dessus.
+Ce n'est plus une procédure écrite, c'est une procédure essayée — deux fois,
+sur deux sauvegardes différentes.
+
 ## 5. Ce qui reste à faire
 
-- [ ] Que `sauvegarder.command` produise aussi un fichier `--data-only`.
-- [ ] Un rôle PostgreSQL **en lecture seule** dédié à la sauvegarde, au lieu du
-      compte `postgres` tout-puissant.
+- [x] Que `sauvegarder.command` produise aussi un fichier `--data-only` — fait le 11/09, et c'est ce fichier-là qui a servi au second test de restauration.
+- [x] Un rôle PostgreSQL **en lecture seule** dédié à la sauvegarde — `matho_sauvegarde`, migrations 37 et 38, appliquées le 11/09. Le compte `postgres` ne sert plus aux sauvegardes.
 - [ ] Refaire ce test une fois par trimestre. Une procédure de restauration
       vieille d'un an n'a jamais été essayée sur la base d'aujourd'hui.

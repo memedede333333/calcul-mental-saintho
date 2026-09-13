@@ -450,6 +450,7 @@ export function ModalApercuImport({
     onClose,
     onConfirm,
     busy = false,
+    type = 'eleves',
 }) {
     if (!apercu) return null;
 
@@ -472,12 +473,19 @@ export function ModalApercuImport({
     // Télécharger le rapport des lignes ignorées
     const telechargerIgnorees = () => {
         if (!apercu.lignes_ignorees?.length) return;
-        const csvContent = [
-            'Ligne,Email,Nom,Prenom,Classe,Raison',
-            ...apercu.lignes_ignorees.map(
-                (i) => `${i.ligne || ''},"${i.email || ''}","${i.nom || ''}","${i.prenom || ''}","${i.classe || ''}","${i.raison || ''}"`
-            ),
-        ].join('\n');
+        const csvContent = type === 'profs'
+            ? [
+                'Ligne,Email,Nom,Role,Raison',
+                ...apercu.lignes_ignorees.map(
+                    (i) => `${i.ligne || ''},"${i.email || ''}","${i.nom || ''}","${i.role || ''}","${i.raison || ''}"`
+                ),
+            ].join('\n')
+            : [
+                'Ligne,Email,Nom,Prenom,Classe,Raison',
+                ...apercu.lignes_ignorees.map(
+                    (i) => `${i.ligne || ''},"${i.email || ''}","${i.nom || ''}","${i.prenom || ''}","${i.classe || ''}","${i.raison || ''}"`
+                ),
+            ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -612,7 +620,7 @@ export function ModalApercuImport({
                         <span>Ligne</span>
                         <span>Nom</span>
                         <span>E‑mail</span>
-                        <span>Classe</span>
+                        <span>{type === 'profs' ? 'Rôle' : 'Classe'}</span>
                         <span>Statut</span>
                     </div>
 
@@ -639,7 +647,7 @@ export function ModalApercuImport({
                             >
                                 <span style={{ font: '600 14px var(--texte)', color: 'var(--gris)' }}>{ligneNum}</span>
                                 <span style={{ font: '700 14px var(--texte)', color: 'var(--indigo)' }}>
-                                    {row.nom ? `${row.nom} ${row.prenom || ''}` : '—'}
+                                    {row.nom ? `${row.nom}${row.prenom ? ` ${row.prenom}` : ''}` : '—'}
                                 </span>
                                 <span
                                     style={{
@@ -655,10 +663,11 @@ export function ModalApercuImport({
                                 <span
                                     style={{
                                         font: '600 14px var(--texte)',
-                                        color: isRejet && rejet.raison?.includes('classe') ? 'var(--rouge)' : 'var(--gris)',
+                                        color: isRejet && (rejet.raison?.includes('classe') || rejet.raison?.includes('role')) ? 'var(--rouge)' : 'var(--gris)',
+                                        textTransform: type === 'profs' ? 'capitalize' : 'none',
                                     }}
                                 >
-                                    {row.classe || '—'}
+                                    {type === 'profs' ? (row.role || 'prof') : (row.classe || '—')}
                                 </span>
                                 <span
                                     style={{

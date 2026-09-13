@@ -85,6 +85,7 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
   4. *Défis entre collègues* : mode défi avec table dédiée `defis_participants_profs` pour une étanchéité absolue avec les élèves.
   5. *Statut de connexion des professeurs* : afficher dans l'onglet Enseignants de l'Admin si le compte Google est rattaché et la date/heure de dernière connexion (à l'identique de l'onglet Élèves).
   6. *Historique d'horodatage des connexions* : vue / journal permettant de consulter l'heure exacte des connexions pour les élèves et les professeurs.
+  7. *Tableau de bord d'activité poussée par élève* : vue détaillée d'analyse (qui joue, à quoi, quand, volume de parties, plages horaires de travail, régularité) pour le suivi pédagogique des enseignants et de l'administration.
 
 **Constaté**
 - Sous macOS, `launchd` bloque l'accès à `~/Documents` (erreur `Operation not permitted`) si un script tente d'y lire ou écrire en tâche de fond. Résolu en hébergeant le runner d'automatisation dans `~/.matho/` avec miroir de configuration dans `~/.config/matho/env`.
