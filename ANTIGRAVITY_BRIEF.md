@@ -113,6 +113,73 @@ au début** — puis n'y reviens plus :
 
 ---
 
+## 4bis. Les règles apprises à nos dépens — septembre 2026
+
+Chacune vient d'un incident réel. Elles ne se discutent pas, et le scénario de
+test en garde plusieurs.
+
+### Toute nouvelle fonction porte son propre `grant execute`
+
+Depuis la **migration 38**, `execute` est retiré à `PUBLIC` sur les fonctions
+existantes **et futures**. Une fonction sans `grant execute ... to authenticated`
+renverra donc « permission denied » à l'application.
+
+*Pourquoi :* PostgreSQL accorde `EXECUTE` à PUBLIC sur toute fonction créée, et
+`grant ... to authenticated` n'enlève pas ce droit — il s'ajoute à côté. Pendant
+37 migrations, tout était donc ouvert à tout le monde : un visiteur muni de la
+seule clé `anon`, publique puisqu'embarquée dans le JavaScript, lisait le
+prénom, l'initiale et la classe de tous les élèves ayant joué.
+
+### Tout changement de signature commence par `drop function if exists`
+
+`create or replace` ne peut **ni** changer un type de retour, **ni** ajouter ou
+retirer un paramètre : il crée une **seconde** fonction. PostgREST appelant
+toujours avec des arguments nommés, la base répond alors
+`function ... is not unique` et l'écran tombe.
+
+*Pourquoi :* ce piège s'est refermé **six fois** sur ce projet. Le **cas de test
+193** échoue désormais si une seule fonction de `public` a deux signatures.
+
+### Aucun secret ne passe par une conversation
+
+Ni mot de passe de base, ni jeton `sbp_`, ni chaîne de connexion. On écrit le
+code qui **lit une variable** (`SUPABASE_DB_URL`) et on dit à Aymeri **où** la
+mettre : `.env.local`, ou les secrets GitHub. Il la place lui-même.
+
+*Pourquoi :* une chaîne de connexion complète, mot de passe du compte `postgres`
+en clair, a circulé dans deux fils de discussion. Il a fallu tout réinitialiser.
+
+### On ne corrige jamais une fiche à la main dans Supabase
+
+`modifier_eleve` et `modifier_prof` font trois choses qu'un `update` direct ne
+fait pas : le rattachement du compte Google (`rattacher_par_email`), le contrôle
+d'unicité de l'adresse, et l'entrée au journal d'audit.
+
+*Pourquoi :* une coquille corrigée directement dans le tableau de bord a laissé
+un professeur **sans accès**, son compte Google orphelin, jusqu'à ce qu'on lance
+la réparation à la main.
+
+### Le SQL est écrit par Claude, le React par toi
+
+C'est le partage depuis le premier jour, et il tient parce que chacun vérifie ce
+que l'autre ne peut pas voir : tu vois l'écran, Claude exécute le SQL avant
+d'affirmer quoi que ce soit. Si une tâche demande une migration, **demande-la**
+plutôt que de l'écrire — les migrations 40 et 42 ont été écrites hors de ce
+partage, et la 40 a introduit le doublon de signature ci-dessus.
+
+### Dans ton rapport après une refonte d'écran
+
+Donne la liste des **appels serveur avant et après**, avec la justification de
+chaque disparition. Un écran refait qui appelle moins de fonctions qu'avant,
+c'est soit une simplification voulue, soit un geste perdu — et seul toi peux
+dire lequel au moment où tu le fais.
+
+*Pourquoi :* la refonte du lot 20 a laissé tomber le formulaire « ajouter un
+élève ». `ajouterEleve` est resté importé, plus rien ne l'appelait, et ni le
+build ni les tests SQL n'ont bronché pendant trois lots. C'est Aymeri qui l'a vu,
+en cherchant un bouton qu'il avait utilisé. `frontend/scripts/check-api.mjs`
+attrape désormais ce cas et fait échouer le build.
+
 ## 5. Fichiers fournis
 
 ```

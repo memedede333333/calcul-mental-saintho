@@ -1044,31 +1044,58 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
 
 ### Le message à coller
 
-> Le dossier « Calcul mental » est connecté. Lis `ETAT.md` à la racine, puis
-> `ANTIGRAVITY_BRIEF.md` et `ECRANS.md`, et les trois dernières entrées de
-> `JOURNAL.md`. Ignore `archive/` : c'est l'ancienne architecture Apps Script,
-> abandonnée. Le partage du travail est fixe : **moi (Claude) je fais la
-> conception, le SQL et la relecture ; Antigravity écrit le React**, parce
-> qu'il voit le résultat à l'écran. Aymeri relaie les messages entre nous.
-> Dis-moi ensuite où en est le projet selon toi et ce que tu proposes comme
-> prochaine étape.
+Court exprès : le partage du travail, les règles de méthode et les garde-fous
+sont désormais **dans les instructions du projet claude.ai** (leur texte est
+dans `docs/PROJET_CLAUDE.md` §1). Les répéter ici les ferait diverger.
 
-### ⚠️ Avant d'ouvrir le nouveau chat — nettoyer le projet Claude
+> Le dossier « Calcul mental » est connecté. Avant de me répondre, lis dans
+> cet ordre :
+>
+> 1. `ETAT.md` en entier — c'est lui qui fait foi.
+> 2. `ANTIGRAVITY_BRIEF.md` §4 et §4bis — les règles de travail, dont celles
+>    apprises à nos dépens.
+> 3. `RESTAURATION.md`.
+> 4. Les cinq dernières entrées de `JOURNAL.md`.
+>
+> Ignore `archive/`, les `PROMPT_ANTIGRAVITY_lot*.md` et les
+> `PROMPT_CLAUDE_DESIGN*.md` : ce sont des archives, pas des consignes.
+>
+> Le partage du travail et les règles de méthode sont dans les instructions
+> du projet — applique-les, ne me les récite pas.
+>
+> Puis dis-moi en quelques lignes : où en est le projet selon toi, ce qui te
+> paraît le plus risqué avant la mise en service, et ce que tu proposes de
+> faire en premier.
 
-Les connaissances du projet Claude décrivent encore **l'ancienne architecture**
-(Google Apps Script + Google Sheets + proxy Vercel). Un chat neuf les lira et
-partira faux dès la première réponse. À faire dans claude.ai :
+### Ce qu'un chat neuf doit savoir et qui n'est écrit nulle part ailleurs
 
-- **Remplacer les instructions du projet** par le texte donné dans
-  `docs/PROJET_CLAUDE.md`.
-- **Supprimer des connaissances** : `AUDIT_HANDOFF.md`, `code.gs`, `gas.js`,
-  `App.jsx`, `Login.jsx`, `Profile.jsx`, `Leaderboards.jsx`, `Challenges.jsx`,
-  `api.js`, `claude/DEMARRAGE.md`, `claude/ANTIGRAVITY_BRIEF.md`.
-  Tous datent d'avant la bascule vers Supabase, ou sont périmés.
-- **Garder** `claude/ETAT.md` — la copie de ce document, tenue à jour.
+**Le dépôt fait foi, pas les pièces jointes du projet Claude.** Les documents
+vivent dans le dossier partagé avec Antigravity, versionnés par git. Une copie
+dans les connaissances du projet divergerait — c'est déjà arrivé avec les guides
+élèves, qui existent aujourd'hui en trois exemplaires différents.
 
-Le dépôt sur le disque fait foi. Les connaissances du projet ne servent qu'à
-donner le contexte quand le dossier n'est pas encore connecté.
+**Les documents qui portent la mémoire**, dans l'ordre d'importance :
+
+| | |
+|---|---|
+| `ETAT.md` | fait foi : état, décisions et leurs raisons, ce qui reste |
+| `ANTIGRAVITY_BRIEF.md` | le cadrage d'Antigravity — §4bis, les règles dures |
+| `JOURNAL.md` | l'historique : fait / décidé / constaté / ensuite |
+| `RESTAURATION.md` | comment remonter une sauvegarde, éprouvé deux fois |
+| `ECRANS.md` | les écrans, un par un |
+| `NOM_ET_MARQUE.md` | la bascule du nom `matHo`, hors code |
+| `SUPABASE_PAS_A_PAS.md` | Supabase, OAuth Google, comptes |
+| `docs/PROJET_CLAUDE.md` | Le texte des instructions du projet claude.ai — §1 la version en vigueur, §5 les versions remplacées et pourquoi |
+
+**Ce qui est du bruit** : les 30 `PROMPT_ANTIGRAVITY_lot*.md` et les
+`PROMPT_CLAUDE_DESIGN*.md` sont les messages déjà transmis, conservés comme
+archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été reversé
+dans `ETAT.md` et `JOURNAL.md`.
+
+**Les deux garde-fous automatiques**, à ne jamais contourner :
+`supabase/tests/run.sh` (193 cas ; toute ligne contenant « ECHEC » est une
+régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
+qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 
 ### La discipline à tenir
 
@@ -1076,10 +1103,18 @@ donner le contexte quand le dossier n'est pas encore connecté.
 
 0. **Corriger la date en tête de ce fichier.** Premier geste, pas dernier.
 1. **Ajouter une entrée dans `JOURNAL.md`** — fait / décidé / constaté /
-   ensuite. Le modèle est en tête du fichier. En marquant clairement ce qui est
-   validé, et par qui.
+   ensuite. Le modèle est en tête du fichier, en marquant ce qui est validé et
+   par qui.
 2. **Mettre à jour ce document** — le tableau du §2 toujours, le registre des
    décisions du §3 si un choix de conception a été pris.
 
 Le journal raconte, `ETAT.md` fait foi. C'est ce qui permet de changer de chat,
 d'outil ou de personne sans rien reperdre.
+
+### Le ménage qui attend une décision d'Aymeri
+
+Trois jeux de guides élèves/professeurs coexistent, jamais tranchés :
+`docs/procedures/` (écrits par Claude, aux couleurs et icônes de l'application),
+`docs/guides/`, et quatre fichiers à la racine (`GUIDE_*_IPAD.html`,
+`guide-*.html`). **Un document en double n'est pas un document de secours, c'est
+un document faux en attente.** Tant que ce n'est pas tranché, ne pas s'en servir.

@@ -57,6 +57,56 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-13 — Bascule vers un nouveau chat : le partage du travail était mal décrit
+
+**Fait**
+- `ANTIGRAVITY_BRIEF.md` : nouveau **§4bis, « Les règles apprises à nos
+  dépens »** — `grant execute` obligatoire sur toute nouvelle fonction,
+  `drop function` avant tout changement de signature, aucun secret dans une
+  conversation, ne jamais corriger une fiche à la main dans Supabase, le SQL
+  est écrit par Claude, et la liste des appels serveur avant/après une refonte.
+- `ETAT.md` **§6 entièrement réécrit** : le message à coller dans un chat neuf,
+  le tableau des sept documents qui portent la mémoire, ce qui est du bruit,
+  les deux garde-fous automatiques, la discipline, et le ménage des guides en
+  attente d'arbitrage.
+- `docs/PROJET_CLAUDE.md` **réordonné et corrigé** : §1 le texte à coller
+  (version du 13 septembre), §2 ce qui a changé et pourquoi, §3 les
+  connaissances du projet, §4 pourquoi le ménage compte, §5 **l'historique des
+  versions** — le texte du 31 août y est conservé intégralement, daté, avec la
+  raison de son remplacement.
+
+**Constaté** — Les instructions du projet Claude, écrites le 31 août,
+décrivaient un partage du travail **qui n'était déjà plus celui qu'on
+pratiquait**. Trois erreurs, toutes relevées par Aymeri :
+
+1. Elles confiaient à Aymeri l'application des migrations dans Supabase. C'est
+   Antigravity qui les applique depuis au moins le 10 septembre — il a les MCP
+   Supabase, GitHub et Vercel, et le 11 septembre il a écrit et fait tourner
+   seul `sauvegarder.sh`, le workflow GitHub Actions, le `launchd` du Mac, la
+   copie Google Drive, le commit `ea05d00` et le déploiement.
+2. Elles ignoraient que **le dossier du dépôt est partagé en direct** entre
+   Claude et Antigravity : un fichier écrit par l'un est lu par l'autre sans
+   commit ni copier-coller. Le commit sert à l'historique et à Vercel, pas à
+   transmettre. Seuls les messages passent par Aymeri.
+3. Elles présentaient Antigravity comme un exécutant, alors que la relecture est
+   **croisée** : il a relu la migration 13, soulevé le point qui a fait entrer
+   `p_faits` dans la migration 26, et trouvé la classe `.game-zone` sur
+   `Keypad.jsx`.
+
+Le coût n'était pas théorique : chaque manipulation demandée à Aymeri
+qu'Antigravity savait faire était un aller-retour perdu.
+
+**Décidé** — Une instruction remplacée n'est pas effacée, elle est **datée et
+conservée** avec la raison du remplacement (`docs/PROJET_CLAUDE.md` §5). Savoir
+ce qu'on croyait le 31 août explique la moitié des décisions prises depuis.
+✅ *validé par Aymeri le 13/09*
+
+**Ensuite** — Aymeri : coller le §1 de `docs/PROJET_CLAUDE.md` dans les
+instructions du projet claude.ai, puis ouvrir le nouveau chat avec le message
+de `ETAT.md` §6. Reste en attente : l'arbitrage des trois jeux de guides
+élèves/professeurs, et la création d'un environnement de test du projet.
+
+
 ## 2026-09-11 — Automatisation complète des sauvegardes (Cloud + Mac) et clôture de la chaîne de restauration
 
 **Fait**
