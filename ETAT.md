@@ -368,6 +368,39 @@ son adresse **est** sa porte d'entrée : une faute de frappe le laisse dehors
 sans que personne comprenne pourquoi. Celui qui change l'adresse doit être celui
 qui peut la changer des deux côtés.
 
+**Corriger une fiche à la main dans Supabase contourne tous les garde-fous.**
+*(13 septembre 2026 — le cas Côme de Mercey.)*
+Une coquille dans l'adresse d'un professeur a été corrigée par un `update`
+direct dans le tableau de bord Supabase. Résultat : il s'était connecté avec
+son compte Google, sa fiche portait encore la coquille, et après correction son
+compte est resté **orphelin** — il a fallu lancer `rattacher_par_email()` à la
+main pour le retrouver.
+
+Ce n'est pas un défaut du déclencheur : `on_auth_user_created` ne se déclenche
+qu'à la **création** d'un compte Auth, jamais après. C'est précisément pour ça
+que `modifier_eleve` (migration 35) et `modifier_prof` (migration 40) appellent
+`rattacher_par_email` elles-mêmes quand la fiche n'est encore attachée à
+personne. **Elles le font ; un `update` direct, non** — et il ne fait pas
+davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
+
+LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
+Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
+enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Deux colonnes qui s'appellent pareil et mesurent deux choses.**
+*(13 septembre 2026 — noté, pas corrigé.)*
+`liste_eleves.derniere_connexion` est la dernière **partie jouée** (migration 36),
+`liste_profs.derniere_connexion` est la dernière **ouverture de session Google**
+(`auth.users.last_sign_in_at`). Deux mesures légitimes — pour un élève la
+question est « travaille-t-il ? », pour un prof « son compte fonctionne-t-il ? »
+— mais un seul nom pour les deux.
+À l'écran la distinction est faite (« Statut / Dernière activité » côté élèves,
+« Connexion / Dernière connexion » côté enseignants), donc aucun professeur ne
+lit un chiffre faux : c'est un piège pour le prochain qui touchera au code, pas
+pour un utilisateur. Si un jour on y revient, le champ des profs s'appellera
+`derniere_session`. C'est le même défaut que le mot « actif » de la migration 28,
+attrapé assez tôt cette fois pour n'être qu'une note.
+
 ### Contrat des fonctions
 
 **Toutes les fonctions de classement renvoient les mêmes colonnes** —
