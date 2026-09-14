@@ -4,8 +4,8 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **Lot A (Fiche Élève) entièrement implémenté et testé**.
-> Migration 46 (`20260914150000_temps_reponse_et_fiche_eleve.sql`) écrite et validée avec **232 cas de test verts (0 échec)**.
+> Dernière mise à jour : **14 septembre 2026** — **Lot A (Fiche Élève) entièrement implémenté, appliqué et testé**.
+> Migration 46 (`20260914150000_temps_reponse_et_fiche_eleve.sql`) **appliquée sur Supabase distant** et validée avec **232 cas de test verts (0 échec)**.
 > Frontend livré : `ModalFicheEleve.jsx` intégré dans `MaClasse.jsx` et `Admin.jsx`, `api.js` et `database.ts` enrichis (`ficheEleve`, `ficheEleveRythme`, `ficheEleveFaits`), ESLint + check-tokens (88 tokens) + check-api (52 RPCs) tous validés à 100%.
 > **Sauvegarde & Sécurité validées** : dump complet compressé de la base Supabase (313 élèves) testé avec intégrité vérifiée et copie Google Drive.
 > **Option 3 livrée** : Couvre-feu 21h30-07h30 résistant au mode avion / hors-ligne, écran d'accueil avec heure dynamique de réveil, MaClasse enrichi avec l'onglet « Activité & Temps de jeu », console Admin dotée de l'onglet « 🌙 Couvre-feu & Nuit » et suivi de l'implication des enseignants.

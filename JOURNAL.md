@@ -72,7 +72,7 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 - Distinguer expressément le calcul mental pur (`temps_moyen_reponse_ms`) de la cadence de jeu (`secondes_par_question`).
 
 **Ensuite**
-- Poser la migration 46 sur Supabase distant via l'éditeur SQL (ou connexion admin).
+- Migration 46 appliquée avec succès sur Supabase distant (2 236 faits amorcés sur maitrise, fonctions et grants en place).
 - Conception du Lot B (comparateur de classe et vue macro).
 
 ## 2026-09-14 — Migration 46 : le temps de réponse, et la fiche d'un élève (lot A)
