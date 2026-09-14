@@ -134,6 +134,54 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
         return true;
     });
 
+    // Si eleveId est absent ou vide, afficher un défaut bruyant et explicite (règle projet anti-garde muet)
+    if (!eleveId) {
+        return (
+            <ModalFrame onClose={onClose} maxWidth={540}>
+                <div style={{
+                    padding: '36px 28px',
+                    textAlign: 'center',
+                    fontFamily: 'var(--texte)',
+                    background: 'var(--surface)',
+                }}>
+                    <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
+                    <h2 style={{
+                        fontFamily: 'var(--titre)',
+                        color: 'var(--erreur-donnee)',
+                        margin: '0 0 12px',
+                        fontSize: 22,
+                    }}>
+                        Identifiant élève manquant
+                    </h2>
+                    <p style={{
+                        color: 'var(--indigo-encre)',
+                        fontSize: 15,
+                        lineHeight: 1.5,
+                        margin: '0 0 24px',
+                    }}>
+                        La fiche élève a été appelée avec un identifiant vide ou indéfini (<code>eleveId: {String(eleveId)}</code>).
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        style={{
+                            padding: '10px 24px',
+                            borderRadius: 'var(--r-bouton)',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--bordure)',
+                            fontWeight: 700,
+                            color: 'var(--indigo)',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--texte)',
+                        }}
+                    >
+                        Fermer
+                    </button>
+                </div>
+            </ModalFrame>
+        );
+    }
+
     return (
         <ModalFrame onClose={onClose} maxWidth={840}>
             <div style={{

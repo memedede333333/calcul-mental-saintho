@@ -79,6 +79,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [showImportProfModal, setShowImportProfModal] = useState(false);
     const [modalModifierProf, setModalModifierProf] = useState(null);
     const [eleveFicheId, setEleveFicheId] = useState(null);
+    const ouvrirFicheEleve = (id) => setEleveFicheId(id || '__MANQUANT__');
 
     // État d'action en cours
     const [actionEnCours, setActionEnCours] = useState(false);
@@ -514,7 +515,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                 <span className="admin-cell-actions">
                                                     <button
                                                         className="admin-btn-table"
-                                                        onClick={() => setEleveFicheId(e.id)}
+                                                        onClick={() => ouvrirFicheEleve(e.eleve_id)}
                                                         disabled={actionEnCours}
                                                         style={{ color: 'var(--action)', fontWeight: 700 }}
                                                     >
@@ -966,7 +967,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                             <button
                                                                 type="button"
                                                                 className="admin-btn-table"
-                                                                onClick={() => setEleveFicheId(s.eleve_id)}
+                                                                onClick={() => ouvrirFicheEleve(s.eleve_id)}
                                                                 style={{ marginRight: 6, color: 'var(--action)', fontWeight: 700 }}
                                                             >
                                                                 Fiche élève
@@ -996,7 +997,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             <TableauComparateur
                                 classe={null}
                                 classes={classes}
-                                onOuvrirFiche={(id) => setEleveFicheId(id)}
+                                onOuvrirFiche={(id) => ouvrirFicheEleve(id)}
                             />
                             <div style={{ flex: 1 }} />
                         </>
@@ -1181,9 +1182,9 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             )}
 
             {/* Modal Fiche Élève Complète (Lot A) */}
-            {eleveFicheId && (
+            {eleveFicheId !== null && (
                 <ModalFicheEleve
-                    eleveId={eleveFicheId}
+                    eleveId={eleveFicheId === '__MANQUANT__' ? null : eleveFicheId}
                     onClose={() => setEleveFicheId(null)}
                 />
             )}

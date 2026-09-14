@@ -57,6 +57,43 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Le bouton « Fiche » de l'onglet Élèves : `e.id` au lieu de `e.eleve_id`
+
+**Constaté** — Signalé par Aymeri : dans Administration › Élèves, le bouton
+« Fiche » ne fait rien, pour un élève actif comme désactivé.
+
+**La cause, `Admin.jsx` ligne 517** : `onClick={() => setEleveFicheId(e.id)}`.
+La liste vient de `listeEleves()`, donc de `liste_eleves()`, dont la colonne
+s'appelle **`eleve_id`**. `e.id` vaut `undefined`, `eleveFicheId` reste falsy, et
+le garde `{eleveFicheId && <ModalFicheEleve …>}` n'ouvre jamais rien. Le bouton
+a l'air mort parce qu'il l'est.
+
+La preuve tient dans la même boucle : la ligne d'en face écrit
+`key={e.eleve_id}`. Un seul site est fautif — `MaClasse.jsx:725`,
+`Admin.jsx:969` et les deux `onOuvrirFiche` du comparateur passent tous
+`eleve_id`.
+
+**Décidé — c'est la troisième fois, et ce n'est pas un hasard.** `classe` au lieu
+de `nom_affiche`, puis `nom` au lieu de `nom_affiche`, maintenant `id` au lieu de
+`eleve_id`. À chaque fois : un écran lit un nom de colonne qui n'existe pas, et
+rien ne bronche. `check-api.mjs` ne peut pas le voir — il vérifie que les RPC
+existent et qu'on les appelle, jamais que les colonnes lues portent le bon nom.
+
+**Ce qui a rendu le défaut MUET, et qui est corrigeable** : le montage conditionnel
+`{eleveFicheId && …}` avale silencieusement un `undefined`. Si le bouton avait
+ouvert la modale avec un identifiant vide, `fiche_eleve()` aurait répondu
+« Eleve introuvable » et le défaut aurait été visible à la première utilisation,
+en recette, pas en production. Un garde qui masque une erreur de programmation au
+lieu de la montrer est un garde mal placé — c'est la même leçon que l'écran blanc
+muet de ce matin, à l'échelle d'un composant.
+
+**Fait** —
+1. `Admin.jsx` ligne 517 corrigée : `e.id` remplacé par `e.eleve_id`. Le bouton « Fiche » de l'onglet Élèves ouvre désormais immédiatement la fiche de l'élève sélectionné.
+2. `ModalFicheEleve.jsx` rend tout identifiant absent bruyant et explicite : si `eleveId` est absent ou vide, la modale s'ouvre et affiche un avertissement visuel `⚠️ Identifiant élève manquant` au lieu de ne rien rendre.
+3. Les écrans parents (`Admin.jsx`, `MaClasse.jsx`) utilisent la fonction `ouvrirFicheEleve(id)` et le garde conditionnel `{eleveFicheId !== null && ...}` : si un appelant tente d'ouvrir une fiche avec un `id` falsy, la modale s'ouvre pour signaler l'erreur de programmation au lieu d'avaler l'événement en silence.
+4. Validation `npm run build` réussie (ESLint 0 erreur, Vite build OK, check-tokens 88 tokens, check-api 66/66 RPC).
+
+
 ## 2026-09-14 — Lot B en production : Tableau de comparaison des élèves
 
 **Fait** —

@@ -64,6 +64,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     const [activiteEleves, setActiviteEleves] = useState([]);
     const [loadingActivite, setLoadingActivite] = useState(false);
     const [eleveFicheId, setEleveFicheId] = useState(null);
+    const ouvrirFicheEleve = (id) => setEleveFicheId(id || '__MANQUANT__');
 
     // 1. Charger la liste des classes au montage
     useEffect(() => {
@@ -722,7 +723,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                                                 <td style={{ padding: '12px 12px', textAlign: 'right' }}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setEleveFicheId(e.eleve_id)}
+                                                        onClick={() => ouvrirFicheEleve(e.eleve_id)}
                                                         style={{
                                                             border: '1px solid var(--bordure)',
                                                             background: 'var(--ciel-pale)',
@@ -771,7 +772,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                     <TableauComparateur
                         classe={selectedClasse}
                         classes={classes}
-                        onOuvrirFiche={(id) => setEleveFicheId(id)}
+                        onOuvrirFiche={(id) => ouvrirFicheEleve(id)}
                     />
 
                     {/* Bouton retour en bas */}
@@ -797,9 +798,9 @@ export default function MaClasse({ onBack, onLancerDefi }) {
             )}
 
             {/* Modale Fiche Élève (Lot A) */}
-            {eleveFicheId && (
+            {eleveFicheId !== null && (
                 <ModalFicheEleve
-                    eleveId={eleveFicheId}
+                    eleveId={eleveFicheId === '__MANQUANT__' ? null : eleveFicheId}
                     initialJours={periodeJours === 1 ? 7 : periodeJours}
                     onClose={() => setEleveFicheId(null)}
                 />
