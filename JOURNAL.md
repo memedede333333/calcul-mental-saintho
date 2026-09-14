@@ -93,6 +93,23 @@ muet de ce matin, à l'échelle d'un composant.
 3. Les écrans parents (`Admin.jsx`, `MaClasse.jsx`) utilisent la fonction `ouvrirFicheEleve(id)` et le garde conditionnel `{eleveFicheId !== null && ...}` : si un appelant tente d'ouvrir une fiche avec un `id` falsy, la modale s'ouvre pour signaler l'erreur de programmation au lieu d'avaler l'événement en silence.
 4. Validation `npm run build` réussie (ESLint 0 erreur, Vite build OK, check-tokens 88 tokens, check-api 66/66 RPC).
 
+**Relu maillon par maillon (Claude)** — Les cinq points d'ouverture de la fiche
+passent bien `eleve_id` : `Admin.jsx` 518 et 970, `MaClasse.jsx` 726, et les deux
+`onOuvrirFiche` du comparateur. La chaîne du filet est complète et je l'ai suivie
+en entier, parce qu'elle se referme en trois endroits différents : l'écran
+transforme un identifiant vide en sentinelle `'__MANQUANT__'` — truthy, donc la
+modale se monte au lieu d'être avalée —, puis la reconvertit en `null` juste
+avant de la passer (`eleveId={eleveFicheId === '__MANQUANT__' ? null : …}`), et
+le garde `if (!eleveId)` affiche enfin l'avertissement. **Aucune RPC n'est
+appelée avec un identifiant qui n'est pas un UUID** — c'était le risque que je
+soupçonnais, il n'existe pas.
+
+**Constante sentinelle centralisée** — `ELEVE_ID_MANQUANT` est exportée depuis `ModalFicheEleve.jsx` et importée dans `Admin.jsx` et `MaClasse.jsx`. Plus aucune chaîne en dur dupliquée.
+
+**Clarté de la colonne « À revoir » et harmonisation visuelle** —
+1. La colonne « À revoir » affiche désormais explicitement « X faits » (ex. : `33 faits` sur 55) et son en-tête mentionne `(sur 55)` pour dissiper toute confusion avec une note scolaire sur 20.
+2. Suppression de l'émoji graphique `📊` dans la barre latérale Administration et sur le bouton du tableau, pour respecter strictement la charte graphique épurée du projet.
+
 
 ## 2026-09-14 — Lot B en production : Tableau de comparaison des élèves
 

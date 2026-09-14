@@ -66,6 +66,8 @@ function formatDateFr(dateStr) {
     }
 }
 
+export const ELEVE_ID_MANQUANT = '__MANQUANT__';
+
 export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
     const [jours, setJours] = useState(initialJours);
     const [tab, setTab] = useState('rapidite'); // 'rapidite', 'faits', 'defis', 'horaires'
@@ -106,7 +108,7 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                 if (isMounted) setLoading(false);
             }
         }
-        if (eleveId) {
+        if (eleveId && eleveId !== ELEVE_ID_MANQUANT) {
             charger();
         }
         return () => { isMounted = false; };
@@ -134,8 +136,8 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
         return true;
     });
 
-    // Si eleveId est absent ou vide, afficher un défaut bruyant et explicite (règle projet anti-garde muet)
-    if (!eleveId) {
+    // Si eleveId est absent ou vaut la sentinelle, afficher un défaut bruyant et explicite (règle projet anti-garde muet)
+    if (!eleveId || eleveId === ELEVE_ID_MANQUANT) {
         return (
             <ModalFrame onClose={onClose} maxWidth={540}>
                 <div style={{

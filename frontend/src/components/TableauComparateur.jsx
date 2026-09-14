@@ -480,10 +480,10 @@ export default function TableauComparateur({ classe = null, classes = [], onOuvr
 
                                 <th
                                     onClick={() => handleSort('a_revoir')}
-                                    title="Multiplications oranges ou rouges de la plage choisie"
+                                    title={`Multiplications avec erreurs ou fragiles sur les ${faitsPlage} de la sélection`}
                                     style={{ padding: '14px 12px', cursor: 'pointer', fontWeight: 800, textAlign: 'center' }}
                                 >
-                                    À revoir {iconeTri('a_revoir')}
+                                    À revoir (sur {faitsPlage}) {iconeTri('a_revoir')}
                                 </th>
 
                                 {modePlage !== 'table' && (
@@ -660,19 +660,22 @@ export default function TableauComparateur({ classe = null, classes = [], onOuvr
                                             {/* À revoir */}
                                             <td style={{ padding: '12px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                                 {(e.faits_a_revoir || 0) > 0 ? (
-                                                    <span style={{
-                                                        padding: '3px 8px',
-                                                        borderRadius: 999,
-                                                        background: 'var(--rouge-pale)',
-                                                        color: 'var(--erreur-donnee)',
-                                                        fontWeight: 700,
-                                                        fontSize: 12,
-                                                    }}>
-                                                        {e.faits_a_revoir}
+                                                    <span
+                                                        title={`${e.faits_a_revoir} multiplications à consolider ou avec erreurs sur les ${e.faits_plage || faitsPlage} de la sélection`}
+                                                        style={{
+                                                            padding: '4px 10px',
+                                                            borderRadius: 999,
+                                                            background: 'var(--rouge-pale)',
+                                                            color: 'var(--erreur-donnee)',
+                                                            fontWeight: 800,
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        {e.faits_a_revoir} faits
                                                     </span>
                                                 ) : (
-                                                    <span style={{ color: 'var(--gris)', fontSize: 13, fontWeight: 500 }}>
-                                                        0
+                                                    <span style={{ color: 'var(--vert)', fontSize: 13, fontWeight: 700 }}>
+                                                        0 fait
                                                     </span>
                                                 )}
                                             </td>
@@ -782,7 +785,7 @@ export default function TableauComparateur({ classe = null, classes = [], onOuvr
                                                     onMouseEnter={ev => ev.currentTarget.style.background = '#cbe6f7'}
                                                     onMouseLeave={ev => ev.currentTarget.style.background = 'var(--ciel-pale)'}
                                                 >
-                                                    📊 Fiche
+                                                    Fiche
                                                 </button>
                                             </td>
                                         </tr>

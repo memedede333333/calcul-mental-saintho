@@ -10,7 +10,7 @@ import {
     ModalApercuImport,
     ModalFrame,
 } from '../components/Modals';
-import ModalFicheEleve from '../components/ModalFicheEleve';
+import ModalFicheEleve, { ELEVE_ID_MANQUANT } from '../components/ModalFicheEleve';
 import TableauComparateur from '../components/TableauComparateur';
 import { formaterHeureReprise } from '../logic/couvreFeu.js';
 
@@ -79,7 +79,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [showImportProfModal, setShowImportProfModal] = useState(false);
     const [modalModifierProf, setModalModifierProf] = useState(null);
     const [eleveFicheId, setEleveFicheId] = useState(null);
-    const ouvrirFicheEleve = (id) => setEleveFicheId(id || '__MANQUANT__');
+    const ouvrirFicheEleve = (id) => setEleveFicheId(id || ELEVE_ID_MANQUANT);
 
     // État d'action en cours
     const [actionEnCours, setActionEnCours] = useState(false);
@@ -337,7 +337,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                         className={`admin-sidebar-tab${tab === 'comparateur' ? ' admin-sidebar-tab--active' : ''}`}
                         onClick={() => setTab('comparateur')}
                     >
-                        <span>📊 Comparateur</span>
+                        <span>Comparateur</span>
                     </button>
 
                     <button
@@ -1182,9 +1182,9 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             )}
 
             {/* Modal Fiche Élève Complète (Lot A) */}
-            {eleveFicheId !== null && (
+            {eleveFicheId && (
                 <ModalFicheEleve
-                    eleveId={eleveFicheId === '__MANQUANT__' ? null : eleveFicheId}
+                    eleveId={eleveFicheId}
                     onClose={() => setEleveFicheId(null)}
                 />
             )}

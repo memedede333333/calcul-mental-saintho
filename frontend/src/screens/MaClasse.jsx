@@ -10,7 +10,7 @@ import {
 } from '../api';
 import { IconMaGrille, IconSprint } from '../components/Icons';
 import { trierTablesFragiles } from '../logic/classeStats';
-import ModalFicheEleve from '../components/ModalFicheEleve';
+import ModalFicheEleve, { ELEVE_ID_MANQUANT } from '../components/ModalFicheEleve';
 import TableauComparateur from '../components/TableauComparateur';
 
 function formaterTempsPartie(secondes) {
@@ -64,7 +64,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     const [activiteEleves, setActiviteEleves] = useState([]);
     const [loadingActivite, setLoadingActivite] = useState(false);
     const [eleveFicheId, setEleveFicheId] = useState(null);
-    const ouvrirFicheEleve = (id) => setEleveFicheId(id || '__MANQUANT__');
+    const ouvrirFicheEleve = (id) => setEleveFicheId(id || ELEVE_ID_MANQUANT);
 
     // 1. Charger la liste des classes au montage
     useEffect(() => {
@@ -798,9 +798,9 @@ export default function MaClasse({ onBack, onLancerDefi }) {
             )}
 
             {/* Modale Fiche Élève (Lot A) */}
-            {eleveFicheId !== null && (
+            {eleveFicheId && (
                 <ModalFicheEleve
-                    eleveId={eleveFicheId === '__MANQUANT__' ? null : eleveFicheId}
+                    eleveId={eleveFicheId}
                     initialJours={periodeJours === 1 ? 7 : periodeJours}
                     onClose={() => setEleveFicheId(null)}
                 />
