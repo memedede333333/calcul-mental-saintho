@@ -4,39 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **Lot A (Fiche Élève) entièrement implémenté, appliqué et testé**.
-> Migration 46 (`20260914150000_temps_reponse_et_fiche_eleve.sql`) **appliquée sur Supabase distant** et validée avec **232 cas de test verts (0 échec)**.
-> Frontend livré : `ModalFicheEleve.jsx` intégré dans `MaClasse.jsx` et `Admin.jsx`, `api.js` et `database.ts` enrichis (`ficheEleve`, `ficheEleveRythme`, `ficheEleveFaits`), ESLint + check-tokens (88 tokens) + check-api (52 RPCs) tous validés à 100%.
-> **Sauvegarde & Sécurité validées** : dump complet compressé de la base Supabase (313 élèves) testé avec intégrité vérifiée et copie Google Drive.
-> **Option 3 livrée** : Couvre-feu 21h30-07h30 résistant au mode avion / hors-ligne, écran d'accueil avec heure dynamique de réveil, MaClasse enrichi avec l'onglet « Activité & Temps de jeu », console Admin dotée de l'onglet « 🌙 Couvre-feu & Nuit » et suivi de l'implication des enseignants.
-> **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
-> deux constats : `run.sh` ne démarrait plus depuis la migration 42 (l'`auth.users`
-> simulée du prélude n'a pas `last_sign_in_at`, la migration ne se créait pas et le
-> scénario s'arrêtait AVANT le premier cas) ; et **un import d'enseignants dont le
-> fichier n'a pas de colonne « rôle » rétrograde tous les administrateurs sauf le
-> dernier — dont celui qui lance l'import** (cas 208, à trancher, voir §5). L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont dans le code.**
-> **Sauvegarde & Sécurité finalisées** : rôle `matho_sauvegarde` opérationnel en lecture seule (migrations 37 & 38 appliquées, fuite PUBLIC colmatée), double dump (complet + données seules réinjectables) testé et validé par restauration à blanc (313 élèves revenus sans erreur). Double automatisme en place : sentinelle GitHub Actions le vendredi à 20h17 Paris et LaunchAgent Mac (`launchd`) le vendredi à 18h00 avec synchronisation Google Drive.
-> **Migrations 39 à 42 appliquées** : réveil quotidien Supabase anon restauré (migration 39, curl 200 et GitHub Actions vert), édition des professeurs par les admins avec maintien de `user_id` (migration 40), signature unique de `modifier_prof` (migration 41), statut de connexion des professeurs avec date/heure de dernière connexion et import CSV en masse des enseignants (`apercu_import_profs` / `importer_profs`) avec protection du dernier admin et rattachement automatique immédiat (migration 42). Défis étendus jusqu'à la table de 20 (`Challenges.jsx`), label corrigé dans `Practice.jsx`. Dump et backup complet + données synchronisés dans Google Drive.
-> Bug de saisie du chiffre `0` corrigé dans le frontend et déployé en production sur Vercel.
-> `enregistrer_session` et `terminer_defi` renvoient la clé `maitrise` des seuls faits touchés.
-> Le front répercute ce delta dans `App.jsx` (`handleMaitriseMaj`) et localement (`Practice.jsx`),
-> la grille bouge immédiatement après chaque partie et les poids de tirage s'adaptent sans recharger.
-> **Le lot 20 est livré** : écran Administration entièrement refait selon la maquette 25 (paysage pour Mac,
-> navigation Élèves / Enseignants / Journal d'audit, modales de changement de classe et de désactivation,
-> recherche locale, import CSV, rattachement, aucune couleur en dur, zéro emploi du mot « actif » pour les joueurs).
-> **Le lot 21 est livré** : la **migration 28 est appliquée** (`populations_classements`), les maquettes 22
-> (Classements/Progression), 23 (Classements/Classes) et 24 (Ma classe) sont refaites sur les maquettes Claude Design.
-> **Le lot 22 est livré** : **Lot 22a** (`124de6f` : écran 26 code projeté en 1280×720 avec layout large, quitter discret, pastilles bordées) et **Lot 22b** (écran 27 accueil professeur avec en-tête profil/classes, carte hero lancer un défi, alerte table fragile partagée avec Ma classe et accès direct, grille 2×2 et barre d'actions ; écrans 33 & 34 avec saisie du code défi à 5 lettres, clavier virtuel 31 touches + clavier physique, carte de confirmation « C'est parti » et messages de refus distincts du serveur).
-> **Le lot 23 est livré** : migrations 29 (`salle_des_profs`) et 30 (`profil_et_place_records`) appliquées, types TypeScript régénérés, écrans 28 (Mes défis passés), 29 (Profil élève), 30 (Profil enseignant), 31 (Classements Records avec ligne épinglée et écart serveur positif) et 32 (Classements Salle des profs avec stats de participation serveur et avatars/initiales), correction du dénominateur `/20` dans `JoinChallenge.jsx`.
-> **Le lot 24 est livré** : Écran 35 (`Learn.jsx`) entièrement reconstruit (sélecteur borné par `plafond_tables`, multiplicateur 1 à 10, carte 1 commutativité avec animation de rotation « Faire tourner » et ronds persistants, carte 2 règle de « La coupure en deux » 5+n ou 10+n masquée pour ≤ 5 et 10, bouton direct libre, aucun enregistrement ni scoring). Écran 36 (`Modals.jsx`) avec les 4 modales unifiées sur voile indigo 55% : a) avatar élève (8 emojis fermés) et enseignant (emojis / initiales), b) changer classe d'un élève avec mention d'audit trail, c) désactiver élève avec garantie de conservation des résultats, d) aperçu d'import CSV branché sur `apercu_import_eleves` (RPC `apercuImportEleves` dans `api.js`) avec 4 compteurs serveur stricts, raisons de rejet serveur mot pour mot, et séparation stricte entre prévisualisation et écriture en base.
-> **Le lot 25 est livré** : fermeture du clavier physique dans les trois modes où le temps compte (Sprint, Contre-la-montre, Montée) pour garantir l'équité entre ordinateurs et iPads. Règle centralisée dans `logic/saisie.js`, touche Échap préservée, phrase d'information sur les écrans de préparation. Clavier maintenu sur Sans faute, Libre, Apprendre et saisie de code.
-> **Le lot 26 est livré** : file d'attente hors-ligne étendue aux défis (`terminerDefi` → `mettreEnAttente`), durée dynamique lue du défi et formatée (`logic/duree.js`), suppression des libellés en dur « 2 min ».
-> **Migrations 31, 32 & 33 livrées** : `mes_defis` renvoie les défis joués, la vraie durée (`duree_s`, null hors chrono), le nombre réel de questions (`nb_questions`, null hors Sprint), et le score sous forme de bonnes réponses pour éviter toute confusion avec les points. Types `database.ts` régénérés, `MesDefis.jsx` aligné.
-> **Jalon atteint** : **Les 36 maquettes de la refonte v10 sont dans le code.**
->
-> *(Cette ligne se met à jour **en premier**, avant tout le reste du document.
-> Elle a menti une fois : le §2 était daté du 31 et l'en-tête du 27, et un chat
-> neuf a eu raison de s'en méfier.)*
+> Dernière mise à jour : **14 septembre 2026** — **47 migrations appliquées**,
+> lot A (fiche élève) et **lot B (tableau de comparaison des élèves)** en production.
+> **240 cas de test verts** sur une base reconstruite depuis les 47 migrations.
 
 ---
 
@@ -395,6 +365,44 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Comparer des élèves, c'est d'abord choisir un dénominateur commun.**
+*(14 septembre 2026, migration 47 — la plage tranchée par la demande d'Aymeri.)*
+Un « % de vert » calculé sur ce que chaque élève a rencontré met en tête celui qui
+a ouvert cinq multiplications et les a réussies. Calculé sur le plafond de chacun,
+il compare une grille de 55 faits à une grille de 120. Les deux classent du bruit.
+
+La demande réglait la question sans qu'on la pose : « sur les tables 1 à 10 ou sur
+une table au choix ». La **plage est le dénominateur**, le professeur la choisit,
+et elle est identique pour tous les élèves du tableau.
+
+⚠️ **Deux dénominateurs justes, et il ne faut pas les aligner.** La fiche élève
+annonce les **cases de la grille** (plafond × plafond) parce qu'un élève doit
+retrouver le nombre qu'il voit en l'ouvrant. Le tableau de comparaison annonce les
+**multiplications distinctes** (55 sur les tables 1 à 10, pas 100) parce que
+`maitrise` est indexée par `min_max` : avec 100 au dénominateur, aucun élève ne
+dépasserait jamais 55 %. Deux lecteurs, deux dénominateurs, chacun juste pour le
+sien.
+
+**Pas de seuil de volume, pas de section à part.** *(Tranché par Aymeri le 14/09,
+contre ma proposition.)* Un élève sans mesure reste dans le tableau : sa vitesse
+vaut `null`, l'écran affiche `—`, et il se range en fin de tri. Sa règle est plus
+simple que la mienne et elle a un mérite que j'avais manqué : personne n'est
+caché. `nb_temps` accompagne la moyenne pour que la fragilité se voie sans
+exclure personne.
+
+**Le sélecteur de période ne fait pas bouger la vitesse ni la maîtrise.**
+*(14 septembre 2026.)* `maitrise` garde un cumul, pas un historique : la vitesse
+et le % de vert sont des états courants. La période agit sur le volume et sur le
+progrès, et sur eux seuls. `comparer_eleves_entete` renvoie `portee_periode` —
+quelles colonnes bougent, lesquelles non — pour que l'écran écrive « Vitesse
+(depuis le début) » à côté de « Parties (30 j) ». Sans ça, un professeur
+conclurait à une progression en changeant de filtre.
+
+**Le progrès se mesure sur la cadence, jamais sur le calcul mental.** Le temps de
+calcul mental n'a pas d'historique — c'est le prix assumé de la migration 46. Les
+secondes par question, elles, existent pour toutes les parties passées. La colonne
+porte donc leur nom.
 
 **Le temps de réponse se mesure en moyenne, pas au dernier coup — et ça ne coûte
 aucune ligne de stockage.**
@@ -1163,6 +1171,12 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     classement — sans lui, l'élève qui a répondu à une seule question vite sort
     premier.
 
+26. ⬜ **Migration 47 — le tableau de comparaison (lot B)** — écrite et testée le
+    14 septembre, **pas encore appliquée**. `comparer_eleves` (une ligne par élève,
+    toutes colonnes triables) et `comparer_eleves_entete` (la plage, les deux
+    populations, et ce que la période fait bouger), plus deux aides partagées,
+    `fait_dans_plage` et `nb_faits_plage`. Cas 233 à 240, 240 cas verts.
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1272,7 +1286,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (232 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (240 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 

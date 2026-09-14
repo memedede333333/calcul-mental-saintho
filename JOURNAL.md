@@ -57,6 +57,104 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Lot B en production : Tableau de comparaison des élèves
+
+**Fait** —
+1. Migration 47 appliquée en production sur Supabase. 240 cas de test verts (0 échec).
+2. Types TypeScript mis à jour (`database.ts`).
+3. Fonctions `comparerEleves` et `comparerElevesEntete` créées dans `frontend/src/api.js`.
+4. Composant `TableauComparateur.jsx` créé et intégré dans `MaClasse.jsx` (3e sous-onglet « Comparatif & Classement ») et dans `Admin.jsx` (onglet de barre latérale « Comparateur »).
+5. Les quatre règles de présentation appliquées :
+   - `null` s'affiche `—` et se trie en dernier dans les deux sens (asc et desc).
+   - Toute moyenne porte son dénominateur dans la cellule (`1,9 s · 3 rép.`).
+   - Les en-têtes respectent `portee_periode` (« Vitesse (depuis le début) » vs « Parties (30 j) »).
+   - « 34 vertes sur 55 » plutôt qu'un pourcentage seul (`faits_plage`).
+6. Le seuil de calcul rapide provient dynamiquement de `comparer_eleves_entete` (`seuil_rapide_ms`).
+7. Vérification complète passée avec succès : `npm run build` (ESLint + Vite + `check-tokens.mjs` 88 tokens + `check-api.mjs` 66/66 fonctions connectées) et `run.sh` (240 cas verts).
+
+## 2026-09-14 — Migration 47 : comparer les élèves (lot B), et « la table de 7 »
+
+**Fait** — `supabase/migrations/20260914163000_comparer_eleves.sql` et les cas 233
+à 240. **240 cas verts**, zéro ECHEC, 47 migrations rejouées depuis zéro. Pas
+encore appliquée.
+
+Deux fonctions et deux aides : `comparer_eleves` (une ligne par élève actif,
+toutes colonnes triables par l'écran), `comparer_eleves_entete` (la plage, ses
+multiplications distinctes, `inscrits` et `ont_joue`, et `portee_periode`), plus
+`fait_dans_plage` et `nb_faits_plage` — la règle d'appartenance et son compte
+écrits une seule fois, pour que le filtre et le dénominateur ne divergent jamais.
+
+**Constaté — « la table de 7 » n'est pas « le fait 7×7 ».** Trouvé en exécutant la
+fonction sur les données de démo, pas en la relisant : demander la table de 7 avec
+une plage 7..7 ne retenait qu'UNE multiplication, et chaque élève affichait 100 %
+ou 0 %. Un professeur qui dit « la table de 7 » entend 7×1 à 7×10.
+
+Il y a donc deux notions distinctes — la **plage** (les deux opérandes dedans) et
+la **table** (un des deux opérandes vaut N) — et deux paramètres. Le cas 234 fixe
+la sémantique : `nb_faits_plage(1, 10, 7)` vaut 10, et `3_8` n'appartient pas à la
+table de 7.
+
+**Décidé — le dénominateur du lot B n'est pas celui de la fiche élève, et c'est
+volontaire.** La fiche annonce les cases de la grille (plafond × plafond) parce
+qu'un élève doit retrouver ce qu'il voit. Le tableau annonce les multiplications
+distinctes (55 sur les tables 1 à 10) parce qu'avec 100 personne ne dépasserait
+55 %. Écrit au §3 pour que personne ne les « aligne » un jour au nom de la
+cohérence.
+
+**Décidé — pas de seuil de volume.** Aymeri a tranché contre ma proposition : une
+ligne sans mesure affiche `—` et se range en fin de tri, personne n'est écarté.
+Sa règle est plus simple et elle a un mérite que j'avais manqué — les cinq bugs de
+population de ce projet effaçaient tous les élèves qui n'avaient rien fait ; ici
+ils restent visibles par construction. `nb_temps` à côté de la moyenne suffit à
+montrer la fragilité.
+
+**Ensuite** — Antigravity : `run.sh` (240 attendus), appliquer la 47, régénérer
+`database.ts`, brancher `comparerEleves` et `comparerElevesEntete`, puis l'écran.
+Reste ouvert du lot A : le seuil de 3 s écrit en dur quatre fois dans
+`ModalFicheEleve.jsx` au lieu de `rapidite.seuil_rapide_ms`.
+
+
+## 2026-09-14 — Lot A en production : relecture, et le seuil de 3 secondes écrit en dur
+
+**Fait** — Migration 46 appliquée sur la base de production, `ModalFicheEleve.jsx`
+livré et branché dans `MaClasse.jsx` et `Admin.jsx` (commits `e2d9c8f` et
+`b7cc60e`). Relu dans le code, pas sur le rapport.
+
+**Relu sans rien à reprendre** — Le fichier de migration au dépôt est au bit près
+celui qui avait été testé (`258cfacd…`) : ce qui a été appliqué en production est
+donc le texte éprouvé, ce qui comptait d'autant plus que la migration remplace
+`enregistrer_session`, la fonction la plus appelée de l'application.
+
+Les trois règles de l'écran sont tenues. Le bloc horaires est doublement
+fermé — le bouton d'onglet ET le panneau sont conditionnés à
+`ficheData?.portee === 'admin'`, sans aucun signal de substitution. Les moyennes
+portent leur dénominateur (« sur 37 réponses », « (aucune mesure) ») et une
+absence de mesure s'affiche `—`, jamais `0`. Et les deux mesures de rapidité sont
+deux cartes distinctes, nommées « Rapidité de calcul mental » et « Cadence
+globale de partie ».
+
+**Constaté — le seuil de rapidité est écrit en dur dans l'écran, quatre fois.**
+`fiche_eleve` renvoie `seuil_rapide_ms`, qui vient de `seuil_reponse_rapide()`.
+Il n'est **jamais lu** : `ModalFicheEleve.jsx` compare à `3000` en dur au filtre
+« Plus lentes », au libellé du filtre, à la coloration des lignes et au compteur
+« Faits rapides (< 3 s) ».
+
+C'est la décision du 4 septembre prise à l'envers — « le seuil technique est écrit
+en un seul endroit, le front n'a pas à le connaître » — et la même forme que le
+libellé « Soirée (20h-21h30) » de la veille.
+
+Ce qui casse, et pour qui : `seuil_reponse_rapide()` est un paramètre
+**pédagogique**, pas une constante technique. Le jour où on le déplace, la grille
+de maîtrise verdira sur une règle et le même écran rangera la même multiplication
+sous « Plus lentes ». Deux affirmations contradictoires sur le même fait, au même
+endroit — c'est la famille « un chiffre juste que personne ne sait lire ».
+
+**Ensuite** — Antigravity : lire `rapidite.seuil_rapide_ms` et l'employer aux
+quatre endroits, libellé compris (« Plus lentes (> 3 s) » se compose à partir du
+seuil reçu). Aucun SQL à changer, la valeur est déjà dans la réponse.
+Puis le lot B, le comparateur, une fois la fiche vue en classe.
+
+
 ## 2026-09-14 — Lot A : Fiche Élève intégrée (micro view) et garde-fous validés
 
 **Fait**

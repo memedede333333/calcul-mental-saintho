@@ -808,6 +808,28 @@ export async function ficheEleveFaits(eleveId) {
     return rpc('fiche_eleve_faits', { p_eleve_id: eleveId });
 }
 
+/** Comparateur d'élèves d'une classe (ou toutes) sur une plage de tables ou une table choisie (réservé profs). */
+export async function comparerEleves({ classe = null, tableMin = 1, tableMax = 10, table = null, jours = 30 } = {}) {
+    return rpc('comparer_eleves', {
+        p_classe: classe,
+        p_table_min: tableMin,
+        p_table_max: tableMax,
+        p_table: table,
+        p_jours: jours,
+    });
+}
+
+/** En-tête et métadonnées du comparateur d'élèves (dénominateur faits_plage, seuil, portée) (réservé profs). */
+export async function comparerElevesEntete({ classe = null, tableMin = 1, tableMax = 10, table = null, jours = 30 } = {}) {
+    return rpc('comparer_eleves_entete', {
+        p_classe: classe,
+        p_table_min: tableMin,
+        p_table_max: tableMax,
+        p_table: table,
+        p_jours: jours,
+    });
+}
+
 /* ===================================================================
  * Regroupement par défaut, pour les écrans qui préfèrent `api.xxx()`
  * ================================================================= */
@@ -830,6 +852,7 @@ export const api = {
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     activiteSynthese, activiteClasse,
     ficheEleve, ficheEleveRythme, ficheEleveFaits,
+    comparerEleves, comparerElevesEntete,
     // administration
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,

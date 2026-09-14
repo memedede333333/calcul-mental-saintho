@@ -11,6 +11,7 @@ import {
     ModalFrame,
 } from '../components/Modals';
 import ModalFicheEleve from '../components/ModalFicheEleve';
+import TableauComparateur from '../components/TableauComparateur';
 import { formaterHeureReprise } from '../logic/couvreFeu.js';
 
 /**
@@ -330,6 +331,13 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             <span>🌙 Couvre-feu & Nuit</span>
                         </button>
                     )}
+
+                    <button
+                        className={`admin-sidebar-tab${tab === 'comparateur' ? ' admin-sidebar-tab--active' : ''}`}
+                        onClick={() => setTab('comparateur')}
+                    >
+                        <span>📊 Comparateur</span>
+                    </button>
 
                     <button
                         className={`admin-sidebar-tab${tab === 'journal' ? ' admin-sidebar-tab--active' : ''}`}
@@ -978,6 +986,18 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                     </div>
                                 )}
                             </div>
+                            <div style={{ flex: 1 }} />
+                        </>
+                    ) : tab === 'comparateur' ? (
+                        <>
+                            <div className="admin-topbar">
+                                <h2 className="admin-heading">Comparateur d'élèves</h2>
+                            </div>
+                            <TableauComparateur
+                                classe={null}
+                                classes={classes}
+                                onOuvrirFiche={(id) => setEleveFicheId(id)}
+                            />
                             <div style={{ flex: 1 }} />
                         </>
                     ) : (

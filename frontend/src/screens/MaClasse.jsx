@@ -11,6 +11,7 @@ import {
 import { IconMaGrille, IconSprint } from '../components/Icons';
 import { trierTablesFragiles } from '../logic/classeStats';
 import ModalFicheEleve from '../components/ModalFicheEleve';
+import TableauComparateur from '../components/TableauComparateur';
 
 function formaterTempsPartie(secondes) {
     if (!secondes || secondes <= 0) return '0 min';
@@ -266,8 +267,8 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         </span>
                     </div>
 
-                    {/* Sélecteur de vue : Maîtrise vs Activité */}
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                    {/* Sélecteur de vue : Maîtrise vs Activité vs Comparatif */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                         <button
                             type="button"
                             onClick={() => setVueActive('maitrise')}
@@ -298,9 +299,24 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         >
                             Activité & Temps de jeu
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setVueActive('comparateur')}
+                            style={{
+                                padding: '10px 22px', borderRadius: 999,
+                                background: vueActive === 'comparateur' ? 'var(--indigo)' : 'var(--surface)',
+                                color: vueActive === 'comparateur' ? '#ffffff' : 'var(--gris)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                border: vueActive === 'comparateur' ? 'none' : '1px solid var(--bordure)',
+                                boxShadow: vueActive === 'comparateur' ? 'none' : '0 2px 8px rgba(48,59,122,.08)',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Comparatif & Classement
+                        </button>
                     </div>
 
-                    {vueActive === 'maitrise' ? (
+                    {vueActive === 'maitrise' && (
                         <>
 
                     {/* Encadré des tables les plus fragiles (Maquette 24) */}
@@ -548,7 +564,9 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                         </button>
                     </div>
                 </>
-            ) : (
+            )}
+
+            {vueActive === 'activite' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     {/* Sélecteur de période */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -727,6 +745,34 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Bouton retour en bas */}
+                    <div style={{ display: 'flex', marginTop: 12 }}>
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            style={{
+                                flex: 1, height: 64, borderRadius: 18,
+                                background: 'var(--surface)', border: '1px solid var(--bordure)',
+                                boxShadow: 'var(--ombre-carte)', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                color: 'var(--indigo)', cursor: 'pointer',
+                            }}
+                        >
+                            ‹ Retour
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {vueActive === 'comparateur' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <TableauComparateur
+                        classe={selectedClasse}
+                        classes={classes}
+                        onOuvrirFiche={(id) => setEleveFicheId(id)}
+                    />
 
                     {/* Bouton retour en bas */}
                     <div style={{ display: 'flex', marginTop: 12 }}>

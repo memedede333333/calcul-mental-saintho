@@ -670,6 +670,42 @@ export type Database = {
           valeur: number
         }[]
       }
+      comparer_eleves: {
+        Args: {
+          p_classe?: string | null
+          p_jours?: number
+          p_table?: number | null
+          p_table_max?: number
+          p_table_min?: number
+        }
+        Returns: {
+          classe: string
+          eleve_id: string
+          faits_a_revoir: number
+          faits_plage: number
+          faits_verts: number
+          jours_actifs: number
+          nb_parties: number
+          nb_temps: number
+          nom: string
+          prenom: string
+          progres_s_question: number | null
+          table_plus_fragile: number | null
+          taux_vert: number
+          temps_moyen_ms: number | null
+          temps_partie_s: number
+        }[]
+      }
+      comparer_eleves_entete: {
+        Args: {
+          p_classe?: string | null
+          p_jours?: number
+          p_table?: number | null
+          p_table_max?: number
+          p_table_min?: number
+        }
+        Returns: Json
+      }
       couvre_feu: { Args: never; Returns: Json }
       creer_defi: {
         Args: {

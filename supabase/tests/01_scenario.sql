@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 232 cas, numérotés jusqu'à 232. Les cas 194 à 211
+-- COMPTE EXACT : 240 cas, numérotés jusqu'à 240. Les cas 194 à 211
 -- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
 -- statut de connexion, import des enseignants, et la règle « un import
 -- ne change jamais un rôle ») ; les cas 212 à 224 la migration 44
@@ -2747,4 +2747,123 @@ do $$ declare v uuid; begin
   perform count(*) from fiche_eleve_rythme(v, 30);
   raise notice 'ECHEC : un eleve lit sa courbe';
 exception when others then raise notice 'OK : courbe refusee (%)', sqlerrm; end $$;
+reset role;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 47 — comparer les eleves entre eux (lot B)
+-- ---------------------------------------------------------------------
+
+\echo '=== 233. La plage compte les MULTIPLICATIONS, pas les cases ==='
+-- Tables 1 a 10 : 55, et non 100. `maitrise` est indexee par `min_max`,
+-- 3x7 et 7x3 sont la meme entree. Avec 100 au denominateur, aucun eleve
+-- ne depasserait jamais 55 % et le tableau serait faux pour tout le
+-- monde, dans le meme sens — donc invisible.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (comparer_eleves_entete('6A',1::smallint,10::smallint,null,30)->>'faits_plage')::int = 55
+             and (comparer_eleves_entete('6A',1::smallint,5::smallint,null,30)->>'faits_plage')::int = 15
+            then 'OK : 55 multiplications sur les tables 1 a 10, 15 sur 1 a 5'
+            else 'ECHEC : le denominateur de la plage est faux' end as verdict;
+
+\echo '=== 234. « La table de 7 » n est PAS « le fait 7x7 » ==='
+-- Trouve en executant : une plage 7..7 ne retenait qu une multiplication
+-- et tout le monde affichait 100 % ou 0 %. Un professeur qui dit « la
+-- table de 7 » entend 7x1 a 7x10.
+reset role;
+select case when public.nb_faits_plage(1, 10, 7) = 10
+             and public.fait_dans_plage('2_7', 1, 10, 7)
+             and public.fait_dans_plage('7_9', 1, 10, 7)
+             and public.fait_dans_plage('7_7', 1, 10, 7)
+             and not public.fait_dans_plage('3_8', 1, 10, 7)
+            then 'OK : la table de 7 retient les 10 faits qui portent un 7'
+            else 'ECHEC : la table choisie ne designe pas la bonne famille' end as verdict;
+
+\echo '=== 235. LE MEME denominateur pour tous les eleves du tableau ==='
+-- C est tout le sujet du lot B. Un « % de vert » calcule sur ce que
+-- chaque eleve a rencontre mettrait en tete celui qui a ouvert cinq
+-- multiplications et les a reussies ; calcule sur le plafond de chacun,
+-- il comparerait une grille de 55 a une grille de 120.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select count(distinct faits_plage)
+                    from comparer_eleves(null,1::smallint,10::smallint,null,30)) = 1
+             and (select min(faits_plage)
+                    from comparer_eleves(null,1::smallint,10::smallint,null,30)) = 55
+            then 'OK : tous les eleves sont mesures sur les memes 55 multiplications'
+            else 'ECHEC : le denominateur change d un eleve a l autre' end as verdict;
+
+\echo '=== 236. TOUS les eleves figurent, meme ceux qui n ont rien joue ==='
+-- Aymeri, 14 septembre : pas de seuil, pas de section a part. Une ligne
+-- sans mesure affiche un tiret et se range en fin de tri. On ne cache
+-- personne — c est l inverse exact des cinq bugs de population de ce
+-- projet, ou l erreur effacait toujours les eleves qui n avaient rien
+-- fait.
+select case when (select count(*) from comparer_eleves('6A',1::smallint,10::smallint,null,30))
+             = (select count(*) from eleves where actif and classe = '6A')
+             and exists (select 1 from comparer_eleves('6A',1::smallint,10::smallint,null,30)
+                          where temps_moyen_ms is null and nb_temps = 0)
+            then 'OK : autant de lignes que d eleves actifs, sans mesure = null'
+            else 'ECHEC : le tableau efface des eleves' end as verdict;
+
+\echo '=== 237. Une moyenne sans mesure vaut null, jamais zero ==='
+-- « 0 ms » se trierait en tete : l eleve qui n a jamais joue passerait
+-- pour le plus rapide du college.
+select case when not exists (select 1 from comparer_eleves(null,1::smallint,10::smallint,null,30)
+                              where nb_temps = 0 and temps_moyen_ms is not null)
+            then 'OK : aucune moyenne fabriquee a partir de rien'
+            else 'ECHEC : un eleve sans mesure a une vitesse chiffree' end as verdict;
+
+\echo '=== 238. La periode agit sur le VOLUME, jamais sur la vitesse ni la maitrise ==='
+-- Le selecteur de periode ne peut pas changer la vitesse : `maitrise`
+-- garde un cumul, pas un historique. Si on laissait croire l inverse,
+-- un professeur conclurait a une progression en changeant de filtre.
+-- `portee_periode` dit lesquelles bougent, pour que l ecran l ecrive.
+select (select temps_moyen_ms from comparer_eleves('6A',1::smallint,10::smallint,null,7)
+         where prenom = 'Bob') as v7 \gset
+select (select temps_moyen_ms from comparer_eleves('6A',1::smallint,10::smallint,null,365)
+         where prenom = 'Bob') as v365 \gset
+select (select nb_parties from comparer_eleves('6A',1::smallint,10::smallint,null,1)
+         where prenom = 'Bob') as p1 \gset
+select (select nb_parties from comparer_eleves('6A',1::smallint,10::smallint,null,365)
+         where prenom = 'Bob') as p365 \gset
+select case when :'v7' = :'v365' and :p1 <= :p365
+             and (comparer_eleves_entete('6A',1::smallint,10::smallint,null,30)
+                  ->'portee_periode'->'depuis_le_debut') ? 'temps_moyen_ms'
+             and (comparer_eleves_entete('6A',1::smallint,10::smallint,null,30)
+                  ->'portee_periode'->'sur_la_periode') ? 'nb_parties'
+            then 'OK : la vitesse ne bouge pas avec la periode, le volume si'
+            else 'ECHEC : le selecteur de periode fait croire a une progression' end as verdict;
+
+\echo '=== 239. Le progres se mesure sur la CADENCE, et negatif = il accelere ==='
+-- Le temps de calcul mental n a pas d historique : c est le prix assume
+-- de la migration 46. Les secondes par question, elles, existent pour
+-- toutes les parties passees. Le progres est donc calcule sur elles, et
+-- la colonne porte leur nom — les deux mesures ne se substituent jamais.
+reset role;
+select id as e239 from eleves where email = 'clara.bernard@demo.saintho.fr' \gset
+-- avant : 10 s par question. apres : 4 s par question. -6 s attendus.
+insert into sessions_jeu (eleve_id, mode, tables, nb_questions, score, duree_s, points, cree_le)
+values (:'e239'::uuid,'sprint','{4}',10,8,100,50, now() - interval '20 days'),
+       (:'e239'::uuid,'sprint','{4}',10,9, 40,60, now() - interval '3 days');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (select progres_s_question from comparer_eleves('6A',1::smallint,10::smallint,null,10)
+         where prenom = 'Clara') as prog \gset
+select case when :'prog' <> '' and :prog < 0
+            then 'OK : la cadence passe de 10 s a 4 s par question, progres ' || :prog
+            else 'ECHEC : le progres ne voit pas une acceleration reelle' end as verdict;
+
+\echo '=== 240. Reserve aux enseignants, et la table fragile se tait quand une table est choisie ==='
+select case when (select count(*) from comparer_eleves('6A',1::smallint,10::smallint,7::smallint,30)
+                   where table_plus_fragile is not null) = 0
+            then 'OK : « la table la plus fragile » ne repete pas la table demandee'
+            else 'ECHEC : la colonne repond la question qu on vient de poser' end as verdict;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+do $$ begin perform count(*) from comparer_eleves(null,1::smallint,10::smallint,null,30);
+  raise notice 'ECHEC : un eleve lit le tableau de comparaison';
+exception when others then raise notice 'OK : comparaison refusee (%)', sqlerrm; end $$;
+do $$ begin perform comparer_eleves_entete(null,1::smallint,10::smallint,null,30);
+  raise notice 'ECHEC : un eleve lit l entete de comparaison';
+exception when others then raise notice 'OK : entete refusee (%)', sqlerrm; end $$;
 reset role;
