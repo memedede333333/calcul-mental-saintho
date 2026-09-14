@@ -4,13 +4,15 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **43 migrations, 211 cas
-> de test verts**.
+> Dernière mise à jour : **14 septembre 2026** — **43 migrations appliquées en
+> production, 211 cas de test verts**, commit `04a73b7` déployé sur Vercel.
 > **Migration 43 : un import d'enseignants ne change JAMAIS un rôle.** Une création
 > vaut `prof`, une mise à jour garde le rôle en base, et les lignes dont le fichier
 > demandait autre chose sont comptées (`roles_ignores`) et listées
 > (`lignes_role_ignore`), à l'aperçu comme au retour de l'import. L'import CSV des
-> enseignants redevient utilisable.
+> enseignants redevient utilisable. L'écran le dit : la modale d'aperçu et le retour
+> d'import affichent le nombre de rôles ignorés et rappellent que la gestion des
+> rôles est nominative. Relu dans le code le 14/09 — rien à reprendre.
 > **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
 > deux constats : `run.sh` ne démarrait plus depuis la migration 42 (l'`auth.users`
 > simulée du prélude n'a pas `last_sign_in_at`, la migration ne se créait pas et le

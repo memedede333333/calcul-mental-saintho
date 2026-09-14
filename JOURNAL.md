@@ -94,14 +94,22 @@ moins un administrateur — qui tient désormais par construction. Un test qui
 survit au mécanisme qu'il testait est un bon test : c'est le résultat qui
 compte, pas le moyen.
 
-**Ensuite** — Antigravity : `run.sh` (211 cas attendus), appliquer la
-migration 43 sur Supabase, régénérer `database.ts`, commiter. Et **côté écran**,
-un point à ne pas laisser tomber : l'aperçu d'import des enseignants renvoie
-maintenant `roles_ignores` et `lignes_role_ignore`, que personne n'affiche. Un
-administrateur qui importe un fichier avec une colonne « rôle » doit lire
-« 3 ligne(s) demandaient un rôle : ignoré, la gestion des rôles se fait dans
-Modifier ». L'information existe côté serveur ; tant qu'elle n'est pas à
-l'écran, elle n'existe pas.
+**Livré** — 14 septembre, commit `04a73b7`. `run.sh` : 211 cas verts chez
+Antigravity aussi. Migration 43 appliquée en production, `npm run build` vert,
+déployé sur Vercel. L'écran suit : `ModalApercuImport` (gardée sur
+`type === 'profs'`) et le retour d'import de `ModalImportProfs` affichent le
+nombre de rôles ignorés et rappellent que la gestion des rôles est nominative.
+
+**Relu dans le code, pas sur le rapport** — les deux blocs d'affichage existent,
+`type="profs"` est bien passé au site d'appel des enseignants (sans quoi le
+message n'aurait jamais paru), les cinq variables CSS employées existent toutes
+dans `tokens.css` — c'est la vérification qui a manqué deux fois sur ce projet —
+et le fichier de migration en dépôt est au bit près celui qui a été testé.
+`database.ts` est inchangé, et c'est le résultat correct : les trois fonctions
+gardent leur signature et leur type de retour `jsonb`, donc les types générés
+n'avaient rien à refléter. Rien à reprendre.
+
+**Ensuite** — Zone de test locale (Supabase CLI + Docker/OrbStack) avec isolation stricte de la production et tests iPad. Option de promotion par CSV tranchée : maintien de la fermeture stricte (la nomination d'administrateurs reste exclusivement nominative dans l'interface).
 
 
 ## 2026-09-14 — Les migrations 39 à 42 avaient été livrées sans un seul cas de test
