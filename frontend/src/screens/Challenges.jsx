@@ -18,6 +18,7 @@ import { sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage
 import JoinChallenge from './JoinChallenge';
 import { clavierAutorise } from '../logic/saisie';
 import { formaterDuree } from '../logic/duree';
+import { estEnCouvreFeu, formaterHeureReprise } from '../logic/couvreFeu';
 
 /**
  * Challenges — Mode Défis
@@ -54,7 +55,9 @@ const CHALLENGE_TYPES = [
     },
 ];
 
-export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig, onMaitriseMaj, onProjecteurChange }) {
+export default function Challenges({ onBack, identite, estProf, onPlafondChange, maitrise: maitriseProp, onGo, defiPreConfig, clearPreConfig, onMaitriseMaj, onProjecteurChange, couvreFeuData }) {
+    const enCouvreFeu = !estProf && estEnCouvreFeu(couvreFeuData);
+    const heureReprise = formaterHeureReprise(couvreFeuData?.heure_fin);
     const [phase, setPhase] = useState(() => (estProf ? 'config' : 'select'));
     const [challengeType, setChallengeType] = useState(() => CHALLENGE_TYPES.find(t => t.id === 'sprint') || CHALLENGE_TYPES[0]);
     const [joinCode, setJoinCode] = useState('');
@@ -317,6 +320,8 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
                 challengeType={challengeType}
                 onStart={() => setPhase('defi-play')}
                 onBack={() => setPhase('select')}
+                enCouvreFeu={enCouvreFeu}
+                heureReprise={heureReprise}
             />
         );
     }
@@ -2133,7 +2138,7 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
 
 /* ===================== DEFI INTRO (Maquette 8) ===================== */
 /* Écran d'annonce : juste avant la première question du défi */
-function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
+function DefiIntro({ defiInfo, challengeType, onStart, onBack, enCouvreFeu, heureReprise }) {
     const origine = defiInfo?.origine || 'prof';
     const auteurNom = defiInfo?.auteur_nom || null;
     const classeDefi = defiInfo?.classe || null;
@@ -2275,16 +2280,20 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack }) {
                 {/* Boutons d'action */}
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 32 }}>
                     <button
+                        disabled={enCouvreFeu}
                         onClick={onStart}
                         style={{
                             width: '100%', height: 72, borderRadius: 22,
-                            background: 'var(--action)', color: '#FFFFFF',
-                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 22,
-                            border: 'none', cursor: 'pointer',
-                            boxShadow: '0 4px 14px rgba(35,164,217,0.35)',
+                            background: enCouvreFeu ? 'var(--gris-inerte)' : 'var(--action)',
+                            color: enCouvreFeu ? 'var(--gris)' : '#FFFFFF',
+                            fontFamily: 'var(--texte)', fontWeight: 700,
+                            fontSize: enCouvreFeu ? 18 : 22,
+                            border: 'none', cursor: enCouvreFeu ? 'not-allowed' : 'pointer',
+                            boxShadow: enCouvreFeu ? 'none' : '0 4px 14px rgba(35,164,217,0.35)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                         }}
                     >
-                        Commencer
+                        {enCouvreFeu ? `🌙 Pause pour la nuit (reprise dès ${heureReprise})` : 'Commencer'}
                     </button>
                     <button
                         onClick={onBack}

@@ -11,10 +11,13 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 211 cas, numérotés jusqu'à 211. Les cas 194 à 211
+-- COMPTE EXACT : 225 cas, numérotés jusqu'à 225. Les cas 194 à 211
 -- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
 -- statut de connexion, import des enseignants, et la règle « un import
--- ne change jamais un rôle »). Le 189 a été retiré
+-- ne change jamais un rôle ») ; les cas 212 à 224 la migration 44
+-- (couvre-feu configurable, et activité des élèves en deux étages) ;
+-- le cas 225 la migration 45 (activité des professeurs pour l'administrateur).
+-- Le 189 a été retiré
 -- (remplacé par le 192, qui ne vaut qu'après la migration 38) ; les cas
 -- 29 à 31 l'ont été depuis longtemps ; 38b-38d et 180b complètent leurs aînés. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
@@ -2368,3 +2371,238 @@ select case when (:'ap'::jsonb->>'roles_ignores')::int = 3
 -- Plus rien a remettre en etat : depuis la migration 43, aucun import
 -- ne deplace un role. C'est precisement ce que les cas 208 a 211 verifient.
 reset role;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 44 — le couvre-feu configurable
+-- ---------------------------------------------------------------------
+
+\echo '=== 212. Le creneau franchit minuit : 21h29 non, 21h30 oui, 07h29 oui, 07h30 non ==='
+-- Le piege de tout couvre-feu : `heure_debut` (21h30) est SUPERIEURE a
+-- `heure_fin` (07h30), donc un test « entre debut et fin » serait faux
+-- toute la nuit. La regle devient « apres le debut OU avant la fin ».
+-- Ces cinq instants sont ceux ou une erreur d une minute se verrait.
+reset role;
+select modifier_couvre_feu(p_actif => true, p_heure_debut => '21:30', p_heure_fin => '07:30')
+  is not null as regle
+  from (select set_config('request.jwt.claim.sub', :'PROF', false)) _;
+select case when (evaluer_couvre_feu(timestamptz '2026-09-14 21:29+02')->>'en_cours')::boolean = false
+             and (evaluer_couvre_feu(timestamptz '2026-09-14 21:30+02')->>'en_cours')::boolean = true
+             and (evaluer_couvre_feu(timestamptz '2026-09-15 00:01+02')->>'en_cours')::boolean = true
+             and (evaluer_couvre_feu(timestamptz '2026-09-15 07:29+02')->>'en_cours')::boolean = true
+             and (evaluer_couvre_feu(timestamptz '2026-09-15 07:30+02')->>'en_cours')::boolean = false
+            then 'OK : la nuit commence a 21h30 et finit a 07h30'
+            else 'ECHEC : le creneau qui franchit minuit est mal evalue' end as verdict;
+
+\echo '=== 213. Un creneau qui NE franchit PAS minuit marche aussi ==='
+-- Un administrateur peut vouloir fermer l application pendant la pause
+-- meridienne. Les deux formes de creneau doivent tenir.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_heure_debut => '13:00', p_heure_fin => '14:00')->>'heure_debut' as midi;
+reset role;
+select case when (evaluer_couvre_feu(timestamptz '2026-09-14 12:59+02')->>'en_cours')::boolean = false
+             and (evaluer_couvre_feu(timestamptz '2026-09-14 13:30+02')->>'en_cours')::boolean = true
+             and (evaluer_couvre_feu(timestamptz '2026-09-14 14:00+02')->>'en_cours')::boolean = false
+             and (evaluer_couvre_feu(timestamptz '2026-09-14 22:00+02')->>'en_cours')::boolean = false
+            then 'OK : un creneau dans la journee ferme la journee, pas la nuit'
+            else 'ECHEC : le creneau sans franchissement de minuit est mal evalue' end as verdict;
+
+\echo '=== 214. prochaine_bascule designe la FIN quand on est dedans, le DEBUT sinon ==='
+-- L ecran s en sert pour programmer le verrouillage a la seconde pres
+-- au lieu d interroger le serveur en boucle. Une bascule fausse, et
+-- l eleve reste bloque une journee entiere.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_heure_debut => '21:30', p_heure_fin => '07:30')->>'heure_fin' as remis;
+reset role;
+select case when (evaluer_couvre_feu(timestamptz '2026-09-14 22:00+02')->>'prochaine_bascule')::timestamptz
+             = timestamptz '2026-09-15 07:30+02'
+             and (evaluer_couvre_feu(timestamptz '2026-09-14 18:00+02')->>'prochaine_bascule')::timestamptz
+             = timestamptz '2026-09-14 21:30+02'
+            then 'OK : l ecran sait quand verrouiller et quand rouvrir'
+            else 'ECHEC : la prochaine bascule est fausse' end as verdict;
+
+\echo '=== 215. Couvre-feu desactive : plus jamais de nuit, et aucune bascule ==='
+-- C est le bouton des vacances. Il doit etre franc : pas de creneau
+-- residuel, pas de bascule programmee.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_actif => false)->>'actif' as eteint;
+reset role;
+select case when (evaluer_couvre_feu(timestamptz '2026-09-15 03:00+02')->>'en_cours')::boolean = false
+             and evaluer_couvre_feu(timestamptz '2026-09-15 03:00+02')->>'prochaine_bascule' is null
+            then 'OK : eteint, et l ecran n a rien a programmer'
+            else 'ECHEC : le couvre-feu desactive ferme encore quelque chose' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_actif => true)->>'actif' as rallume;
+
+\echo '=== 216. Un ELEVE lit le couvre-feu — il doit verrouiller son ecran ==='
+-- Sans ce droit, l eleve ne saurait pas qu il fait nuit, et l ecran
+-- devrait se fier a l horloge de l iPad. `maintenant` est l heure du
+-- SERVEUR, precisement pour ne pas dependre d elle.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+select case when couvre_feu()->>'message' is not null
+             and couvre_feu()->>'heure_fin' = '07:30'
+             and couvre_feu()->>'maintenant' is not null
+            then 'OK : l eleve sait qu il fait nuit et a quelle heure ca rouvre'
+            else 'ECHEC : l eleve ne peut pas verrouiller son ecran' end as verdict;
+
+\echo '=== 217. ... mais ne le regle pas. Un prof non admin non plus ==='
+do $$ begin
+  perform modifier_couvre_feu(p_actif => false);
+  raise notice 'ECHEC : un eleve a eteint le couvre-feu';
+exception when others then raise notice 'OK : eleve refuse (%)', sqlerrm; end $$;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin
+  perform modifier_couvre_feu(p_heure_debut => '03:00');
+  raise notice 'ECHEC : un prof simple a regle le couvre-feu';
+exception when others then raise notice 'OK : prof refuse (%)', sqlerrm; end $$;
+
+\echo '=== 218. Bornes identiques et message trop long refuses, reglage trace ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+do $$ begin
+  perform modifier_couvre_feu(p_heure_debut => '21:30', p_heure_fin => '21:30');
+  raise notice 'ECHEC : un creneau de duree nulle a ete accepte';
+exception when others then raise notice 'OK : bornes refusees (%)', sqlerrm; end $$;
+do $$ begin
+  perform modifier_couvre_feu(p_message => repeat('a', 201));
+  raise notice 'ECHEC : un message sans limite de longueur';
+exception when others then raise notice 'OK : message refuse (%)', sqlerrm; end $$;
+reset role;
+select case when exists (select 1 from journal_admin
+                          where action = 'modification_couvre_feu'
+                            and detail->'avant' is not null
+                            and detail->'apres' is not null)
+            then 'OK : le reglage du couvre-feu est au journal, avant et apres'
+            else 'ECHEC : on peut changer le couvre-feu sans laisser de trace' end as verdict;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 44 — l'activite des eleves, en deux etages
+-- ---------------------------------------------------------------------
+
+\echo '=== 219. LE SERVEUR NE REFUSE AUCUNE PARTIE PENDANT LE COUVRE-FEU ==='
+-- Decision du 14 septembre, ecrite ici pour que personne ne la
+-- « corrige ». `enregistrer_session` est derriere la file d attente
+-- hors-ligne, et `viderFile()` jette toute reponse qui n est pas une
+-- panne reseau. Un refus serveur ferait donc disparaitre la partie d un
+-- eleve qui a joue AVANT l heure, sans un mot. Le couvre-feu se tient a
+-- l ecran ; le serveur, lui, enregistre.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_heure_debut => '00:00', p_heure_fin => '23:59')->>'en_cours' as il_fait_nuit_maintenant;
+-- Bob et non Alice : le cas 184 a volontairement detache le compte Google
+-- d Alice pour simuler un partant de juin, et `enregistrer_session`
+-- reconnait un eleve par son compte, pas par son adresse.
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$
+declare r jsonb;
+begin
+  r := enregistrer_session(p_mode => 'sprint', p_tables => '{3}'::smallint[],
+                           p_nb_questions => 10, p_score => 8, p_duree_s => 30);
+  if coalesce((r->>'ok')::boolean, true) then
+    raise notice 'OK : la partie est enregistree, rien ne se perd';
+  else
+    raise notice 'ECHEC : le serveur a refuse une partie pendant le couvre-feu';
+  end if;
+exception when others then
+  raise notice 'ECHEC : le serveur a refuse une partie pendant le couvre-feu (%)', sqlerrm;
+end $$;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_couvre_feu(p_heure_debut => '21:30', p_heure_fin => '07:30')->>'heure_debut' as remis;
+
+\echo '=== 220. activite_synthese : UNE population, pas deux ==='
+-- `inscrits` et `nb_parties` doivent porter sur les MEMES eleves. Un
+-- eleve desactive qui pesait dans les parties sans peser dans les
+-- inscrits, c est le sixieme bug de population de ce projet.
+reset role;
+select id as e219 from eleves where email = 'clara.bernard@demo.saintho.fr' \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (activite_synthese('6A', 30)->>'inscrits')::int as insc_avant,
+       (activite_synthese('6A', 30)->>'nb_parties')::int as parties_avant \gset
+select desactiver_eleve(:'e219'::uuid, 'test 220')->>'ok' as desactivee;
+select (activite_synthese('6A', 30)->>'inscrits')::int as insc_apres,
+       (activite_synthese('6A', 30)->>'nb_parties')::int as parties_apres \gset
+select reactiver_eleve(:'e219'::uuid)->>'ok' as reactivee;
+select case when :insc_apres = :insc_avant - 1
+             and :parties_apres <= :parties_avant
+            then 'OK : desactiver un eleve le retire de TOUS les compteurs'
+            else 'ECHEC : inscrits et parties comptent deux populations differentes'
+       end as verdict;
+
+\echo '=== 221. activite_classe montre AUSSI les eleves a zero ==='
+-- Ce sont eux que le professeur cherche. Une liste qui n affiche que
+-- ceux qui ont joue efface exactement ceux qui ne travaillent pas —
+-- l erreur va toujours dans le sens rassurant.
+select case when exists (select 1 from activite_classe('6A', 1) where nb_parties = 0)
+            then 'OK : les eleves sans aucune partie sont dans la liste'
+            else 'ECHEC : la liste efface les eleves qui n ont rien fait' end as verdict;
+
+\echo '=== 222. Les horaires nominatifs sont reserves a l administrateur ==='
+-- « Lea a joue a 22h41 » ne dit rien des tables de multiplication : ca
+-- dit qu une enfant etait eveillee a 22h41. Le volume reste ouvert a
+-- tout enseignant, la frise horaire non.
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin perform count(*) from activite_nocturne(null, 7);
+  raise notice 'ECHEC : un prof simple lit les horaires nocturnes';
+exception when others then raise notice 'OK : nocturne refuse (%)', sqlerrm; end $$;
+do $$ declare v uuid; begin
+  select id into v from eleves where email = 'alice.dupont@demo.saintho.fr';
+  perform count(*) from activite_eleve_detail(v, 7);
+  raise notice 'ECHEC : un prof simple lit la frise d un eleve';
+exception when others then raise notice 'OK : frise refusee (%)', sqlerrm; end $$;
+select case when (select count(*) from activite_classe('6A', 7)) > 0
+             and (activite_synthese('6A', 7)->>'inscrits')::int > 0
+            then 'OK : mais le volume lui reste ouvert'
+            else 'ECHEC : le prof ne voit plus rien du tout' end as verdict;
+
+\echo '=== 223. UNE SEULE definition de la nuit : elle suit le reglage ==='
+-- Si la detection nocturne portait une constante, un administrateur qui
+-- decale le couvre-feu verrait le tableau de bord contredire la regle
+-- qu il vient de poser. Deux definitions divergent au premier reglage.
+reset role;
+select id as a223 from eleves where email = 'alice.dupont@demo.saintho.fr' \gset
+insert into sessions_jeu (eleve_id, mode, tables, nb_questions, score, duree_s, points, cree_le) values
+  (:'a223'::uuid,'sprint','{8}',20,15,70,100,
+    (date_trunc('day', now() at time zone 'Europe/Paris') - interval '1 day' + interval '22 hours 41 minutes')
+      at time zone 'Europe/Paris'),
+  (:'a223'::uuid,'sprint','{8}',20,16,65,110,
+    (date_trunc('day', now() at time zone 'Europe/Paris') - interval '2 days' + interval '23 hours 10 minutes')
+      at time zone 'Europe/Paris');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (select parties_couvre_feu from activite_nocturne(null, 7) where prenom = 'Alice') as a_21h30 \gset
+select modifier_couvre_feu(p_heure_debut => '23:00')->>'heure_debut' as decale;
+select (select parties_couvre_feu from activite_nocturne(null, 7) where prenom = 'Alice') as a_23h \gset
+select modifier_couvre_feu(p_heure_debut => '21:30')->>'heure_debut' as remis;
+select case when :a_21h30 = 2 and :a_23h = 1
+            then 'OK : la partie de 22h41 sort du compte quand la nuit commence a 23h'
+            else 'ECHEC : la detection nocturne ignore le reglage du couvre-feu ('
+                 || :a_21h30 || ' puis ' || :a_23h || ')' end as verdict;
+
+\echo '=== 224. Un ELEVE ne lit aucune donnee d activite, pas meme la sienne ==='
+select set_config('request.jwt.claim.sub', :'ALICE', false);
+do $$ begin perform activite_synthese(null, 7);
+  raise notice 'ECHEC : un eleve lit la synthese de sa classe';
+exception when others then raise notice 'OK : synthese refusee (%)', sqlerrm; end $$;
+do $$ begin perform count(*) from activite_classe(null, 7);
+  raise notice 'ECHEC : un eleve lit l activite de sa classe';
+exception when others then raise notice 'OK : activite refusee (%)', sqlerrm; end $$;
+reset role;
+
+\echo '=== 225. activite_profs : reserve a l administrateur ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin perform count(*) from activite_profs();
+  raise notice 'ECHEC : un prof non-admin lit activite_profs';
+exception when others then raise notice 'OK : activite_profs refusee au prof non-admin (%)', sqlerrm; end $$;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select count(*) from activite_profs()) >= 2
+            then 'OK : l administrateur lit les activites de l equipe'
+            else 'ECHEC : activite_profs vide pour l administrateur' end as verdict;
+reset role;
+

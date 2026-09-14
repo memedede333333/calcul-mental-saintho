@@ -4,15 +4,11 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **43 migrations appliquées en
-> production, 211 cas de test verts**, commit `04a73b7` déployé sur Vercel.
-> **Migration 43 : un import d'enseignants ne change JAMAIS un rôle.** Une création
-> vaut `prof`, une mise à jour garde le rôle en base, et les lignes dont le fichier
-> demandait autre chose sont comptées (`roles_ignores`) et listées
-> (`lignes_role_ignore`), à l'aperçu comme au retour de l'import. L'import CSV des
-> enseignants redevient utilisable. L'écran le dit : la modale d'aperçu et le retour
-> d'import affichent le nombre de rôles ignorés et rappellent que la gestion des
-> rôles est nominative. Relu dans le code le 14/09 — rien à reprendre.
+> Dernière mise à jour : **14 septembre 2026** — **45 migrations appliquées en
+> production**. Couvre-feu nocturne configurable, activité des classes et implication des enseignants entièrement livrés. **225 cas de test
+> verts** sur une base reconstruite depuis les 45 migrations.
+> **Sauvegarde & Sécurité validées** : dump complet compressé de la base Supabase (313 élèves) testé avec intégrité vérifiée et copie Google Drive.
+> **Option 3 livrée** : Couvre-feu 21h30-07h30 résistant au mode avion / hors-ligne, écran d'accueil avec heure dynamique de réveil, MaClasse enrichi avec l'onglet « Activité & Temps de jeu », console Admin dotée de l'onglet « 🌙 Couvre-feu & Nuit » et suivi de l'implication des enseignants.
 > **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
 > deux constats : `run.sh` ne démarrait plus depuis la migration 42 (l'`auth.users`
 > simulée du prélude n'a pas `last_sign_in_at`, la migration ne se créait pas et le
@@ -399,6 +395,62 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Le couvre-feu est une mesure de soin, tenue par l'écran. Le serveur ne refuse rien.**
+*(14 septembre 2026, migration 44 — tranché par Aymeri.)*
+La première version du plan faisait refuser `enregistrer_session` pendant la
+nuit. Relu dans le code : `enregistrer_session` est derrière la file d'attente
+hors-ligne du lot 26, et `viderFile()` **jette** toute réponse qui n'est pas une
+panne réseau. Un élève qui joue à 21h25 sur un wifi faible verrait sa partie
+partir dans la file, la file se vider à 21h35, le serveur refuser — et son
+résultat disparaître sans un mot. Le serveur aurait jugé l'heure de
+l'**écriture** quand ce qui compte est l'heure du **jeu**.
+
+Donc : l'écran ferme les boutons et affiche le message ; la base enregistre tout.
+C'est la même logique que sur la triche — on ne punit pas le certain pour
+empêcher le possible. Le vrai levier de contrainte est ailleurs : Temps d'écran
+dans Jamf éteint l'iPad entier, pas une application. Le **cas 221** vérifie qu'une
+partie passe pendant le couvre-feu, pour que personne ne « corrige » ce choix.
+
+**Les heures du couvre-feu se règlent dans l'application, et une seule définition
+de la nuit sert partout.**
+*(14 septembre 2026, migration 44.)* 21h30 – 07h30 par défaut, tous les jours,
+modifiables par un administrateur — c'est le bouton des vacances. Une règle qui
+distinguerait les veilles d'école devrait connaître le calendrier scolaire, et ce
+calendrier n'a aucun propriétaire : il serait juste en septembre et faux en
+février.
+
+Et la détection du jeu nocturne relit **les heures configurées**, jamais une
+constante. Deux définitions de « la nuit » auraient divergé au premier réglage,
+et le tableau de bord aurait contredit la règle qu'il illustre. Le cas 223 le
+vérifie en décalant le couvre-feu et en regardant la détection suivre.
+
+Le message affiché aux élèves ne contient **pas** l'heure de reprise : l'écran la
+compose à partir de `heure_fin`. Sinon il mentirait dès le premier réglage — un
+chiffre juste que personne ne sait lire ne vaut pas mieux qu'un chiffre faux.
+
+**L'heure de connexion nominative n'est pas une donnée pédagogique.**
+*(14 septembre 2026, migration 44 — tranché par Aymeri.)*
+« Léa a joué à 22h41 » ne dit rien des tables de multiplication : ça dit qu'une
+enfant était éveillée à 22h41. C'est une information sur sa vie de famille.
+
+La décision « un enseignant voit toutes les classes » a été prise pour la
+maîtrise, et sa raison — les affectations changent en cours d'année — ne dit rien
+des heures de coucher. Ce n'était donc pas une décision à rouvrir, mais une
+question neuve. Deux étages, étanches en SQL et pas dans l'écran :
+
+| | |
+|---|---|
+| `activite_synthese`, `activite_classe` | tout enseignant : volume, temps passé en partie, régularité |
+| `activite_nocturne`, `activite_eleve_detail` | administrateurs seuls : ce qui a été joué pendant le couvre-feu, et la frise des parties une par une |
+
+`liste_eleves.derniere_connexion` reste visible de tout enseignant : elle l'est
+déjà depuis la migration 36, et ce module ne l'élargit pas.
+
+**« Temps passé en partie », jamais « temps d'utilisation ».** C'est la somme des
+`duree_s` des parties enregistrées. Les menus n'y sont pas, et le mode Apprendre
+non plus — il n'enregistre aucune session, par construction. Le compteur porte le
+mot qui le rend lisible.
 
 **Un import d'enseignants ne change jamais un rôle.**
 *(14 septembre 2026, migration 43 — tranché par Aymeri.)*
@@ -1051,6 +1103,16 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     défaut : il ne protégeait qu'une personne, et il n'a plus rien à
     protéger. Cas 208 à 211 ajoutés, 211 cas verts.
 
+24. ⬜ **Migration 44 — couvre-feu configurable et activité des élèves** — écrite
+    et testée le 14 septembre, **pas encore appliquée**. Une table d'un seul
+    enregistrement (`couvre_feu`), `couvre_feu()` ouverte à tout compte connecté,
+    `modifier_couvre_feu()` réservée à l'administrateur et tracée au journal, et
+    quatre fonctions d'activité réparties en deux étages étanches. Cas 212 à 224,
+    224 cas verts. Reste à faire : appliquer la migration, brancher les écrans
+    (verrouillage côté élève, onglet volume dans Ma classe, frise nocturne côté
+    administrateur), et **ajouter la ligne au registre de traitement RGPD** — ce
+    module enregistre et affiche des horaires de connexion de mineurs.
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1160,7 +1222,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (211 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (224 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 

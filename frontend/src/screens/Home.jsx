@@ -7,6 +7,7 @@ import {
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 import { cleFait, masteryColor } from '../logic/mastery';
 import { tablePlusFragileClasse } from '../logic/classeStats';
+import { estEnCouvreFeu, formaterHeureReprise } from '../logic/couvreFeu';
 import branding from '../branding';
 import MasteryGrid from '../components/MasteryGrid';
 import {
@@ -77,7 +78,7 @@ function formaterDateRelative(isoDate) {
     return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onReprendreDefi }) {
+export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onReprendreDefi, couvreFeuData }) {
     const profil = identite?.profil;
     const idUtilisateur = profil?.id;
 
@@ -106,6 +107,9 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
     const [showGrid, setShowGrid] = useState(false);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const [selectedAvatar, setSelectedAvatar] = useState(null);
+
+    const enCouvreFeu = !estProf && !isDevPreview && estEnCouvreFeu(couvreFeuData);
+    const heureReprise = formaterHeureReprise(couvreFeuData?.heure_fin);
 
 
     // Données professeur (Écran 27)
@@ -1033,7 +1037,25 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                         {erreurReprise}
                     </div>
                 )}
-                {defiEnCours ? (
+                {enCouvreFeu ? (
+                    <div
+                        style={{
+                            background: 'var(--surface)', borderRadius: 24, padding: '16px 20px',
+                            boxShadow: 'var(--ombre-carte)', display: 'flex', alignItems: 'center',
+                            gap: 14, minHeight: 80, border: '1px solid var(--bordure)',
+                        }}
+                    >
+                        <div style={{ fontSize: 28 }}>🌙</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 18, color: 'var(--indigo)' }}>
+                                Défis en pause pour la nuit
+                            </div>
+                            <div style={{ fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600, color: 'var(--gris)' }}>
+                                Les défis de classe reprennent dès {heureReprise}.
+                            </div>
+                        </div>
+                    </div>
+                ) : defiEnCours ? (
                     <div style={{
                         background: 'var(--indigo)', borderRadius: 24, padding: '16px 20px',
                         boxShadow: 'var(--ombre-carte)', display: 'flex', alignItems: 'center',
@@ -1115,123 +1137,161 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 )}
             </div>
 
-            {/* 4. Aujourd'hui / Action du jour (uniquement si mesTablesFaibles a répondu) */}
-            {tableActionJour && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 4 & 5. Couvre-feu nocturne OU Actions du jour & Grille des modes */}
+            {enCouvreFeu ? (
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 26, padding: '36px 28px',
+                    boxShadow: 'var(--ombre-carte)', border: '1px solid var(--bordure)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+                    gap: 16, marginTop: 4,
+                }}>
                     <div style={{
-                        fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
-                        color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                        width: 72, height: 72, borderRadius: 24,
+                        background: 'rgba(92, 114, 155, 0.12)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: 38,
                     }}>
-                        Aujourd'hui
+                        🌙
+                    </div>
+                    <div className="font-display" style={{ fontSize: 26, fontWeight: 700, color: 'var(--indigo)' }}>
+                        {couvreFeuData?.message || "C'est l'heure de dormir. L'entraînement est en pause pour la nuit."}
+                    </div>
+                    <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--gris)', maxWidth: 480, lineHeight: 1.5 }}>
+                        Reprends des forces pour demain ! L'entraînement rouvre dès <strong style={{ color: 'var(--indigo)' }}>{heureReprise}</strong>.
                     </div>
                     <button
-                        onClick={() => onGo('play', { mode: 'flawless', tables: [tableActionJour], length: 20, timer: 0 })}
+                        onClick={() => onGo('learn')}
                         style={{
-                            background: 'var(--action)', borderRadius: 26, padding: '24px 26px',
-                            display: 'flex', alignItems: 'center', gap: 20, border: 'none',
-                            cursor: 'pointer', textAlign: 'left', width: '100%',
+                            marginTop: 10, height: 56, padding: '0 28px', borderRadius: 16,
+                            background: 'var(--ivoire)', border: '2px solid var(--bordure)',
+                            color: 'var(--indigo)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
                         }}
                     >
-                        <div style={{
-                            width: 78, height: 78, borderRadius: 22,
-                            background: 'rgba(255, 255, 255, 0.18)', display: 'flex',
-                            alignItems: 'center', justifyContent: 'center',
-                            fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
-                            color: 'var(--action-texte)', flexShrink: 0,
-                        }}>
-                            {tableActionJour}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
-                            <div className="font-display" style={{ fontSize: 28, fontWeight: 700, color: 'var(--action-texte)' }}>
-                                Reprendre la table de {tableActionJour}
-                            </div>
-                            <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--ciel-pale)' }}>
-                                Ta table la plus faible · Sans faute · 20 questions
-                            </div>
-                        </div>
-                        <div style={{
-                            width: 66, height: 66, borderRadius: 20,
-                            background: 'var(--surface)', display: 'flex',
-                            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        }}>
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                                <path d="M8.5 5 17 12l-8.5 7" stroke="var(--action)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
+                        <IconApprendre size={22} color="var(--indigo)" actionColor="var(--indigo)" />
+                        <span>Consulter mes tables (mode calme)</span>
                     </button>
                 </div>
+            ) : (
+                <>
+                    {/* 4. Aujourd'hui / Action du jour (uniquement si mesTablesFaibles a répondu) */}
+                    {tableActionJour && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{
+                                fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                                color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                            }}>
+                                Aujourd'hui
+                            </div>
+                            <button
+                                onClick={() => onGo('play', { mode: 'flawless', tables: [tableActionJour], length: 20, timer: 0 })}
+                                style={{
+                                    background: 'var(--action)', borderRadius: 26, padding: '24px 26px',
+                                    display: 'flex', alignItems: 'center', gap: 20, border: 'none',
+                                    cursor: 'pointer', textAlign: 'left', width: '100%',
+                                }}
+                            >
+                                <div style={{
+                                    width: 78, height: 78, borderRadius: 22,
+                                    background: 'rgba(255, 255, 255, 0.18)', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 40,
+                                    color: 'var(--action-texte)', flexShrink: 0,
+                                }}>
+                                    {tableActionJour}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+                                    <div className="font-display" style={{ fontSize: 28, fontWeight: 700, color: 'var(--action-texte)' }}>
+                                        Reprendre la table de {tableActionJour}
+                                    </div>
+                                    <div style={{ fontFamily: 'var(--texte)', fontSize: 17, fontWeight: 600, color: 'var(--ciel-pale)' }}>
+                                        Ta table la plus faible · Sans faute · 20 questions
+                                    </div>
+                                </div>
+                                <div style={{
+                                    width: 66, height: 66, borderRadius: 20,
+                                    background: 'var(--surface)', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                        <path d="M8.5 5 17 12l-8.5 7" stroke="var(--action)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 5. Grille des 6 modes */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{
+                            fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
+                            color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
+                        }}>
+                            {tableActionJour ? 'Ou choisis ton mode' : 'Choisis ton mode'}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                            {/* Sprint */}
+                            <button
+                                onClick={() => onGo('play', { mode: 'sprint', length: 20, timer: 3 })}
+                                style={modeBtnStyle}
+                            >
+                                <IconSprint size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Sprint</span>
+                                <span style={modeBtnDescStyle}>3 s par question</span>
+                            </button>
+
+                            {/* Sans faute */}
+                            <button
+                                onClick={() => onGo('play', { mode: 'flawless', length: 20, timer: 0 })}
+                                style={modeBtnStyle}
+                            >
+                                <IconSansFaute size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Sans faute</span>
+                                <span style={modeBtnDescStyle}>zéro erreur</span>
+                            </button>
+
+                            {/* Contre-la-montre */}
+                            <button
+                                onClick={() => onGo('play', { mode: 'countdown', length: 0, timer: 120 })}
+                                style={modeBtnStyle}
+                            >
+                                <IconChrono size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Contre‑la‑montre</span>
+                                <span style={modeBtnDescStyle}>2 minutes</span>
+                            </button>
+
+                            {/* Montée */}
+                            <button
+                                onClick={() => onGo('challenges', { mode: 'climb' })}
+                                style={modeBtnStyle}
+                            >
+                                <IconMontee size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Montée</span>
+                                <span style={modeBtnDescStyle}>palier {plafond}</span>
+                            </button>
+
+                            {/* Libre */}
+                            <button
+                                onClick={() => onGo('play')}
+                                style={modeBtnStyle}
+                            >
+                                <IconLibre size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Libre</span>
+                                <span style={modeBtnDescStyle}>sans contrainte</span>
+                            </button>
+
+                            {/* Apprendre */}
+                            <button
+                                onClick={() => onGo('learn')}
+                                style={modeBtnStyle}
+                            >
+                                <IconApprendre size={34} color="var(--indigo)" actionColor="var(--action)" />
+                                <span style={modeBtnTitleStyle}>Apprendre</span>
+                                <span style={modeBtnDescStyle}>sans score</span>
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
-
-            {/* 5. Grille des 6 modes */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{
-                    fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 700,
-                    color: 'var(--gris)', letterSpacing: '0.14em', textTransform: 'uppercase',
-                }}>
-                    {tableActionJour ? 'Ou choisis ton mode' : 'Choisis ton mode'}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    {/* Sprint */}
-                    <button
-                        onClick={() => onGo('play', { mode: 'sprint', length: 20, timer: 3 })}
-                        style={modeBtnStyle}
-                    >
-                        <IconSprint size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Sprint</span>
-                        <span style={modeBtnDescStyle}>3 s par question</span>
-                    </button>
-
-                    {/* Sans faute */}
-                    <button
-                        onClick={() => onGo('play', { mode: 'flawless', length: 20, timer: 0 })}
-                        style={modeBtnStyle}
-                    >
-                        <IconSansFaute size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Sans faute</span>
-                        <span style={modeBtnDescStyle}>zéro erreur</span>
-                    </button>
-
-                    {/* Contre-la-montre */}
-                    <button
-                        onClick={() => onGo('play', { mode: 'countdown', length: 0, timer: 120 })}
-                        style={modeBtnStyle}
-                    >
-                        <IconChrono size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Contre‑la‑montre</span>
-                        <span style={modeBtnDescStyle}>2 minutes</span>
-                    </button>
-
-                    {/* Montée */}
-                    <button
-                        onClick={() => onGo('challenges', { mode: 'climb' })}
-                        style={modeBtnStyle}
-                    >
-                        <IconMontee size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Montée</span>
-                        <span style={modeBtnDescStyle}>palier {plafond}</span>
-                    </button>
-
-                    {/* Libre */}
-                    <button
-                        onClick={() => onGo('play')}
-                        style={modeBtnStyle}
-                    >
-                        <IconLibre size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Libre</span>
-                        <span style={modeBtnDescStyle}>sans contrainte</span>
-                    </button>
-
-                    {/* Apprendre */}
-                    <button
-                        onClick={() => onGo('learn')}
-                        style={modeBtnStyle}
-                    >
-                        <IconApprendre size={34} color="var(--indigo)" actionColor="var(--action)" />
-                        <span style={modeBtnTitleStyle}>Apprendre</span>
-                        <span style={modeBtnDescStyle}>sans score</span>
-                    </button>
-                </div>
-            </div>
 
             {/* 6. File hors-ligne */}
             {enAttente > 0 && (

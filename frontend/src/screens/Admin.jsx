@@ -3,6 +3,7 @@ import {
     listeClasses, ajouterEleve, modifierEleve, desactiverEleve, reactiverEleve,
     listeEleves, listeProfs, creerProf, modifierProf, desactiverProf,
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, reparerRattachements, journalAdmin,
+    couvreFeu, modifierCouvreFeu, activiteNocturne, activiteEleveDetail, activiteProfs,
 } from '../api.js';
 import {
     ModalDesactiverEleve,
@@ -28,14 +29,36 @@ import {
 
 export default function Admin({ onBack, identite, onIdentiteChange }) {
     const estAdmin = identite?.admin === true;
-    const [tab, setTab] = useState('eleves'); // 'eleves' | 'profs' | 'journal'
+    const [tab, setTab] = useState('eleves'); // 'eleves' | 'profs' | 'couvre_feu' | 'journal'
     const [loading, setLoading] = useState(true);
 
     // Données principales
     const [classes, setClasses] = useState([]);
     const [eleves, setEleves] = useState([]);
     const [profs, setProfs] = useState([]);
+    const [profsActivite, setProfsActivite] = useState([]);
     const [journal, setJournal] = useState([]);
+
+    // Couvre-feu & Nuit
+    const [cfConfig, setCfConfig] = useState({
+        actif: true,
+        heure_debut: '21:30',
+        heure_fin: '07:30',
+        message: "C'est l'heure de dormir. Les calculs attendront demain matin !",
+    });
+    const [cfForm, setCfForm] = useState({
+        actif: true,
+        heure_debut: '21:30',
+        heure_fin: '07:30',
+        message: '',
+    });
+    const [cfEnregistrement, setCfEnregistrement] = useState(false);
+    const [periodeNocturne, setPeriodeNocturne] = useState(7);
+    const [sessionsNocturnes, setSessionsNocturnes] = useState([]);
+    const [loadingNocturne, setLoadingNocturne] = useState(false);
+    const [eleveSelectionneDetail, setEleveSelectionneDetail] = useState(null);
+    const [detailSessionsEleve, setDetailSessionsEleve] = useState([]);
+    const [loadingDetailEleve, setLoadingDetailEleve] = useState(false);
 
     // Filtres onglet Élèves
     const [classeFiltre, setClasseFiltre] = useState('Toutes');
@@ -62,20 +85,97 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     // Chargement initial des données
     const rechargerDonnees = useCallback(async () => {
         setLoading(true);
-        const [resClasses, resEleves, resProfs, resJournal] = await Promise.all([
+        const [resClasses, resEleves, resProfs, resJournal, resActProfs, resCF] = await Promise.all([
             listeClasses(),
             listeEleves(null),
             listeProfs(),
             journalAdmin(100),
+            estAdmin ? activiteProfs().catch(() => ({ ok: false })) : Promise.resolve({ ok: false }),
+            couvreFeu().catch(() => ({ ok: false })),
         ]);
 
         if (resClasses.ok && resClasses.data) setClasses(resClasses.data);
         if (resEleves.ok && resEleves.data) setEleves(resEleves.data);
         if (resProfs.ok && resProfs.data) setProfs(resProfs.data);
         if (resJournal.ok && resJournal.data) setJournal(resJournal.data);
+        if (resActProfs?.ok && resActProfs.data) setProfsActivite(resActProfs.data);
+        if (resCF?.ok && resCF.data) {
+            const debut = (resCF.data.heure_debut || '21:30:00').slice(0, 5);
+            const fin = (resCF.data.heure_fin || '07:30:00').slice(0, 5);
+            const cfg = {
+                actif: resCF.data.actif ?? true,
+                heure_debut: debut,
+                heure_fin: fin,
+                message: resCF.data.message_blocage || "C'est l'heure de dormir. Les calculs attendront demain matin !",
+            };
+            setCfConfig(cfg);
+            setCfForm(cfg);
+        }
 
         setLoading(false);
-    }, []);
+    }, [estAdmin]);
+
+    // Charger les sessions nocturnes quand l'onglet ou la période change
+    const rechargerSessionsNocturnes = useCallback(async () => {
+        if (!estAdmin) return;
+        setLoadingNocturne(true);
+        try {
+            const res = await activiteNocturne(null, periodeNocturne);
+            if (res.ok && res.data) {
+                setSessionsNocturnes(res.data);
+            }
+        } finally {
+            setLoadingNocturne(false);
+        }
+    }, [estAdmin, periodeNocturne]);
+
+    useEffect(() => {
+        if (tab === 'couvre_feu') {
+            rechargerSessionsNocturnes();
+        }
+    }, [tab, rechargerSessionsNocturnes]);
+
+    // Charger le détail d'un élève quand sélectionné
+    const ouvrirDetailEleve = useCallback(async (eleve) => {
+        setEleveSelectionneDetail(eleve);
+        setLoadingDetailEleve(true);
+        try {
+            const res = await activiteEleveDetail(eleve.eleve_id, periodeNocturne);
+            if (res.ok && res.data) {
+                setDetailSessionsEleve(res.data);
+            } else {
+                setDetailSessionsEleve([]);
+            }
+        } finally {
+            setLoadingDetailEleve(false);
+        }
+    }, [periodeNocturne]);
+
+    // Sauvegarde des paramètres de couvre-feu
+    const handleSauvegarderCouvreFeu = async (e) => {
+        e?.preventDefault();
+        setCfEnregistrement(true);
+        setMessageFeedback('');
+        try {
+            const debut = cfForm.heure_debut.length === 5 ? `${cfForm.heure_debut}:00` : cfForm.heure_debut;
+            const fin = cfForm.heure_fin.length === 5 ? `${cfForm.heure_fin}:00` : cfForm.heure_fin;
+            const res = await modifierCouvreFeu({
+                actif: cfForm.actif,
+                heure_debut: debut,
+                heure_fin: fin,
+                message: cfForm.message,
+            });
+            if (res.ok) {
+                setCfConfig({ ...cfForm });
+                setMessageFeedback('✅ Paramètres du couvre-feu enregistrés.');
+                await rechargerSessionsNocturnes();
+            } else {
+                setMessageFeedback(`❌ ${res.error || 'Erreur lors de la mise à jour du couvre-feu.'}`);
+            }
+        } finally {
+            setCfEnregistrement(false);
+        }
+    };
 
     useEffect(() => {
         rechargerDonnees();
@@ -231,6 +331,15 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                         <span>Enseignants</span>
                         <span className="admin-sidebar-badge">{profs.length}</span>
                     </button>
+
+                    {estAdmin && (
+                        <button
+                            className={`admin-sidebar-tab${tab === 'couvre_feu' ? ' admin-sidebar-tab--active' : ''}`}
+                            onClick={() => setTab('couvre_feu')}
+                        >
+                            <span>🌙 Couvre-feu & Nuit</span>
+                        </button>
+                    )}
 
                     <button
                         className={`admin-sidebar-tab${tab === 'journal' ? ' admin-sidebar-tab--active' : ''}`}
@@ -472,10 +581,69 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                 )}
                             </div>
 
+                            {/* 4 Cartes métriques d'implication des professeurs */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                gap: 14, marginBottom: 20,
+                            }}>
+                                <div style={{
+                                    background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                    display: 'flex', flexDirection: 'column', gap: 4,
+                                }}>
+                                    <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                        Enseignants inscrits
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--indigo)' }}>
+                                        {profs.length}
+                                    </span>
+                                </div>
+
+                                <div style={{
+                                    background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                    display: 'flex', flexDirection: 'column', gap: 4,
+                                }}>
+                                    <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                        Comptes Google rattachés
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--succes)' }}>
+                                        {profs.filter(p => p.connecte || profsActivite.find(a => a.prof_id === p.prof_id)?.est_rattache).length}
+                                    </span>
+                                </div>
+
+                                <div style={{
+                                    background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                    display: 'flex', flexDirection: 'column', gap: 4,
+                                }}>
+                                    <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                        Défis créés pour les élèves
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--action)' }}>
+                                        {profsActivite.reduce((acc, a) => acc + (Number(a.nb_defis) || 0), 0)}
+                                    </span>
+                                </div>
+
+                                <div style={{
+                                    background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                                    border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                    display: 'flex', flexDirection: 'column', gap: 4,
+                                }}>
+                                    <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                        Parties jouées (profs)
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--vert)' }}>
+                                        {profsActivite.reduce((acc, a) => acc + (Number(a.nb_parties) || 0), 0)}
+                                    </span>
+                                </div>
+                            </div>
+
                             <div className="admin-table-card">
                                 <div style={{
-                                    display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(170px, 1.2fr) 85px 140px 160px',
-                                    minWidth: 550, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
+                                    display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(160px, 1.2fr) 85px 150px 90px 90px 140px',
+                                    minWidth: 700, boxSizing: 'border-box', padding: '11px 12px', background: 'var(--ivoire)',
                                     borderBottom: '1px solid var(--bordure)', fontFamily: 'var(--texte)',
                                     fontWeight: 700, fontSize: 12, color: 'var(--gris)', letterSpacing: '0.08em',
                                     textTransform: 'uppercase', alignItems: 'center'
@@ -484,18 +652,25 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                     <span>Nom</span>
                                     <span>Email</span>
                                     <span>Rôle</span>
-                                    <span>Connexion</span>
+                                    <span>Dernière connexion</span>
+                                    <span style={{ textAlign: 'center' }}>Défis</span>
+                                    <span style={{ textAlign: 'center' }}>Parties</span>
                                     <span style={{ textAlign: 'right' }}>Actions</span>
                                 </div>
 
                                 {profs.map(p => {
                                     const estMoi = p.prof_id === monProfId;
+                                    const act = profsActivite.find(a => a.prof_id === p.prof_id);
+                                    const derniereConn = act?.derniere_connexion || p.derniere_connexion;
+                                    const nbDefis = act?.nb_defis ?? 0;
+                                    const nbParties = act?.nb_parties ?? 0;
+
                                     return (
                                         <div
                                             key={p.prof_id}
                                             style={{
-                                                display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(170px, 1.2fr) 85px 140px 160px',
-                                                minWidth: 550, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
+                                                display: 'grid', gridTemplateColumns: '36px minmax(130px, 1fr) minmax(160px, 1.2fr) 85px 150px 90px 90px 140px',
+                                                minWidth: 700, boxSizing: 'border-box', padding: '11px 12px', alignItems: 'center',
                                                 borderBottom: '1px solid var(--bordure)', background: 'var(--surface)',
                                                 fontFamily: 'var(--texte)'
                                             }}
@@ -536,18 +711,21 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                             <span>
                                                 {!p.actif ? (
                                                     <span className="admin-status-badge--inactive">Désactivé</span>
-                                                ) : p.connecte ? (
-                                                    <span
-                                                        className="admin-status-badge--active"
-                                                        title={p.derniere_connexion ? `Dernière connexion le ${new Date(p.derniere_connexion).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Compte Google rattaché'}
-                                                    >
-                                                        Rattaché
+                                                ) : derniereConn ? (
+                                                    <span style={{ fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 600, color: 'var(--indigo-encre)' }}>
+                                                        {formaterConnexionProf(derniereConn)}
                                                     </span>
                                                 ) : (
-                                                    <span className="admin-status-badge--never" title="En attente de première connexion Google">
+                                                    <span className="admin-status-badge--never">
                                                         En attente
                                                     </span>
                                                 )}
+                                            </span>
+                                            <span style={{ textAlign: 'center', fontWeight: 700, color: nbDefis > 0 ? 'var(--action)' : 'var(--gris)' }}>
+                                                {nbDefis}
+                                            </span>
+                                            <span style={{ textAlign: 'center', fontWeight: 700, color: nbParties > 0 ? 'var(--vert)' : 'var(--gris)' }}>
+                                                {nbParties}
                                             </span>
                                             <span style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
                                                 {estAdmin && (
@@ -572,6 +750,239 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         </div>
                                     );
                                 })}
+                            </div>
+                            <div style={{ flex: 1 }} />
+                        </>
+                    ) : tab === 'couvre_feu' ? (
+                        /* Onglet Couvre-feu & Nuit */
+                        <>
+                            <div className="admin-topbar">
+                                <div>
+                                    <h2 className="admin-heading">🌙 Couvre-feu & Activité de nuit</h2>
+                                    <div style={{ fontFamily: 'var(--texte)', fontSize: 14, color: 'var(--gris)', marginTop: 2 }}>
+                                        Protection du sommeil des élèves et surveillance des sessions tardives
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 1. Carte de réglage du couvre-feu */}
+                            <div style={{
+                                background: 'var(--surface)', borderRadius: 24, padding: '22px 24px',
+                                border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 16,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                                    <div>
+                                        <h3 style={{ fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 18, color: 'var(--indigo)', margin: 0 }}>
+                                            Horaires du couvre-feu
+                                        </h3>
+                                        <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', marginTop: 2 }}>
+                                            Actif 7j/7. Bloque le démarrage de nouvelles parties sur l'iPad (même hors connexion).
+                                        </div>
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={cfForm.actif}
+                                            onChange={e => setCfForm({ ...cfForm, actif: e.target.checked })}
+                                            style={{ width: 18, height: 18, accentColor: 'var(--indigo)', cursor: 'pointer' }}
+                                        />
+                                        <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15, color: cfForm.actif ? 'var(--succes)' : 'var(--gris)' }}>
+                                            {cfForm.actif ? 'Couvre-feu activé' : 'Couvre-feu désactivé'}
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', marginBottom: 6 }}>
+                                            Heure de début (soir) :
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={cfForm.heure_debut}
+                                            onChange={e => setCfForm({ ...cfForm, heure_debut: e.target.value })}
+                                            disabled={!cfForm.actif || cfEnregistrement}
+                                            style={{
+                                                width: '100%', height: 44, padding: '0 12px', borderRadius: 12,
+                                                border: '1px solid var(--bordure)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                                color: 'var(--indigo)', background: cfForm.actif ? 'var(--surface)' : 'var(--ivoire)',
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', marginBottom: 6 }}>
+                                            Heure de reprise (matin) :
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={cfForm.heure_fin}
+                                            onChange={e => setCfForm({ ...cfForm, heure_fin: e.target.value })}
+                                            disabled={!cfForm.actif || cfEnregistrement}
+                                            style={{
+                                                width: '100%', height: 44, padding: '0 12px', borderRadius: 12,
+                                                border: '1px solid var(--bordure)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                                color: 'var(--indigo)', background: cfForm.actif ? 'var(--surface)' : 'var(--ivoire)',
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', marginBottom: 6 }}>
+                                        Message affiché aux élèves :
+                                    </label>
+                                    <input
+                                        type="text"
+                                        maxLength={200}
+                                        value={cfForm.message}
+                                        onChange={e => setCfForm({ ...cfForm, message: e.target.value })}
+                                        disabled={!cfForm.actif || cfEnregistrement}
+                                        placeholder="C'est l'heure de dormir. Les calculs attendront demain matin !"
+                                        style={{
+                                            width: '100%', height: 44, padding: '0 12px', borderRadius: 12,
+                                            border: '1px solid var(--bordure)', fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14,
+                                            color: 'var(--indigo-encre)', background: cfForm.actif ? 'var(--surface)' : 'var(--ivoire)',
+                                            boxSizing: 'border-box',
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                                    <button
+                                        type="button"
+                                        onClick={handleSauvegarderCouvreFeu}
+                                        disabled={cfEnregistrement}
+                                        className="admin-btn-action-main"
+                                        style={{ minWidth: 170 }}
+                                    >
+                                        {cfEnregistrement ? 'Enregistrement…' : 'Enregistrer les horaires'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 2. Surveillance nocturne */}
+                            <div style={{
+                                background: 'var(--surface)', borderRadius: 24, padding: '22px 24px',
+                                border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                display: 'flex', flexDirection: 'column', gap: 16,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                                    <div>
+                                        <h3 style={{ fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 18, color: 'var(--indigo)', margin: 0 }}>
+                                            Sessions nocturnes & soirées
+                                        </h3>
+                                        <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', marginTop: 2 }}>
+                                            Parties enregistrées après 20h00 ou pendant le couvre-feu.
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                            Période :
+                                        </span>
+                                        {[
+                                            { label: "Aujourd'hui", j: 1 },
+                                            { label: '7 jours', j: 7 },
+                                            { label: '14 jours', j: 14 },
+                                            { label: '30 jours', j: 30 },
+                                        ].map(p => {
+                                            const sel = (periodeNocturne === p.j);
+                                            return (
+                                                <button
+                                                    key={p.j}
+                                                    type="button"
+                                                    onClick={() => setPeriodeNocturne(p.j)}
+                                                    style={{
+                                                        padding: '5px 12px', borderRadius: 999,
+                                                        background: sel ? 'var(--action)' : 'var(--surface)',
+                                                        color: sel ? '#ffffff' : 'var(--gris)',
+                                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
+                                                        border: sel ? 'none' : '1px solid var(--bordure)',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    {p.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {loadingNocturne ? (
+                                    <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--gris)', fontFamily: 'var(--texte)' }}>
+                                        Recherche des sessions nocturnes…
+                                    </div>
+                                ) : sessionsNocturnes.length === 0 ? (
+                                    <div style={{
+                                        padding: '36px 16px', textAlign: 'center',
+                                        background: 'rgba(56, 161, 105, 0.06)', borderRadius: 16,
+                                        border: '1px solid rgba(56, 161, 105, 0.2)',
+                                        color: 'var(--vert)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                    }}>
+                                        ✨ Aucun élève n'a joué en soirée tardive ou pendant le couvre-feu ({periodeNocturne === 1 ? "aujourd'hui" : `sur les ${periodeNocturne} derniers jours`}).
+                                    </div>
+                                ) : (
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--texte)' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '2px solid var(--bordure)', color: 'var(--gris)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Heure & Date</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Élève</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Classe</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Mode</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Score</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Créneau</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'right' }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {sessionsNocturnes.map((s, idx) => {
+                                                    const dateStr = s.date_session || s.cree_le;
+                                                    const badgeInfo = formaterBadgeHoraire(dateStr, cfConfig);
+                                                    return (
+                                                        <tr key={s.session_id || s.id || idx} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 14 }}>
+                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
+                                                                {formaterDateHeureExacte(dateStr)}
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo-encre)' }}>
+                                                                {s.prenom} {s.nom}
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px', color: 'var(--gris)', fontWeight: 600 }}>
+                                                                {s.classe}
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px', color: 'var(--indigo-encre)' }}>
+                                                                {s.mode === 'defi' ? 'Défi' : 'Entraînement'}
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--action)' }}>
+                                                                {s.score != null ? `${s.score} / ${s.total_questions || 20}` : '—'}
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px' }}>
+                                                                <span style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                    padding: '3px 9px', borderRadius: 8,
+                                                                    fontSize: 12, fontWeight: 700,
+                                                                    background: badgeInfo.bg, color: badgeInfo.color,
+                                                                }}>
+                                                                    {badgeInfo.label}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    className="admin-btn-table"
+                                                                    onClick={() => ouvrirDetailEleve(s)}
+                                                                >
+                                                                    Historique
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                             <div style={{ flex: 1 }} />
                         </>
@@ -737,6 +1148,20 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                     onClose={() => setShowImportProfModal(false)}
                     onSuccess={async () => {
                         await rechargerDonnees();
+                    }}
+                />
+            )}
+
+            {/* Modal Historique & Activité détaillée d'un élève */}
+            {eleveSelectionneDetail && (
+                <ModalDetailEleveActivite
+                    eleve={eleveSelectionneDetail}
+                    sessions={detailSessionsEleve}
+                    loading={loadingDetailEleve}
+                    cfConfig={cfConfig}
+                    onClose={() => {
+                        setEleveSelectionneDetail(null);
+                        setDetailSessionsEleve([]);
                     }}
                 />
             )}
@@ -1859,4 +2284,200 @@ function formaterDetailJournal(entry) {
         return JSON.stringify(detail);
     }
     return cible || '—';
+}
+
+/* ===================================================================
+ * UTILITAIRES ET MODALE ACTIVITÉ / COUVRE-FEU
+ * ================================================================= */
+
+function formaterConnexionProf(dateStr) {
+    if (!dateStr) return 'Jamais connecté';
+    const now = new Date();
+    const d = new Date(dateStr);
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+
+    if (diffDays === 0) return `Auj. à ${h}h${m}`;
+    if (diffDays === 1) return `Hier à ${h}h${m}`;
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function formaterDateHeureExacte(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    const jour = String(d.getDate()).padStart(2, '0');
+    const mois = String(d.getMonth() + 1).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${jour}/${mois} à ${h}h${m}`;
+}
+
+function formaterBadgeHoraire(dateStr, cfConfig) {
+    if (!dateStr) return { label: 'Inconnu', bg: 'var(--bordure)', color: 'var(--gris)' };
+    const d = new Date(dateStr);
+    const totalMinutes = d.getHours() * 60 + d.getMinutes();
+
+    const [hDeb, mDeb] = (cfConfig?.heure_debut || '21:30').split(':').map(Number);
+    const [hFin, mFin] = (cfConfig?.heure_fin || '07:30').split(':').map(Number);
+    const debutMin = (hDeb || 21) * 60 + (mDeb || 30);
+    const finMin = (hFin || 7) * 60 + (mFin || 30);
+
+    const estEnCouvreFeu = debutMin > finMin
+        ? (totalMinutes >= debutMin || totalMinutes < finMin)
+        : (totalMinutes >= debutMin && totalMinutes < finMin);
+
+    if (estEnCouvreFeu) {
+        return {
+            label: '🌙 Couvre-feu',
+            bg: 'rgba(239, 68, 68, 0.12)',
+            color: 'var(--rouge)',
+        };
+    }
+
+    // Soirée : entre 20h00 et heure_debut
+    const debutSoiree = 20 * 60;
+    if (totalMinutes >= debutSoiree && totalMinutes < debutMin) {
+        return {
+            label: '🟠 Soirée (20h-21h30)',
+            bg: 'rgba(245, 158, 11, 0.14)',
+            color: 'var(--orange)',
+        };
+    }
+
+    return {
+        label: '🟢 Journée',
+        bg: 'rgba(16, 185, 129, 0.12)',
+        color: 'var(--vert)',
+    };
+}
+
+function ModalDetailEleveActivite({ eleve, sessions = [], loading = false, cfConfig, onClose }) {
+    const totalParties = sessions.length;
+    const totalSecondes = sessions.reduce((acc, s) => acc + (Number(s.duree_secondes) || 0), 0);
+    const partiesCouvreFeu = sessions.filter(s => formaterBadgeHoraire(s.date_session || s.cree_le, cfConfig).label.includes('Couvre-feu')).length;
+    const partiesSoiree = sessions.filter(s => formaterBadgeHoraire(s.date_session || s.cree_le, cfConfig).label.includes('Soirée')).length;
+
+    const min = Math.round(totalSecondes / 60);
+
+    return (
+        <ModalFrame onClose={onClose} maxWidth={720}>
+            <div style={{ padding: 26, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* En-tête de la modale */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 32 }}>{eleve.avatar_emoji || '👤'}</span>
+                        <div>
+                            <h3 style={{ margin: 0, font: '700 22px var(--titre)', color: 'var(--indigo)' }}>
+                                {eleve.prenom} {eleve.nom}
+                            </h3>
+                            <div style={{ font: '600 14px var(--texte)', color: 'var(--gris)' }}>
+                                Classe {eleve.classe} · Historique d'activité
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--gris)' }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* 4 Mini-métriques */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                    <div style={{ background: 'var(--ivoire)', borderRadius: 14, padding: '10px 12px', textAlign: 'center', border: '1px solid var(--bordure)' }}>
+                        <div style={{ font: '600 12px var(--texte)', color: 'var(--gris)' }}>Parties</div>
+                        <div style={{ font: '800 20px var(--titre)', color: 'var(--indigo)' }}>{totalParties}</div>
+                    </div>
+                    <div style={{ background: 'var(--ivoire)', borderRadius: 14, padding: '10px 12px', textAlign: 'center', border: '1px solid var(--bordure)' }}>
+                        <div style={{ font: '600 12px var(--texte)', color: 'var(--gris)' }}>Temps en jeu</div>
+                        <div style={{ font: '800 20px var(--titre)', color: 'var(--indigo)' }}>{min > 0 ? `${min} min` : `${totalSecondes}s`}</div>
+                    </div>
+                    <div style={{ background: 'var(--ivoire)', borderRadius: 14, padding: '10px 12px', textAlign: 'center', border: '1px solid var(--bordure)' }}>
+                        <div style={{ font: '600 12px var(--texte)', color: 'var(--gris)' }}>En soirée</div>
+                        <div style={{ font: '800 20px var(--titre)', color: partiesSoiree > 0 ? 'var(--orange)' : 'var(--indigo)' }}>{partiesSoiree}</div>
+                    </div>
+                    <div style={{ background: 'var(--ivoire)', borderRadius: 14, padding: '10px 12px', textAlign: 'center', border: '1px solid var(--bordure)' }}>
+                        <div style={{ font: '600 12px var(--texte)', color: 'var(--gris)' }}>Couvre-feu</div>
+                        <div style={{ font: '800 20px var(--titre)', color: partiesCouvreFeu > 0 ? 'var(--rouge)' : 'var(--succes)' }}>{partiesCouvreFeu}</div>
+                    </div>
+                </div>
+
+                {/* Tableau chronologique */}
+                <div style={{
+                    maxHeight: 380, overflowY: 'auto',
+                    border: '1px solid var(--bordure)', borderRadius: 16,
+                    background: 'var(--surface)',
+                }}>
+                    {loading ? (
+                        <div style={{ padding: 40, textAlign: 'center', color: 'var(--gris)', font: '600 14px var(--texte)' }}>
+                            Chargement des sessions…
+                        </div>
+                    ) : sessions.length === 0 ? (
+                        <div style={{ padding: 40, textAlign: 'center', color: 'var(--gris)', font: '600 14px var(--texte)' }}>
+                            Aucune session de jeu sur cette période.
+                        </div>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--texte)' }}>
+                            <thead>
+                                <tr style={{ background: 'var(--ivoire)', borderBottom: '1px solid var(--bordure)', color: 'var(--gris)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                    <th style={{ padding: '8px 12px', fontWeight: 700 }}>Date & Heure</th>
+                                    <th style={{ padding: '8px 12px', fontWeight: 700 }}>Mode</th>
+                                    <th style={{ padding: '8px 12px', fontWeight: 700 }}>Score</th>
+                                    <th style={{ padding: '8px 12px', fontWeight: 700 }}>Durée</th>
+                                    <th style={{ padding: '8px 12px', fontWeight: 700 }}>Créneau</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sessions.map((s, i) => {
+                                    const dateStr = s.date_session || s.cree_le;
+                                    const badgeInfo = formaterBadgeHoraire(dateStr, cfConfig);
+                                    return (
+                                        <tr key={s.session_id || s.id || i} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 13 }}>
+                                            <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
+                                                {formaterDateHeureExacte(dateStr)}
+                                            </td>
+                                            <td style={{ padding: '9px 12px', color: 'var(--indigo-encre)', fontWeight: 600 }}>
+                                                {s.mode === 'defi' ? '🏆 Défi' : '🎯 Entraînement'}
+                                            </td>
+                                            <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--action)' }}>
+                                                {s.score != null ? `${s.score} / ${s.total_questions || 20}` : '—'}
+                                            </td>
+                                            <td style={{ padding: '9px 12px', color: 'var(--gris)' }}>
+                                                {s.duree_secondes ? `${Math.round(s.duree_secondes)}s` : '—'}
+                                            </td>
+                                            <td style={{ padding: '9px 12px' }}>
+                                                <span style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                                                    padding: '2px 8px', borderRadius: 6,
+                                                    fontSize: 11, fontWeight: 700,
+                                                    background: badgeInfo.bg, color: badgeInfo.color,
+                                                }}>
+                                                    {badgeInfo.label}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="admin-btn-action-main"
+                        style={{ height: 40, padding: '0 20px', fontSize: 14 }}
+                    >
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </ModalFrame>
+    );
 }

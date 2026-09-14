@@ -750,6 +750,50 @@ export async function journalAdmin(limite = 100) {
 }
 
 /* ===================================================================
+ * COUVRE-FEU ET ACTIVITÉ
+ * ================================================================= */
+
+/** État du couvre-feu courant (actif, en_cours, heures, message, prochaine_bascule). */
+export async function couvreFeu() {
+    return rpc('couvre_feu');
+}
+
+/** Réglage du couvre-feu (réservé admin). */
+export async function modifierCouvreFeu({ actif, heure_debut, heure_fin, message } = {}) {
+    return rpc('modifier_couvre_feu', {
+        p_actif: actif,
+        p_heure_debut: heure_debut,
+        p_heure_fin: heure_fin,
+        p_message: message,
+    });
+}
+
+/** Synthèse d'activité globale ou par classe (inscrits, ont_joue, parties, temps_partie_s). */
+export async function activiteSynthese(classe = null, jours = 7) {
+    return rpc('activite_synthese', { p_classe: classe, p_jours: jours });
+}
+
+/** Liste d'activité par élève pour une classe ou tout le collège (temps en partie, parties, jours). */
+export async function activiteClasse(classe = null, jours = 7) {
+    return rpc('activite_classe', { p_classe: classe, p_jours: jours });
+}
+
+/** Liste des élèves ayant joué pendant le couvre-feu (réservé admin). */
+export async function activiteNocturne(classe = null, jours = 7) {
+    return rpc('activite_nocturne', { p_classe: classe, p_jours: jours });
+}
+
+/** Frise détaillée des parties d'un élève (réservé admin). */
+export async function activiteEleveDetail(eleveId, jours = 7) {
+    return rpc('activite_eleve_detail', { p_eleve_id: eleveId, p_jours: jours });
+}
+
+/** Tableau de bord de l'activité des professeurs : connexions, défis créés, parties jouées (réservé admin). */
+export async function activiteProfs() {
+    return rpc('activite_profs');
+}
+
+/* ===================================================================
  * Regroupement par défaut, pour les écrans qui préfèrent `api.xxx()`
  * ================================================================= */
 
@@ -769,10 +813,12 @@ export const api = {
     classementProgression, maPlaceProgression, classementRecords, classementClasses, classementProfs,
     // enseignant
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
+    activiteSynthese, activiteClasse,
     // administration
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
+    couvreFeu, modifierCouvreFeu, activiteNocturne, activiteEleveDetail, activiteProfs,
 };
 
 export default api;

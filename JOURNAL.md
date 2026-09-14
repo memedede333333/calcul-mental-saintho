@@ -57,6 +57,92 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Option 3 & Migration 45 : Couvre-feu nocturne, activité des classes et implication des enseignants
+
+**Fait**
+- **Sauvegarde et vérification préalable de la base de données** : dump complet compressé de la base Supabase distante (313 élèves, rôles, sessions) vérifié avec succès et archivé localement ainsi que sur Google Drive.
+- **Migration 45 (`20260914121500_activite_profs_et_reglage.sql`)** appliquée sur Supabase distant :
+  * Fonction `activite_profs()` réservée administrateur via `est_admin()`. Fournit la dernière connexion réelle, le nombre de défis créés pour les classes (`nb_defis`) et le nombre de parties jouées (`nb_parties`).
+  * Scénarios de tests SQL portés à **225 cas verts (0 échec)**.
+- **Résilience hors-ligne du couvre-feu** :
+  * Module `frontend/src/logic/couvreFeu.js` avec cache persistant `localStorage`.
+  * Même en mode avion / sans wifi, l'iPad bloque le lancement de nouveaux entraînements et défis si l'horloge locale est dans la plage horaire du couvre-feu (`21h30 - 07h30` par défaut).
+  * L'exercice en cours n'est pas coupé brutalement, mais toute nouvelle partie ou rejouer est verrouillé.
+- **Accueil élève & écrans de jeu** :
+  * Bannière de sommeil apaisante avec calcul dynamique de l'heure de réveil (`prochaine_bascule`, `heure_fin`).
+  * Boutons d'entraînement et défis grisés en période de couvre-feu. Le mode « Apprendre » reste accessible sans limite pour relire les tables sereinement.
+- **Vue Enseignant (`MaClasse.jsx`)** :
+  * Bascule d'onglets « Maîtrise des tables » vs « Activité & Temps de jeu ».
+  * Sélecteur de période (Aujourd'hui, 7j, 14j, 30j) avec 4 cartes d'indicateurs (Inscrits, Ont joué, Parties terminées, Temps moyen par joueur actif).
+  * Tableau individuel avec libellé strict « **temps passé en partie** », nombre de parties, jours actifs et date relative.
+- **Console d'Administration (`Admin.jsx`)** :
+  * Nouvel onglet « 🌙 Couvre-feu & Nuit » : paramétrage complet des horaires, message d'endormissement, et surveillance des parties nocturnes (tags 🟢 Journée, 🟠 Soirée 20h-21h30, 🌙 Couvre-feu).
+  * Modale chronologique par élève détaillée.
+  * Onglet Enseignants enrichi : dernière connexion visible directement, métriques globales d'équipe, et indicateurs d'implication (défis et parties).
+
+**Décidé** — Validation complète par Aymeri. Le temps d'activité est strictement nommé « temps passé en partie » pour ne pas induire en erreur sur le mode « Apprendre » non chronométré. L'heure de reprise n'est jamais codée en dur dans les textes et découle toujours du paramètre `heure_fin`.
+
+**Constaté** — Le scénario de tests et les vérificateurs de build (`check-tokens.mjs`, `check-api.mjs`) ont garanti la conformité stricte des 88 variables CSS et l'alignement des 49 RPC avec la base distante.
+
+**Ensuite** — Déploiement en production et communication aux équipes pédagogiques.
+
+## 2026-09-14 — Migration 44 : le couvre-feu, et l'activité des élèves en deux étages
+
+**Fait** — `supabase/migrations/20260914110000_couvre_feu_et_activite.sql` et les
+cas 212 à 224. **224 cas verts**, zéro ECHEC, sur un PostgreSQL vierge avec les
+44 migrations rejouées depuis zéro. La migration n'est pas encore appliquée.
+
+Une table d'un seul enregistrement — la clé primaire `unique_ligne check
+(unique_ligne)` interdit physiquement une deuxième ligne de configuration — avec
+`actif`, `heure_debut`, `heure_fin`, `message`. RLS activée et **aucune
+politique** : la table n'est atteignable que par les fonctions `security
+definer`, conformément à la règle « le front n'écrit jamais dans les tables ».
+
+`couvre_feu()` renvoie l'état complet, plus deux choses que l'écran aurait
+sinon fabriquées : `maintenant`, l'heure du **serveur** — sans quoi le
+verrouillage dépendrait de l'horloge de l'iPad, qu'un élève peut changer et
+qu'un fuseau mal réglé rend fausse — et `prochaine_bascule`, pour que l'écran
+programme le verrouillage à la seconde près au lieu d'interroger la base en
+boucle.
+
+Côté activité, quatre fonctions et deux étages : `activite_synthese` et
+`activite_classe` pour tout enseignant, `activite_nocturne` et
+`activite_eleve_detail` pour les administrateurs seuls.
+
+**Décidé** — Trois choses, toutes écrites au §3 d'`ETAT.md` avec leur raison : le
+serveur ne refuse aucune partie (la file hors-ligne jetterait les parties
+légitimes différées) ; les heures sont réglables et **une seule définition de la
+nuit** sert au couvre-feu comme à la détection ; l'heure de connexion nominative
+est réservée aux administrateurs.
+
+**Constaté — deux défauts trouvés en exécutant, aucun en relisant.**
+
+1. `activite_classe` répondait **« column reference "eleve_id" is ambiguous »**.
+   `eleve_id` est à la fois une colonne de sortie de la fonction — donc une
+   variable PL/pgSQL — et une colonne de `sessions_jeu`. La fonction serait
+   tombée au premier appel depuis l'écran. Corrigé en préfixant `sj.` partout
+   dans la sous-requête latérale. `activite_nocturne`, écrite juste après avec
+   les mêmes colonnes de sortie, était déjà qualifiée : c'est le hasard qui a
+   décidé laquelle des deux était cassée, pas le raisonnement.
+
+2. `activite_synthese` comptait **deux populations**. `inscrits` portait sur les
+   élèves actifs, `nb_parties` sur tous les élèves — un élève désactivé pesait
+   dans les parties sans peser dans les inscrits. Le sixième bug de population
+   de ce projet, attrapé avant livraison cette fois. Corrigé par un `where
+   e.actif` unique, et le **cas 220** le vérifie en désactivant un élève et en
+   regardant les deux compteurs bouger ensemble.
+
+**Ensuite** — Aymeri : relire les deux décisions du §3 avant application, et
+surtout **ajouter ce module au registre de traitement RGPD** — c'est la première
+fois que l'application enregistre et affiche des horaires de connexion de
+mineurs ; la ligne « un enseignant accède aux données de maîtrise de tout le
+collège » ne couvre pas ça.
+Antigravity : `run.sh` (224 cas attendus), appliquer la migration 44, régénérer
+`database.ts` — cette fois il **changera**, quatre fonctions apparaissent —,
+brancher `couvreFeu()` et les quatre fonctions d'activité dans `api.js`, puis
+les écrans.
+
+
 ## 2026-09-14 — Migration 43 : un import d'enseignants ne change jamais un rôle
 
 **Fait** — `supabase/migrations/20260914080000_import_profs_roles.sql`, et les

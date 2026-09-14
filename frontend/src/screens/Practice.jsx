@@ -7,6 +7,7 @@ import TimerRing from '../components/TimerRing';
 import MasteryGrid from '../components/MasteryGrid';
 import { IconCadenas, IconSprint, IconSansFaute, IconChrono, IconMontee, IconMaGrille, IconAmpoule, IconLibre } from '../components/Icons';
 import { clavierAutorise } from '../logic/saisie';
+import { estEnCouvreFeu, formaterHeureReprise } from '../logic/couvreFeu';
 
 /**
  * Practice — Modes de jeu élève (Maquettes 1, 3, 7 + Écrans 18, 19, 20, 21)
@@ -31,7 +32,10 @@ export default function Practice({
     maitrise: maitriseProp,
     config,
     onMaitriseMaj,
+    couvreFeuData,
 }) {
+    const enCouvreFeu = !estProf && estEnCouvreFeu(couvreFeuData);
+    const heureReprise = formaterHeureReprise(couvreFeuData?.heure_fin);
     const plafond = estProf ? 20 : (identite?.profil?.plafond_tables || 10);
     const mode = config?.mode || 'libre';
     const isLibre = mode === 'libre';
@@ -129,6 +133,8 @@ export default function Practice({
                         onShowGrid={() => setShowGrid(true)}
                         plafond={plafond}
                         mastery={mastery}
+                        enCouvreFeu={enCouvreFeu}
+                        heureReprise={heureReprise}
                     />
                 </>
             );
@@ -158,6 +164,8 @@ export default function Practice({
                 onReviewErrors={(tables) => startWithTables(tables, 10)}
                 onHome={onBack}
                 onSetup={() => setPhase('setup')}
+                enCouvreFeu={enCouvreFeu}
+                heureReprise={heureReprise}
             />
         );
     }
@@ -179,6 +187,8 @@ export default function Practice({
                 mastery={mastery}
                 onOpenTablePicker={() => setPhase('libre-tables')}
                 onStart={() => setPhase('libre-quiz')}
+                enCouvreFeu={enCouvreFeu}
+                heureReprise={heureReprise}
             />
         );
     }
@@ -226,6 +236,8 @@ export default function Practice({
                 setLength(10);
                 setPhase('libre-quiz');
             }}
+            enCouvreFeu={enCouvreFeu}
+            heureReprise={heureReprise}
         />
     );
 }
@@ -234,7 +246,7 @@ export default function Practice({
    ÉCRAN 18 — Entraînement libre : l'entrée du mode (« Sur quoi »)
    ========================================================================= */
 
-function LibreIntro({ onBack, tables, setTables, length, setLength, plafond, mastery, onOpenTablePicker, onStart }) {
+function LibreIntro({ onBack, tables, setTables, length, setLength, plafond, mastery, onOpenTablePicker, onStart, enCouvreFeu, heureReprise }) {
     const unlocked = ALL_TABLES.filter(t => t <= plafond);
 
     // Calcul des cases rouges de l'élève (niveau 1)
@@ -547,16 +559,21 @@ function LibreIntro({ onBack, tables, setTables, length, setLength, plafond, mas
                     {countRouges} cases rouges · {length === 0 ? 'sans fin' : `${length} questions`} · sans chrono · tables modifiables
                 </div>
                 <button
-                    disabled={tables.length === 0}
+                    disabled={tables.length === 0 || enCouvreFeu}
                     onClick={onStart}
                     style={{
-                        height: 96, borderRadius: 26, background: 'var(--action)',
-                        color: '#fff', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 28,
-                        border: 'none', cursor: tables.length === 0 ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 8px 20px rgba(32,34,107,.10)', opacity: tables.length === 0 ? 0.5 : 1,
+                        height: 96, borderRadius: 26,
+                        background: enCouvreFeu ? 'var(--gris-inerte)' : 'var(--action)',
+                        color: enCouvreFeu ? 'var(--gris)' : '#fff',
+                        fontFamily: 'var(--texte)', fontWeight: 700,
+                        fontSize: enCouvreFeu ? 20 : 28,
+                        border: 'none', cursor: (tables.length === 0 || enCouvreFeu) ? 'not-allowed' : 'pointer',
+                        boxShadow: enCouvreFeu ? 'none' : '0 8px 20px rgba(32,34,107,.10)',
+                        opacity: (tables.length === 0 || enCouvreFeu) ? 0.6 : 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                     }}
                 >
-                    Commencer
+                    {enCouvreFeu ? `🌙 Pause pour la nuit (reprise dès ${heureReprise})` : 'Commencer'}
                 </button>
             </div>
         </div>
@@ -1208,7 +1225,7 @@ function LibreQuiz({ tables, length, mastery, onStop, onDone }) {
    ÉCRAN 20 — Entraînement libre : fin de partie
    ========================================================================= */
 
-function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome, onOpenGrid, onContinueWeakest }) {
+function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome, onOpenGrid, onContinueWeakest, enCouvreFeu, heureReprise }) {
     if (!result) return null;
     const { answered, seconds, resultats, historyByFact = [] } = result;
 
@@ -1359,7 +1376,16 @@ function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome,
 
             {/* Boutons d'action */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4, marginBottom: 16 }}>
-                {weakestTable && (
+                {enCouvreFeu ? (
+                    <div style={{
+                        padding: '16px 20px', borderRadius: 22, background: 'var(--surface)',
+                        border: '1px solid var(--bordure)', textAlign: 'center',
+                        fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)',
+                        boxShadow: 'var(--ombre-douce)',
+                    }}>
+                        🌙 C'est l'heure de dormir ! L'entraînement est en pause (reprise dès {heureReprise}).
+                    </div>
+                ) : weakestTable ? (
                     <button
                         onClick={() => onContinueWeakest(weakestTable)}
                         style={{
@@ -1370,7 +1396,7 @@ function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome,
                     >
                         Continuer sur la table de {weakestTable}
                     </button>
-                )}
+                ) : null}
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button
                         onClick={onOpenGrid}
@@ -1404,7 +1430,7 @@ function LibreResults({ result, serverResult, tables, mastery, onReplay, onHome,
    MAQUETTE 7 — Sélecteur de tables (Sprint, Sans faute, Contre-la-montre)
    ========================================================================= */
 
-function Setup({ onBack, picked, setPicked, mode, onStart, onShowGrid, plafond, mastery }) {
+function Setup({ onBack, picked, setPicked, mode, onStart, onShowGrid, plafond, mastery, enCouvreFeu, heureReprise }) {
     const ModeIcon = MODE_INFO[mode]?.icon || IconSprint;
     const modeName = MODE_INFO[mode]?.name || 'Sprint';
     const unlocked = ALL_TABLES.filter(t => t <= plafond);
@@ -1598,18 +1624,21 @@ function Setup({ onBack, picked, setPicked, mode, onStart, onShowGrid, plafond, 
                     </div>
                 )}
                 <button
-                    disabled={picked.length === 0}
+                    disabled={picked.length === 0 || enCouvreFeu}
                     onClick={onStart}
                     style={{
                         width: '100%', height: 76, borderRadius: 24,
-                        background: 'var(--action)', color: 'var(--action-texte)',
-                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 24,
-                        border: 'none', cursor: picked.length === 0 ? 'not-allowed' : 'pointer',
-                        opacity: picked.length === 0 ? 0.45 : 1,
-                        boxShadow: 'var(--ombre-douce)',
+                        background: enCouvreFeu ? 'var(--gris-inerte)' : 'var(--action)',
+                        color: enCouvreFeu ? 'var(--gris)' : 'var(--action-texte)',
+                        fontFamily: 'var(--texte)', fontWeight: 700,
+                        fontSize: enCouvreFeu ? 18 : 24,
+                        border: 'none', cursor: (picked.length === 0 || enCouvreFeu) ? 'not-allowed' : 'pointer',
+                        opacity: (picked.length === 0 || enCouvreFeu) ? 0.6 : 1,
+                        boxShadow: enCouvreFeu ? 'none' : 'var(--ombre-douce)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                     }}
                 >
-                    C'est parti !
+                    {enCouvreFeu ? `🌙 Pause pour la nuit (reprise dès ${heureReprise})` : "C'est parti !"}
                 </button>
             </div>
         </div>
@@ -2020,7 +2049,7 @@ function Quiz({ tables, length, globalTimer, questionDuration, mode, mastery, on
    MAQUETTE 3 — Fin de partie (Sprint, Sans faute, Contre-la-montre)
    ========================================================================= */
 
-function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome, onSetup }) {
+function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome, onSetup, enCouvreFeu, heureReprise }) {
     if (!result) return null;
     const { score, scorePremierEssai, answered, maxStreak, resultats, seconds } = result;
     const modeName = MODE_INFO[mode]?.name || 'Sprint';
@@ -2189,14 +2218,20 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4, marginBottom: 12 }}>
                 <button
+                    disabled={enCouvreFeu}
                     onClick={onReplay}
                     style={{
-                        height: 74, borderRadius: 24, background: 'var(--action)',
-                        color: 'var(--action-texte)', fontFamily: 'var(--texte)', fontWeight: 700,
-                        fontSize: 22, border: 'none', cursor: 'pointer', boxShadow: 'var(--ombre-douce)',
+                        height: 74, borderRadius: 24,
+                        background: enCouvreFeu ? 'var(--gris-inerte)' : 'var(--action)',
+                        color: enCouvreFeu ? 'var(--gris)' : 'var(--action-texte)',
+                        fontFamily: 'var(--texte)', fontWeight: 700,
+                        fontSize: enCouvreFeu ? 18 : 22,
+                        border: 'none', cursor: enCouvreFeu ? 'not-allowed' : 'pointer',
+                        boxShadow: enCouvreFeu ? 'none' : 'var(--ombre-douce)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                     }}
                 >
-                    Rejouer un {modeName}
+                    {enCouvreFeu ? `🌙 Pause pour la nuit (reprise dès ${heureReprise})` : `Rejouer un ${modeName}`}
                 </button>
                 <div style={{ display: 'flex', gap: 12 }}>
                     {wrongTables.length > 0 && (

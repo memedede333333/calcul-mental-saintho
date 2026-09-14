@@ -10,9 +10,9 @@ import Profile from './screens/Profile';
 import Admin from './screens/Admin';
 import MesDefis from './screens/MesDefis';
 import MaClasse from './screens/MaClasse';
-import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil, emailSession } from './api';
+import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil, emailSession, couvreFeu } from './api';
 import { effacerDefiEnCours } from './logic/defiStorage';
-import branding from './branding';
+import { lireCouvreFeuLocal, sauvegarderCouvreFeuLocal } from './logic/couvreFeu';
 
 /**
  * App — Routeur principal + restauration de session
@@ -50,11 +50,42 @@ export default function App() {
     const estAdmin = identite?.admin === true;
     const profil = identite?.profil;
 
+    // Initialisé avec le cache local pour verrouillage immédiat même hors-ligne
+    const [couvreFeuData, setCouvreFeuData] = useState(() => lireCouvreFeuLocal());
+
     useEffect(() => {
         if (screen !== 'challenges') {
             setIsProjecteur(false);
         }
     }, [screen]);
+
+    // --- Surveillance du couvre-feu et programmation de la prochaine bascule ---
+    useEffect(() => {
+        let timer = null;
+        let actif = true;
+        async function verifierCouvreFeu() {
+            try {
+                const res = await couvreFeu();
+                if (actif && res.ok && res.data) {
+                    setCouvreFeuData(res.data);
+                    sauvegarderCouvreFeuLocal(res.data);
+                    if (res.data.prochaine_bascule) {
+                        const basculeMs = new Date(res.data.prochaine_bascule).getTime() - Date.now();
+                        if (basculeMs > 0 && basculeMs < 86400000) {
+                            timer = setTimeout(verifierCouvreFeu, basculeMs + 1000);
+                        }
+                    }
+                }
+            } catch {}
+        }
+        if (appState === 'ready') {
+            verifierCouvreFeu();
+        }
+        return () => {
+            actif = false;
+            if (timer) clearTimeout(timer);
+        };
+    }, [appState]);
 
     // --- Restauration de session au montage ---
     useEffect(() => {
@@ -373,6 +404,7 @@ export default function App() {
                     identite={identite}
                     estProf={estProf}
                     estAdmin={estAdmin}
+                    couvreFeuData={couvreFeuData}
                     onLogout={handleDeconnexion}
                     onReprendreDefi={(rejointDefi) => {
                         setDefiPreConfig({ rejointDefi });
@@ -386,6 +418,7 @@ export default function App() {
                     onBack={goHome}
                     identite={identite}
                     estProf={estProf}
+                    couvreFeuData={couvreFeuData}
                     onPlafondChange={handlePlafondChange}
                     tablesInitiales={tablesADemarrer}
                     maitrise={maitrise}
@@ -398,6 +431,7 @@ export default function App() {
                     onBack={goHome}
                     identite={identite}
                     estProf={estProf}
+                    couvreFeuData={couvreFeuData}
                     onPlafondChange={handlePlafondChange}
                     maitrise={maitrise}
                     onGo={handleGo}
@@ -433,7 +467,16 @@ export default function App() {
                 />
             )}
             {screen === 'admin' && (estAdmin || estProf) && (
-                <Admin onBack={goHome} identite={identite} onIdentiteChange={refreshIdentite} />
+                <Admin
+                    onBack={goHome}
+                    identite={identite}
+                    onIdentiteChange={refreshIdentite}
+                    couvreFeuData={couvreFeuData}
+                    onCouvreFeuChange={(nouvellesDonnees) => {
+                        setCouvreFeuData(nouvellesDonnees);
+                        sauvegarderCouvreFeuLocal(nouvellesDonnees);
+                    }}
+                />
             )}
         </Layout>
     );

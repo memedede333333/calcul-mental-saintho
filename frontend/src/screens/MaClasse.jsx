@@ -5,9 +5,25 @@ import {
     listeClasses,
     listeEleves,
     definirPlafondClasse,
+    activiteSynthese,
+    activiteClasse,
 } from '../api';
 import { IconMaGrille, IconSprint } from '../components/Icons';
 import { trierTablesFragiles } from '../logic/classeStats';
+
+function formaterTempsPartie(secondes) {
+    if (!secondes || secondes <= 0) return '0 min';
+    const s = Math.round(secondes);
+    if (s < 60) return `${s} s`;
+    const min = Math.floor(s / 60);
+    const resteSec = s % 60;
+    if (min < 60) {
+        return resteSec > 0 ? `${min} min ${resteSec} s` : `${min} min`;
+    }
+    const h = Math.floor(min / 60);
+    const resteMin = min % 60;
+    return resteMin > 0 ? `${h} h ${resteMin} min` : `${h} h`;
+}
 
 /**
  * MaClasse — Pilotage enseignant (Maquette 24)
@@ -37,6 +53,14 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     // Voir plus de tables
     const [voirToutesTables, setVoirToutesTables] = useState(false);
     const [actionEnCours, setActionEnCours] = useState(false);
+
+    // Onglet : 'maitrise' | 'activite'
+    const [vueActive, setVueActive] = useState('maitrise');
+    // Période activité : 7 | 14 | 30 | 1
+    const [periodeJours, setPeriodeJours] = useState(7);
+    const [synthese, setSynthese] = useState(null);
+    const [activiteEleves, setActiviteEleves] = useState([]);
+    const [loadingActivite, setLoadingActivite] = useState(false);
 
     // 1. Charger la liste des classes au montage
     useEffect(() => {
@@ -81,6 +105,27 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     useEffect(() => {
         rechargerClasse();
     }, [rechargerClasse]);
+
+    const rechargerActivite = useCallback(async () => {
+        if (!selectedClasse) return;
+        setLoadingActivite(true);
+        try {
+            const [resSyn, resAct] = await Promise.all([
+                activiteSynthese(selectedClasse, periodeJours),
+                activiteClasse(selectedClasse, periodeJours),
+            ]);
+            if (resSyn.ok) setSynthese(resSyn.data);
+            if (resAct.ok) setActiviteEleves(resAct.data || []);
+        } finally {
+            setLoadingActivite(false);
+        }
+    }, [selectedClasse, periodeJours]);
+
+    useEffect(() => {
+        if (vueActive === 'activite') {
+            rechargerActivite();
+        }
+    }, [vueActive, rechargerActivite]);
 
     // Tri des tables fragiles :
     // (eleves_jaunes + eleves_rouges) / eleves_classe décroissant (fonction partagée)
@@ -218,6 +263,43 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             {entete?.ont_joue ?? 0} ont joué · {entete?.inscrits ?? 0} inscrits · plafond commun : table {plafondCommun}
                         </span>
                     </div>
+
+                    {/* Sélecteur de vue : Maîtrise vs Activité */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                        <button
+                            type="button"
+                            onClick={() => setVueActive('maitrise')}
+                            style={{
+                                padding: '10px 22px', borderRadius: 999,
+                                background: vueActive === 'maitrise' ? 'var(--indigo)' : 'var(--surface)',
+                                color: vueActive === 'maitrise' ? '#ffffff' : 'var(--gris)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                border: vueActive === 'maitrise' ? 'none' : '1px solid var(--bordure)',
+                                boxShadow: vueActive === 'maitrise' ? 'none' : '0 2px 8px rgba(48,59,122,.08)',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Maîtrise des tables
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setVueActive('activite')}
+                            style={{
+                                padding: '10px 22px', borderRadius: 999,
+                                background: vueActive === 'activite' ? 'var(--indigo)' : 'var(--surface)',
+                                color: vueActive === 'activite' ? '#ffffff' : 'var(--gris)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                border: vueActive === 'activite' ? 'none' : '1px solid var(--bordure)',
+                                boxShadow: vueActive === 'activite' ? 'none' : '0 2px 8px rgba(48,59,122,.08)',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Activité & Temps de jeu
+                        </button>
+                    </div>
+
+                    {vueActive === 'maitrise' ? (
+                        <>
 
                     {/* Encadré des tables les plus fragiles (Maquette 24) */}
                     {tablesFragiles.length > 0 && tablesDefi.length > 0 && (
@@ -463,6 +545,186 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                             ‹ Retour
                         </button>
                     </div>
+                </>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {/* Sélecteur de période */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                                Période :
+                            </span>
+                            {[
+                                { label: "Aujourd'hui", jours: 1 },
+                                { label: '7 jours', jours: 7 },
+                                { label: '14 jours', jours: 14 },
+                                { label: '30 jours', jours: 30 },
+                            ].map(p => {
+                                const isSel = (periodeJours === p.jours);
+                                return (
+                                    <button
+                                        key={p.jours}
+                                        type="button"
+                                        onClick={() => setPeriodeJours(p.jours)}
+                                        style={{
+                                            padding: '6px 14px', borderRadius: 999,
+                                            background: isSel ? 'var(--action)' : 'var(--surface)',
+                                            color: isSel ? '#ffffff' : 'var(--gris)',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13,
+                                            border: isSel ? 'none' : '1px solid var(--bordure)',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {p.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {loadingActivite && (
+                            <span style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', fontStyle: 'italic' }}>
+                                Actualisation des données…
+                            </span>
+                        )}
+                    </div>
+
+                    {/* 4 Cartes métriques */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: 14,
+                    }}>
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                            border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                            display: 'flex', flexDirection: 'column', gap: 4,
+                        }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                Inscrits
+                            </span>
+                            <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--indigo)' }}>
+                                {synthese?.inscrits ?? entete?.inscrits ?? eleves.length}
+                            </span>
+                        </div>
+
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                            border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                            display: 'flex', flexDirection: 'column', gap: 4,
+                        }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                Ont joué ({periodeJours === 1 ? "auj." : `${periodeJours}j`})
+                            </span>
+                            <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--action)' }}>
+                                {synthese?.ont_joue ?? 0}
+                            </span>
+                        </div>
+
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                            border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                            display: 'flex', flexDirection: 'column', gap: 4,
+                        }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                Parties terminées
+                            </span>
+                            <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 28, color: 'var(--indigo)' }}>
+                                {synthese?.nb_parties ?? 0}
+                            </span>
+                        </div>
+
+                        <div style={{
+                            background: 'var(--surface)', borderRadius: 20, padding: '16px 18px',
+                            border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                            display: 'flex', flexDirection: 'column', gap: 4,
+                        }}>
+                            <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 13, color: 'var(--gris)' }}>
+                                Moyenne / joueur actif
+                            </span>
+                            <span style={{ fontFamily: 'var(--titre)', fontWeight: 800, fontSize: 24, color: 'var(--vert)' }}>
+                                {formaterTempsPartie(synthese?.temps_moyen_secondes ?? 0)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{
+                        fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)',
+                        background: 'rgba(48,59,122,0.04)', borderRadius: 12, padding: '10px 14px',
+                        border: '1px solid var(--bordure)',
+                    }}>
+                        ℹ️ Le temps affiché correspond au <strong>temps passé en partie</strong> (défis et entraînements enregistrés).
+                    </div>
+
+                    {/* Tableau des élèves */}
+                    <div style={{
+                        background: 'var(--surface)', borderRadius: 24, padding: '20px 22px',
+                        border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                        overflowX: 'auto',
+                    }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--texte)' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid var(--bordure)', color: 'var(--gris)', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Élève</th>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Temps passé en partie</th>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Parties</th>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Jours actifs</th>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Dernière activité</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {activiteEleves.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} style={{ padding: '30px 12px', textAlign: 'center', color: 'var(--gris)', fontSize: 15 }}>
+                                            Aucune session enregistrée sur cette période.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    activiteEleves.map(e => {
+                                        const aJoue = (e.nb_parties || 0) > 0;
+                                        return (
+                                            <tr key={e.eleve_id} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 15 }}>
+                                                <td style={{ padding: '12px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
+                                                    {e.prenom} {e.nom}
+                                                </td>
+                                                <td style={{ padding: '12px 12px', fontWeight: 700, color: aJoue ? 'var(--indigo-encre)' : 'var(--gris)' }}>
+                                                    {aJoue ? formaterTempsPartie(e.secondes_total) : '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 12px', color: aJoue ? 'var(--action)' : 'var(--gris)', fontWeight: aJoue ? 700 : 500 }}>
+                                                    {e.nb_parties || 0}
+                                                </td>
+                                                <td style={{ padding: '12px 12px', color: 'var(--indigo-encre)' }}>
+                                                    {e.jours_actifs ? `${e.jours_actifs} j` : '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 12px', color: 'var(--gris)', fontSize: 13 }}>
+                                                    {formatDateRelative(e.derniere_activite)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Bouton retour en bas */}
+                    <div style={{ display: 'flex', marginTop: 12 }}>
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            style={{
+                                flex: 1, height: 64, borderRadius: 18,
+                                background: 'var(--surface)', border: '1px solid var(--bordure)',
+                                boxShadow: 'var(--ombre-carte)', display: 'flex',
+                                alignItems: 'center', justifyContent: 'center',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                color: 'var(--indigo)', cursor: 'pointer',
+                            }}
+                        >
+                            ‹ Retour
+                        </button>
+                    </div>
+                </div>
+            )}
                 </>
             )}
         </div>

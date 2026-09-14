@@ -40,6 +40,36 @@ export type Database = {
           },
         ]
       }
+      couvre_feu: {
+        Row: {
+          actif: boolean
+          heure_debut: string
+          heure_fin: string
+          message: string
+          modifie_le: string
+          modifie_par: string | null
+          unique_ligne: boolean
+        }
+        Insert: {
+          actif?: boolean
+          heure_debut?: string
+          heure_fin?: string
+          message?: string
+          modifie_le?: string
+          modifie_par?: string | null
+          unique_ligne?: boolean
+        }
+        Update: {
+          actif?: boolean
+          heure_debut?: string
+          heure_fin?: string
+          message?: string
+          modifie_le?: string
+          modifie_par?: string | null
+          unique_ligne?: boolean
+        }
+        Relationships: []
+      }
       defis: {
         Row: {
           classe: string | null
@@ -481,6 +511,63 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activite_classe: {
+        Args: { p_classe?: string; p_jours?: number }
+        Returns: {
+          classe: string
+          derniere_activite: string
+          eleve_id: string
+          jours_actifs: number
+          nb_parties: number
+          nom: string
+          prenom: string
+          temps_partie_s: number
+        }[]
+      }
+      activite_eleve_detail: {
+        Args: { p_eleve_id: string; p_jours?: number }
+        Returns: {
+          duree_s: number
+          joue_le: string
+          mode: string
+          nb_questions: number
+          pendant_couvre_feu: boolean
+          points: number
+          score: number
+          tables: number[]
+        }[]
+      }
+      activite_nocturne: {
+        Args: { p_classe?: string; p_jours?: number }
+        Returns: {
+          classe: string
+          derniere_partie_nocturne: string
+          eleve_id: string
+          nom: string
+          parties_couvre_feu: number
+          prenom: string
+        }[]
+      }
+      activite_profs: {
+        Args: never
+        Returns: {
+          actif: boolean
+          classes: string[]
+          connecte: boolean
+          derniere_connexion: string
+          derniere_partie: string
+          email: string
+          nb_defis: number
+          nb_parties: number
+          nom: string
+          prof_id: string
+          role: string
+        }[]
+      }
+      activite_synthese: {
+        Args: { p_classe?: string; p_jours?: number }
+        Returns: Json
+      }
       ajouter_eleve: {
         Args: {
           p_classe: string
@@ -577,6 +664,7 @@ export type Database = {
           valeur: number
         }[]
       }
+      couvre_feu: { Args: never; Returns: Json }
       creer_defi: {
         Args: {
           p_classe?: string
@@ -668,6 +756,7 @@ export type Database = {
       entete_salle_des_profs: { Args: { p_periode?: string }; Returns: Json }
       est_admin: { Args: never; Returns: boolean }
       est_prof: { Args: never; Returns: boolean }
+      evaluer_couvre_feu: { Args: { p_maintenant: string }; Returns: Json }
       generer_code_defi: { Args: never; Returns: string }
       importer_eleves: { Args: { p_eleves: Json }; Returns: Json }
       importer_profs: { Args: { p_profs: Json }; Returns: Json }
@@ -785,6 +874,15 @@ export type Database = {
         }[]
       }
       mes_tables_faibles: { Args: { p_combien?: number }; Returns: number[] }
+      modifier_couvre_feu: {
+        Args: {
+          p_actif?: boolean
+          p_heure_debut?: string
+          p_heure_fin?: string
+          p_message?: string
+        }
+        Returns: Json
+      }
       modifier_eleve: {
         Args: {
           p_classe?: string
