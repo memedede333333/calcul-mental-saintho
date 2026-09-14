@@ -7,6 +7,7 @@
 > Dernière mise à jour : **14 septembre 2026** — **45 migrations appliquées en
 > production**. Couvre-feu nocturne configurable, activité des classes et implication des enseignants entièrement livrés. **225 cas de test
 > verts** sur une base reconstruite depuis les 45 migrations.
+> **Correctifs Option 3 & Écran blanc livrés** : écran blanc au démarrage résolu (import `branding` restauré et `RootErrorBoundary` en place), repli hors-ligne du couvre-feu fonctionnel sans rémanence de cache (`lireCouvreFeuLocal`), prise en compte immédiate du réveil iPad (`visibilitychange`), et exploitation directe des colonnes serveur PostgreSQL dans l'Admin (`pendant_couvre_feu`, `parties_couvre_feu`).
 > **Sauvegarde & Sécurité validées** : dump complet compressé de la base Supabase (313 élèves) testé avec intégrité vérifiée et copie Google Drive.
 > **Option 3 livrée** : Couvre-feu 21h30-07h30 résistant au mode avion / hors-ligne, écran d'accueil avec heure dynamique de réveil, MaClasse enrichi avec l'onglet « Activité & Temps de jeu », console Admin dotée de l'onglet « 🌙 Couvre-feu & Nuit » et suivi de l'implication des enseignants.
 > **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,

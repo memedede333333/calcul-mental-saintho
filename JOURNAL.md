@@ -57,6 +57,21 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Correction de l'écran blanc au démarrage et application des 3 correctifs de relecture Option 3
+
+**Fait**
+- **Résolution du blocage au démarrage sur iPad / Safari** : import manquant `branding` dans `frontend/src/App.jsx` corrigé, variables token nettoyées, et ajout d'un `RootErrorBoundary` global dans `main.jsx` pour interdire toute page blanche muette. Testé en direct sur le navigateur de production sans aucune erreur console.
+- **Repli hors-ligne du couvre-feu (`logic/couvreFeu.js`)** :
+  * `lireCouvreFeuLocal()` exclut systématiquement les champs calculés (`en_cours`, `maintenant`, `prochaine_bascule`) pour que l'horloge locale prenne le relais de façon autonome sans rejouer un instantané figé, réparant immédiatement tout iPad ayant un ancien cache.
+  * `sauvegarderCouvreFeuLocal()` ne persiste que la configuration stable `{ actif, heure_debut, heure_fin, message }`.
+- **Réveil de l'iPad (`App.jsx`)** : écouteur de l'événement `visibilitychange` ajouté avec nettoyage propre. Dès que l'iPad sort de veille ou que l'onglet revient au premier plan, `couvreFeu()` est immédiatement réévalué. En cas d'échec réseau, repli fluide sur la règle locale.
+- **Alignement strict avec les RPC PostgreSQL (`Admin.jsx`)** :
+  * La modale `ModalDetailEleveActivite` utilise directement `s.pendant_couvre_feu` (booléen calculé côté serveur dans le fuseau `Europe/Paris`) pour le comptage et l'étiquette 🌙 Couvre-feu, supprimant tout filtrage fragile sur chaîne d'affichage.
+  * Durée et scores alignés sur `s.joue_le`, `s.duree_s` et `s.nb_questions`.
+  * Le tableau d'activité nocturne exploite directement `parties_couvre_feu` et `derniere_partie` fournis par `activite_nocturne()`.
+  * La mention de la soirée est dynamisée : `🟠 Soirée (20h-${formaterHeureReprise(heure_debut)})`, suivant fidèlement la borne réglée par l'administrateur.
+- **Validation & Déploiement** : 225 scénarios SQL verts (0 échec), build Vite + vérification des 88 tokens et 49 RPC réussi à 100%, commit et push sur `origin/master`.
+
 ## 2026-09-14 — Relecture de l'Option 3 : le repli hors-ligne ne se déclenche jamais
 
 **Fait** — Migrations 44 et 45 appliquées, écrans livrés, commit `79aa246`.
