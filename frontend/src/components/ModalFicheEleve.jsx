@@ -30,6 +30,10 @@ const BADGES_INFO = {
     days_7: { emoji: '🌟', titre: 'Assidu', desc: 'A joué 7 jours consécutifs' },
 };
 
+// Constantes indicatives pour la cadence de partie (secondes par question, lecture et frappe comprises)
+const SEUIL_CADENCE_RAPIDE_S = 3;
+const SEUIL_CADENCE_MOYENNE_S = 5;
+
 function formatTempsMs(ms) {
     if (ms == null) return '—';
     const s = (ms / 1000).toFixed(1).replace('.', ',');
@@ -116,6 +120,7 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
     const badges = ficheData?.badges || [];
     const horaires = ficheData?.horaires;
     const estAdmin = ficheData?.portee === 'admin';
+    const seuilRapideMs = rapidite?.seuil_rapide_ms ?? 3000;
 
     // Faits filtrés
     const faitsFiltres = faitsData.filter((f) => {
@@ -124,7 +129,7 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
             if (!f.fait.toLowerCase().includes(clean)) return false;
         }
         if (filtreFait === 'fragiles') return f.niveau === 1;
-        if (filtreFait === 'lents') return (f.temps_moyen_ms ?? 0) >= 3000;
+        if (filtreFait === 'lents') return (f.temps_moyen_ms ?? 0) >= seuilRapideMs;
         if (filtreFait === 'maitrises') return f.niveau === 3;
         return true;
     });
@@ -447,7 +452,7 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                                                 alignItems: 'center',
                                                 gap: 6,
                                             }}>
-                                                <span>🎯 Faits rapides (&lt; 3 s) :</span>
+                                                <span>🎯 Faits rapides (&lt; {formatTempsMs(seuilRapideMs)}) :</span>
                                                 <strong style={{ color: 'var(--succes)' }}>
                                                     {rapidite?.faits_sous_le_seuil ?? 0}
                                                 </strong>
@@ -723,9 +728,9 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                                 <span style={{
                                                                     fontWeight: 800,
-                                                                    color: pt.secondes_par_question && pt.secondes_par_question < 3
+                                                                    color: pt.secondes_par_question && pt.secondes_par_question < SEUIL_CADENCE_RAPIDE_S
                                                                         ? 'var(--succes)'
-                                                                        : pt.secondes_par_question && pt.secondes_par_question < 5
+                                                                        : pt.secondes_par_question && pt.secondes_par_question < SEUIL_CADENCE_MOYENNE_S
                                                                             ? 'var(--attention)'
                                                                             : 'var(--indigo-encre)',
                                                                 }}>
@@ -849,7 +854,7 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                                             {[
                                                 { id: 'tous', label: `Toutes (${faitsData.length})` },
                                                 { id: 'fragiles', label: `🔴 À revoir (${maitrise?.rouges ?? 0})` },
-                                                { id: 'lents', label: '⏱️ Plus lentes (> 3s)' },
+                                                { id: 'lents', label: `⏱️ Plus lentes (> ${formatTempsMs(seuilRapideMs)})` },
                                                 { id: 'maitrises', label: `🟢 Maîtrisées (${maitrise?.vertes ?? 0})` },
                                             ].map((f) => (
                                                 <button
@@ -955,9 +960,9 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                                                                 </td>
                                                                 <td style={{ padding: '10px 14px', fontSize: 'var(--t-petit)' }}>
                                                                     <strong style={{
-                                                                        color: f.temps_moyen_ms && f.temps_moyen_ms < 3000
+                                                                        color: f.temps_moyen_ms && f.temps_moyen_ms < seuilRapideMs
                                                                             ? 'var(--succes)'
-                                                                            : f.temps_moyen_ms && f.temps_moyen_ms < 5000
+                                                                            : f.temps_moyen_ms && f.temps_moyen_ms < seuilRapideMs * 1.5
                                                                                 ? 'var(--attention)'
                                                                                 : 'var(--indigo-encre)',
                                                                     }}>
