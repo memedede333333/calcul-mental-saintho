@@ -426,6 +426,14 @@ le rôle demandé n'a pas été appliqué, `lignes_role_ignore` les nomme une pa
 une, à l'aperçu **comme** au retour de l'import. Ignorer une instruction sans
 le dire serait le même défaut sous une autre forme.
 
+**Toujours sauvegarder la base avant de modifier la production (code et base).**
+*(14 septembre 2026 — tranché par Aymeri.)*
+On n'installe pas d'environnement de test lourd (Docker / base locale dupliquée) pour éviter l'usine à gaz.
+La sécurité de la production repose sur trois garde-fous stricts :
+1. **Sauvegarde systématique** : Lancer un dump (`sauvegarder.command` ou dump automatisé) avant toute modification de schéma ou de données en production.
+2. **Validation SQL locale préalable** : `./supabase/tests/run.sh` doit impérativement dérouler ses 211 cas de test avec zéro ECHEC sur le PostgreSQL natif du Mac avant d'appliquer une migration en production.
+3. **Validation frontend** : `npm run build` doit valider les tokens CSS et les fonctions RPC exposées avant tout déploiement.
+
 **Deux colonnes qui s'appellent pareil et mesurent deux choses.**
 *(13 septembre 2026 — noté, pas corrigé.)*
 `liste_eleves.derniere_connexion` est la dernière **partie jouée** (migration 36),
