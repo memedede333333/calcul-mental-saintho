@@ -73,18 +73,36 @@ export default function App() {
                     if (res.data.prochaine_bascule) {
                         const basculeMs = new Date(res.data.prochaine_bascule).getTime() - Date.now();
                         if (basculeMs > 0 && basculeMs < 86400000) {
+                            if (timer) clearTimeout(timer);
                             timer = setTimeout(verifierCouvreFeu, basculeMs + 1000);
                         }
                     }
+                } else if (actif) {
+                    // Hors-ligne ou réponse inaccessible : utiliser la config locale sans en_cours figé
+                    setCouvreFeuData(lireCouvreFeuLocal());
                 }
-            } catch {}
+            } catch {
+                if (actif) {
+                    setCouvreFeuData(lireCouvreFeuLocal());
+                }
+            }
         }
         if (appState === 'ready') {
             verifierCouvreFeu();
         }
+
+        // Réveil de l'iPad / retour au premier plan (iOS suspend les minuteries en tâche de fond)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && appState === 'ready') {
+                verifierCouvreFeu();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
             actif = false;
             if (timer) clearTimeout(timer);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [appState]);
 

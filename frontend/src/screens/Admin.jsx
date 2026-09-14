@@ -10,6 +10,7 @@ import {
     ModalApercuImport,
     ModalFrame,
 } from '../components/Modals';
+import { formaterHeureReprise } from '../logic/couvreFeu.js';
 
 /**
  * Admin — Écran d'administration (Maquette 25)
@@ -870,10 +871,10 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                                     <div>
                                         <h3 style={{ fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 18, color: 'var(--indigo)', margin: 0 }}>
-                                            Sessions nocturnes & soirées
+                                            Élèves actifs pendant le couvre-feu
                                         </h3>
                                         <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', marginTop: 2 }}>
-                                            Parties enregistrées après 20h00 ou pendant le couvre-feu.
+                                            Élèves ayant lancé des parties pendant les heures du couvre-feu ({formaterHeureReprise(cfConfig?.heure_debut || '21:30')} – {formaterHeureReprise(cfConfig?.heure_fin || '07:30')}).
                                         </div>
                                     </div>
 
@@ -920,65 +921,53 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         border: '1px solid rgba(56, 161, 105, 0.2)',
                                         color: 'var(--vert)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
                                     }}>
-                                        ✨ Aucun élève n'a joué en soirée tardive ou pendant le couvre-feu ({periodeNocturne === 1 ? "aujourd'hui" : `sur les ${periodeNocturne} derniers jours`}).
+                                        ✨ Aucun élève n'a joué pendant le couvre-feu ({periodeNocturne === 1 ? "aujourd'hui" : `sur les ${periodeNocturne} derniers jours`}).
                                     </div>
                                 ) : (
                                     <div style={{ overflowX: 'auto' }}>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'var(--texte)' }}>
                                             <thead>
                                                 <tr style={{ borderBottom: '2px solid var(--bordure)', color: 'var(--gris)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Heure & Date</th>
                                                     <th style={{ padding: '10px 12px', fontWeight: 700 }}>Élève</th>
                                                     <th style={{ padding: '10px 12px', fontWeight: 700 }}>Classe</th>
-                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Mode</th>
-                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Score</th>
-                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Créneau</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Parties couvre-feu</th>
+                                                    <th style={{ padding: '10px 12px', fontWeight: 700 }}>Dernière partie</th>
                                                     <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'right' }}>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {sessionsNocturnes.map((s, idx) => {
-                                                    const dateStr = s.date_session || s.cree_le;
-                                                    const badgeInfo = formaterBadgeHoraire(dateStr, cfConfig);
-                                                    return (
-                                                        <tr key={s.session_id || s.id || idx} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 14 }}>
-                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
-                                                                {formaterDateHeureExacte(dateStr)}
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo-encre)' }}>
-                                                                {s.prenom} {s.nom}
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px', color: 'var(--gris)', fontWeight: 600 }}>
-                                                                {s.classe}
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px', color: 'var(--indigo-encre)' }}>
-                                                                {s.mode === 'defi' ? 'Défi' : 'Entraînement'}
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--action)' }}>
-                                                                {s.score != null ? `${s.score} / ${s.total_questions || 20}` : '—'}
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px' }}>
-                                                                <span style={{
-                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                    padding: '3px 9px', borderRadius: 8,
-                                                                    fontSize: 12, fontWeight: 700,
-                                                                    background: badgeInfo.bg, color: badgeInfo.color,
-                                                                }}>
-                                                                    {badgeInfo.label}
-                                                                </span>
-                                                            </td>
-                                                            <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-btn-table"
-                                                                    onClick={() => ouvrirDetailEleve(s)}
-                                                                >
-                                                                    Historique
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
+                                                {sessionsNocturnes.map((s, idx) => (
+                                                    <tr key={s.eleve_id || s.id || idx} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 14 }}>
+                                                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo-encre)' }}>
+                                                            {s.prenom} {s.nom}
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', color: 'var(--gris)', fontWeight: 600 }}>
+                                                            {s.classe}
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px' }}>
+                                                            <span style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                                padding: '3px 10px', borderRadius: 8,
+                                                                fontSize: 12, fontWeight: 700,
+                                                                background: 'rgba(239, 68, 68, 0.12)', color: 'var(--rouge)',
+                                                            }}>
+                                                                🌙 {s.parties_couvre_feu} partie{s.parties_couvre_feu > 1 ? 's' : ''}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
+                                                            {s.derniere_partie ? formaterDateHeureExacte(s.derniere_partie) : '—'}
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                                            <button
+                                                                type="button"
+                                                                className="admin-btn-table"
+                                                                onClick={() => ouvrirDetailEleve(s)}
+                                                            >
+                                                                Voir les sessions
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -2315,7 +2304,14 @@ function formaterDateHeureExacte(dateStr) {
     return `${jour}/${mois} à ${h}h${m}`;
 }
 
-function formaterBadgeHoraire(dateStr, cfConfig) {
+function formaterBadgeHoraire(dateStr, cfConfig, pendantCouvreFeu = null) {
+    if (pendantCouvreFeu === true) {
+        return {
+            label: '🌙 Couvre-feu',
+            bg: 'rgba(239, 68, 68, 0.12)',
+            color: 'var(--rouge)',
+        };
+    }
     if (!dateStr) return { label: 'Inconnu', bg: 'var(--bordure)', color: 'var(--gris)' };
     const d = new Date(dateStr);
     const totalMinutes = d.getHours() * 60 + d.getMinutes();
@@ -2325,9 +2321,11 @@ function formaterBadgeHoraire(dateStr, cfConfig) {
     const debutMin = (hDeb || 21) * 60 + (mDeb || 30);
     const finMin = (hFin || 7) * 60 + (mFin || 30);
 
-    const estEnCouvreFeu = debutMin > finMin
-        ? (totalMinutes >= debutMin || totalMinutes < finMin)
-        : (totalMinutes >= debutMin && totalMinutes < finMin);
+    const estEnCouvreFeu = pendantCouvreFeu !== null
+        ? pendantCouvreFeu
+        : (debutMin > finMin
+            ? (totalMinutes >= debutMin || totalMinutes < finMin)
+            : (totalMinutes >= debutMin && totalMinutes < finMin));
 
     if (estEnCouvreFeu) {
         return {
@@ -2337,11 +2335,12 @@ function formaterBadgeHoraire(dateStr, cfConfig) {
         };
     }
 
-    // Soirée : entre 20h00 et heure_debut
+    // Soirée : entre 20h00 et heure_debut (dynamique)
     const debutSoiree = 20 * 60;
+    const hDebutFormate = formaterHeureReprise(cfConfig?.heure_debut || '21:30');
     if (totalMinutes >= debutSoiree && totalMinutes < debutMin) {
         return {
-            label: '🟠 Soirée (20h-21h30)',
+            label: `🟠 Soirée (20h-${hDebutFormate})`,
             bg: 'rgba(245, 158, 11, 0.14)',
             color: 'var(--orange)',
         };
@@ -2356,9 +2355,17 @@ function formaterBadgeHoraire(dateStr, cfConfig) {
 
 function ModalDetailEleveActivite({ eleve, sessions = [], loading = false, cfConfig, onClose }) {
     const totalParties = sessions.length;
-    const totalSecondes = sessions.reduce((acc, s) => acc + (Number(s.duree_secondes) || 0), 0);
-    const partiesCouvreFeu = sessions.filter(s => formaterBadgeHoraire(s.date_session || s.cree_le, cfConfig).label.includes('Couvre-feu')).length;
-    const partiesSoiree = sessions.filter(s => formaterBadgeHoraire(s.date_session || s.cree_le, cfConfig).label.includes('Soirée')).length;
+    const totalSecondes = sessions.reduce((acc, s) => acc + (Number(s.duree_s ?? s.duree_secondes) || 0), 0);
+    // Utilisation directe du booléen serveur pendant_couvre_feu (calculé dans le fuseau Europe/Paris)
+    const partiesCouvreFeu = sessions.filter(s => s.pendant_couvre_feu).length;
+    const [hDeb, mDeb] = (cfConfig?.heure_debut || '21:30').split(':').map(Number);
+    const debutMin = (hDeb || 21) * 60 + (mDeb || 30);
+    const partiesSoiree = sessions.filter(s => {
+        if (s.pendant_couvre_feu) return false;
+        const d = new Date(s.joue_le || s.date_session || s.cree_le);
+        const mins = d.getHours() * 60 + d.getMinutes();
+        return mins >= 20 * 60 && mins < debutMin;
+    }).length;
 
     const min = Math.round(totalSecondes / 60);
 
@@ -2433,8 +2440,8 @@ function ModalDetailEleveActivite({ eleve, sessions = [], loading = false, cfCon
                             </thead>
                             <tbody>
                                 {sessions.map((s, i) => {
-                                    const dateStr = s.date_session || s.cree_le;
-                                    const badgeInfo = formaterBadgeHoraire(dateStr, cfConfig);
+                                    const dateStr = s.joue_le || s.date_session || s.cree_le;
+                                    const badgeInfo = formaterBadgeHoraire(dateStr, cfConfig, s.pendant_couvre_feu);
                                     return (
                                         <tr key={s.session_id || s.id || i} style={{ borderBottom: '1px solid var(--bordure)', fontSize: 13 }}>
                                             <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--indigo)' }}>
@@ -2444,10 +2451,10 @@ function ModalDetailEleveActivite({ eleve, sessions = [], loading = false, cfCon
                                                 {s.mode === 'defi' ? '🏆 Défi' : '🎯 Entraînement'}
                                             </td>
                                             <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--action)' }}>
-                                                {s.score != null ? `${s.score} / ${s.total_questions || 20}` : '—'}
+                                                {s.score != null ? `${s.score} / ${s.nb_questions || s.total_questions || 20}` : '—'}
                                             </td>
                                             <td style={{ padding: '9px 12px', color: 'var(--gris)' }}>
-                                                {s.duree_secondes ? `${Math.round(s.duree_secondes)}s` : '—'}
+                                                {(s.duree_s != null || s.duree_secondes != null) ? `${Math.round(s.duree_s ?? s.duree_secondes)}s` : '—'}
                                             </td>
                                             <td style={{ padding: '9px 12px' }}>
                                                 <span style={{

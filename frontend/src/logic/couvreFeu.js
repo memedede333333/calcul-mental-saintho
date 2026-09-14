@@ -23,7 +23,11 @@ export function lireCouvreFeuLocal() {
         const str = localStorage.getItem(STORAGE_KEY);
         if (str) {
             const parsed = JSON.parse(str);
-            return { ...DEFAUT_CONFIG, ...parsed };
+            // Retirer impérativement les champs d'état calculés (en_cours, maintenant, prochaine_bascule)
+            // pour que le repli hors-ligne recalcule toujours à partir de l'heure courante (et soigne les iPads
+            // ayant déjà stocké l'ancienne valeur).
+            const { en_cours, maintenant, prochaine_bascule, ...cleanConfig } = parsed;
+            return { ...DEFAUT_CONFIG, ...cleanConfig };
         }
     } catch {}
     return DEFAUT_CONFIG;
@@ -32,7 +36,8 @@ export function lireCouvreFeuLocal() {
 export function sauvegarderCouvreFeuLocal(data) {
     if (!data) return;
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        const { actif, heure_debut, heure_fin, message } = data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ actif, heure_debut, heure_fin, message }));
     } catch {}
 }
 
