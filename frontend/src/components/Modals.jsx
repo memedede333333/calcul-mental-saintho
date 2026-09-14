@@ -459,6 +459,7 @@ export function ModalApercuImport({
     const ignorees = Number(apercu.ignorees || 0);
     const dontReactivations = Number(apercu.dont_reactivations || 0);
     const absents = apercu.actifs_absents_du_fichier?.length || 0;
+    const rolesIgnores = Number(apercu.roles_ignores || 0);
     const totalAImporter = creations + misesAJour;
 
     // Indexer les lignes rejetées pour un affichage précis
@@ -589,6 +590,20 @@ export function ModalApercuImport({
                         <span style={{ font: '600 13px var(--texte)', color: 'var(--gris)' }}>absents du fichier</span>
                     </div>
                 </div>
+
+                {type === 'profs' && rolesIgnores > 0 && (
+                    <div style={{
+                        padding: '12px 16px', borderRadius: '14px', background: 'var(--ivoire)',
+                        border: '1px solid var(--bordure)', font: '600 13px var(--texte)', color: 'var(--indigo)',
+                        display: 'flex', alignItems: 'center', gap: '10px'
+                    }}>
+                        <span style={{ fontSize: '18px' }}>ℹ️</span>
+                        <span>
+                            <b>{rolesIgnores} ligne{rolesIgnores > 1 ? 's' : ''}</b> demandai{rolesIgnores > 1 ? 'ent' : 't'} un rôle spécifique : <b>ignoré</b>.
+                            La gestion des rôles administrateurs reste nominative via le bouton Modifier.
+                        </span>
+                    </div>
+                )}
 
                 {/* Tableau de prévisualisation */}
                 <div

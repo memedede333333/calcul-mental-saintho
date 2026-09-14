@@ -57,6 +57,53 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Migration 43 : un import d'enseignants ne change jamais un rôle
+
+**Fait** — `supabase/migrations/20260914080000_import_profs_roles.sql`, et les
+cas 208 à 211. Le cas 208 passe de l'étiquette « A TRANCHER » à un test
+d'intégrité en bonne et due forme. 211 cas verts, zéro ECHEC, sur un PostgreSQL
+vierge avec les 43 migrations rejouées depuis zéro.
+
+Ce que fait la migration : une **création** vaut `prof` ; une **mise à jour** ou
+une **réactivation** garde le rôle en base, quoi que dise le fichier — la
+colonne `role` a tout simplement disparu du `update`. Un rôle absent, vide, ou
+inconnu est traité comme une absence d'instruction. Le verrou « dernier
+administrateur » de la migration 42 a été retiré dans le même geste : il ne
+protégeait qu'une seule personne, et il n'a plus rien à protéger.
+
+**Décidé (1)** — La fermeture vaut **dans les deux sens**. Aymeri a tranché sur
+la rétrogradation ; j'ai étendu à la promotion, et voici la raison : un fichier
+Excel qui rétrograde un administrateur en poste est un défaut, un fichier Excel
+qui en **fabrique** est pire. La règle énoncée — « la gestion des rôles
+administrateurs reste un acte nominatif, dans l'écran de modification dédié » —
+ne distingue pas les deux sens, et un import qui crée des droits est le chemin
+le plus court vers un administrateur que personne n'a nommé.
+✅ *à confirmer par Aymeri — si la promotion par fichier doit rester possible,
+c'est deux lignes à retirer dans `valider_lignes_import_profs`*
+
+**Décidé (2)** — Ignorer une instruction sans le dire serait le même défaut sous
+une autre forme. `roles_ignores` compte les lignes dont le rôle demandé n'a pas
+été appliqué, `lignes_role_ignore` les nomme une par une — à l'aperçu **comme**
+au retour de l'import. Le cas 211 vérifie que l'aperçu annonce exactement ce que
+l'import fera : les deux passent par `valider_lignes_import_profs`, et un aperçu
+qui ment est pire que pas d'aperçu du tout.
+
+**Constaté** — Le cas 207 a changé de raison sans changer de verdict. Il
+vérifiait un verrou ; il vérifie maintenant une garantie — il reste toujours au
+moins un administrateur — qui tient désormais par construction. Un test qui
+survit au mécanisme qu'il testait est un bon test : c'est le résultat qui
+compte, pas le moyen.
+
+**Ensuite** — Antigravity : `run.sh` (211 cas attendus), appliquer la
+migration 43 sur Supabase, régénérer `database.ts`, commiter. Et **côté écran**,
+un point à ne pas laisser tomber : l'aperçu d'import des enseignants renvoie
+maintenant `roles_ignores` et `lignes_role_ignore`, que personne n'affiche. Un
+administrateur qui importe un fichier avec une colonne « rôle » doit lire
+« 3 ligne(s) demandaient un rôle : ignoré, la gestion des rôles se fait dans
+Modifier ». L'information existe côté serveur ; tant qu'elle n'est pas à
+l'écran, elle n'existe pas.
+
+
 ## 2026-09-14 — Les migrations 39 à 42 avaient été livrées sans un seul cas de test
 
 **Fait** — Cas 194 à 208 dans `supabase/tests/01_scenario.sql`, et un correctif

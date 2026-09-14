@@ -11,9 +11,10 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 208 cas, numérotés jusqu'à 208. Les cas 194 à 208
--- couvrent les migrations 39 à 42 (réveil quotidien, modifier_prof,
--- statut de connexion et import des enseignants). Le 189 a été retiré
+-- COMPTE EXACT : 211 cas, numérotés jusqu'à 211. Les cas 194 à 211
+-- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
+-- statut de connexion, import des enseignants, et la règle « un import
+-- ne change jamais un rôle »). Le 189 a été retiré
 -- (remplacé par le 192, qui ne vaut qu'après la migration 38) ; les cas
 -- 29 à 31 l'ont été depuis longtemps ; 38b-38d et 180b complètent leurs aînés. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
@@ -2260,9 +2261,14 @@ do $$ begin
   raise notice 'ECHEC : un prof simple importe des enseignants';
 exception when others then raise notice 'OK : import refuse (%)', sqlerrm; end $$;
 
-\echo '=== 207. L import ne retrograde JAMAIS le dernier administrateur actif ==='
--- Sans ce verrou, un fichier suffirait a enfermer tout le monde dehors
--- et il faudrait repasser par la console Supabase.
+\echo '=== 207. Il reste toujours au moins un administrateur apres un import ==='
+-- La migration 42 protegeait le DERNIER administrateur par un verrou
+-- dans `importer_profs`. La migration 43 a supprime ce verrou — non pas
+-- pour affaiblir la garantie, mais parce qu il n a plus rien a proteger :
+-- l import ne touche plus du tout a la colonne `role`. Ce cas reste,
+-- parce que c est la garantie qui compte, quel que soit le mecanisme :
+-- sans un seul administrateur, tout le monde est enferme dehors et il
+-- faut repasser par la console Supabase.
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'PROF', false);
 select modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
@@ -2277,17 +2283,14 @@ select case when (select role from profs where email = 'prof.demo@demo.saintho.f
             else 'ECHEC : plus aucun administrateur, personne ne peut plus rentrer'
        end as verdict;
 
-\echo '=== 208. A TRANCHER : un fichier sans colonne « role » retrograde les autres admins ==='
--- Constate par execution le 14 septembre, sur la migration 42.
--- `valider_lignes_import_profs` remplace un role ABSENT par 'prof'. Un
--- export d annuaire (email, nom, prenom) — le format le plus probable —
--- vaut donc « retrograde tout le monde ». Le verrou du cas 207 sauve le
--- DERNIER admin, jamais les autres : l administrateur qui lance l import
--- se retrograde lui-meme, et le retour dit « ok » sans un mot.
+\echo '=== 208. INTEGRITE : un fichier sans colonne role ne retrograde personne ==='
+-- Migration 43. Avant elle, `valider_lignes_import_profs` remplacait un
+-- role ABSENT par 'prof' : un export d annuaire (email, nom, prenom) --
+-- le format le plus probable -- valait « retrograde tout le monde », et
+-- le verrou ne sauvait que le DERNIER administrateur. Mesure en base le
+-- 14 septembre : deux administrateurs avant l import, UN apres, et
+-- c etait celui qui lancait l import qui perdait ses droits.
 -- Un role absent n est pas un role : c est l absence d instruction.
--- Tant que ce n est pas tranche, ce cas VERIFIE la seule garantie qui
--- tienne aujourd hui — il reste toujours au moins un administrateur —
--- et AFFICHE la retrogradation constatee sans crier a la regression.
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'PROF', false);
 select modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
@@ -2295,18 +2298,73 @@ select modifier_prof((select id from profs where email = 'cyrille@demo.saintho.f
 select importer_profs('[
   {"ligne":"2","email":"prof.demo@demo.saintho.fr","nom":"M. Demonstration"},
   {"ligne":"3","email":"cyrille@demo.saintho.fr","nom":"Cyrille Moreau"}
-]'::jsonb)->>'ok' as import_sans_colonne_role;
+]'::jsonb) as sans_role \gset
 reset role;
-select case when (select count(*) from profs where role = 'admin' and actif) = 0
-            then 'ECHEC : plus aucun administrateur apres un import'
-            when (select count(*) from profs where role = 'admin' and actif) = 2
+select case when (select role from profs where email = 'prof.demo@demo.saintho.fr') = 'admin'
+             and (select role from profs where email = 'cyrille@demo.saintho.fr') = 'admin'
+             and (:'sans_role'::jsonb->>'roles_ignores')::int = 0
             then 'OK : les deux administrateurs ont garde leur role'
-            else 'A TRANCHER : il reste '
-                 || (select count(*) from profs where role = 'admin' and actif)
-                 || ' administrateur sur 2 — un fichier sans colonne role retrograde'
-                 || ' celui qui importe. Voir ETAT.md, migration 43 proposee.'
+            else 'ECHEC : un fichier sans colonne role a retrograde un administrateur'
        end as verdict;
 
--- On rend la base a son etat courant : deux administrateurs actifs.
+\echo '=== 209. Un role EXPLICITE ne retrograde pas davantage — et c est dit ==='
+-- La gestion des roles reste un acte nominatif, dans l ecran Modifier.
+-- Un fichier Excel qui retrograde un administrateur en poste est un
+-- defaut ; un fichier Excel qui en FABRIQUE est pire. Les deux sens
+-- sont fermes, et aucun des deux n est silencieux.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select importer_profs('[
+  {"ligne":"2","email":"cyrille@demo.saintho.fr","nom":"Cyrille Moreau","role":"prof"},
+  {"ligne":"3","email":"mme.calcul@demo.saintho.fr","nom":"Mme Calcul","role":"admin"}
+]'::jsonb) as roles_explicites \gset
 reset role;
-update profs set role = 'admin' where email in ('prof.demo@demo.saintho.fr', 'cyrille@demo.saintho.fr');
+select case when (select role from profs where email = 'cyrille@demo.saintho.fr') = 'admin'
+             and (select role from profs where email = 'mme.calcul@demo.saintho.fr') = 'prof'
+             and (:'roles_explicites'::jsonb->>'roles_ignores')::int = 2
+             and jsonb_array_length(:'roles_explicites'::jsonb->'lignes_role_ignore') = 2
+            then 'OK : ni retrogradation ni promotion, et les 2 lignes sont nommees'
+            else 'ECHEC : un fichier a change un role -> ' || :'roles_explicites'
+       end as verdict;
+
+\echo '=== 210. Une CREATION vaut prof, meme si le fichier reclame admin ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select importer_profs('[
+  {"ligne":"2","email":"ambitieux.demo@demo.saintho.fr","nom":"M. Ambitieux","role":"admin"}
+]'::jsonb) as creation \gset
+reset role;
+select case when (select role from profs where email = 'ambitieux.demo@demo.saintho.fr') = 'prof'
+             and (:'creation'::jsonb->>'crees')::int = 1
+             and (:'creation'::jsonb->>'roles_ignores')::int = 1
+            then 'OK : cree comme prof, la demande d admin est signalee'
+            else 'ECHEC : un fichier a fabrique un administrateur' end as verdict;
+
+\echo '=== 211. L apercu annonce EXACTEMENT ce que l import fera des roles ==='
+-- Deux copies des memes regles, ce sont deux copies qui divergent au
+-- premier correctif — et un apercu qui ment est pire que pas d apercu
+-- du tout (migration 24). L apercu et l import partagent
+-- `valider_lignes_import_profs` : ce cas verifie qu ils le partagent
+-- VRAIMENT, en comparant leurs deux comptes sur le meme fichier.
+reset role;
+select count(*) as avant_apercu from profs \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select apercu_import_profs('[
+  {"ligne":"2","email":"cyrille@demo.saintho.fr","nom":"Cyrille Moreau","role":"prof"},
+  {"ligne":"3","email":"mme.calcul@demo.saintho.fr","nom":"Mme Calcul","role":"admin"},
+  {"ligne":"4","email":"encore.demo@demo.saintho.fr","nom":"Mme Encore","role":"admin"}
+]'::jsonb) as ap \gset
+reset role;
+select case when (:'ap'::jsonb->>'roles_ignores')::int = 3
+             and (select count(*) from profs) = :avant_apercu
+             and ((:'ap'::jsonb->>'creations')::int
+                + (:'ap'::jsonb->>'mises_a_jour')::int
+                + (:'ap'::jsonb->>'ignorees')::int) = (:'ap'::jsonb->>'lignes_lues')::int
+            then 'OK : 3 roles signales avant d ecrire, et rien n a ete ecrit'
+            else 'ECHEC : l apercu des roles ne dit pas ce que l import fera'
+       end as verdict;
+
+-- Plus rien a remettre en etat : depuis la migration 43, aucun import
+-- ne deplace un role. C'est precisement ce que les cas 208 a 211 verifient.
+reset role;

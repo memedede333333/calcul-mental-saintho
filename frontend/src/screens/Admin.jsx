@@ -1630,6 +1630,11 @@ function ModalImportProfs({ onClose, onSuccess }) {
                                         {resultat.crees ?? 0} créé{(resultat.crees ?? 0) > 1 ? 's' : ''}, {resultat.mis_a_jour ?? 0} mis à jour.
                                         {(resultat.rattaches ?? 0) > 0 && ` (${resultat.rattaches} rattachés immédiatement)`}
                                     </div>
+                                    {(resultat.roles_ignores ?? 0) > 0 && (
+                                        <div style={{ color: 'var(--gris)', fontSize: 12.5, marginTop: 4, fontStyle: 'italic' }}>
+                                            ℹ️ {resultat.roles_ignores} rôle{resultat.roles_ignores > 1 ? 's' : ''} demandé{resultat.roles_ignores > 1 ? 's' : ''} ignoré{resultat.roles_ignores > 1 ? 's' : ''} (gestion nominative des rôles).
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

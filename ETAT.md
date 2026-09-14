@@ -4,8 +4,13 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **42 migrations appliquées, 208 cas
+> Dernière mise à jour : **14 septembre 2026** — **43 migrations, 211 cas
 > de test verts**.
+> **Migration 43 : un import d'enseignants ne change JAMAIS un rôle.** Une création
+> vaut `prof`, une mise à jour garde le rôle en base, et les lignes dont le fichier
+> demandait autre chose sont comptées (`roles_ignores`) et listées
+> (`lignes_role_ignore`), à l'aperçu comme au retour de l'import. L'import CSV des
+> enseignants redevient utilisable.
 > **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
 > deux constats : `run.sh` ne démarrait plus depuis la migration 42 (l'`auth.users`
 > simulée du prélude n'a pas `last_sign_in_at`, la migration ne se créait pas et le
@@ -392,6 +397,32 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Un import d'enseignants ne change jamais un rôle.**
+*(14 septembre 2026, migration 43 — tranché par Aymeri.)*
+`valider_lignes_import_profs` remplaçait un rôle **absent** par `'prof'`. Un
+export d'annuaire Charlemagne (`email, nom, prénom`) valait donc « rétrograde
+tout le monde », et le verrou ne sauvait que le **dernier** administrateur.
+Mesuré en base : deux administrateurs avant l'import, **un** après — et c'est
+**celui qui lance l'import** qui perdait ses droits, avec un retour
+`"ok": true` ne mentionnant aucun changement de rôle.
+
+Deux raisons, et la seconde est la plus forte. D'abord, **un rôle absent n'est
+pas un rôle** : c'est l'absence d'instruction, exactement comme « en cours de
+chargement » n'est pas « zéro partie jouée » (lot 16 bis). Ensuite, **un import
+CSV est un outil de synchronisation en masse, pas un acte d'autorité** : nommer
+ou révoquer un administrateur est nominatif, et se fait dans l'écran Modifier —
+la même règle que le `!estMoi` qui interdit déjà à un administrateur de se
+modifier lui-même.
+
+La fermeture vaut **dans les deux sens**. Un fichier Excel qui rétrograde un
+administrateur en poste est un défaut ; un fichier Excel qui en **fabrique**
+est pire. Une ligne `"role":"admin"` ne nomme donc personne.
+
+Et rien de tout cela n'est silencieux : `roles_ignores` compte les lignes dont
+le rôle demandé n'a pas été appliqué, `lignes_role_ignore` les nomme une par
+une, à l'aperçu **comme** au retour de l'import. Ignorer une instruction sans
+le dire serait le même défaut sous une autre forme.
 
 **Deux colonnes qui s'appellent pareil et mesurent deux choses.**
 *(13 septembre 2026 — noté, pas corrigé.)*
@@ -1001,20 +1032,14 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     réservé à l'administrateur, dernier admin protégé). **Correctif de
     prélude au passage** : `run.sh` ne démarrait plus depuis la migration 42.
 
-⬜ **À TRANCHER — l'import d'enseignants rétrograde les administrateurs.**
-   *(14 septembre, constaté par exécution, cas 208.)*
-   `valider_lignes_import_profs` remplace un rôle **absent** par `'prof'`.
-   Un export d'annuaire (`email, nom, prénom`) — le format le plus probable —
-   vaut donc « rétrograde tout le monde ». Le verrou ne sauve que le
-   **dernier** administrateur : celui qui lance l'import se rétrograde
-   lui-même, et le retour dit `"ok": true` sans un mot. Vérifié en base : deux
-   administrateurs avant, un après.
-   Proposition : un rôle absent n'est pas un rôle, c'est l'absence
-   d'instruction — sur une mise à jour, une ligne sans clé `role` garde le
-   rôle existant ; seul un `"role":"prof"` explicite rétrograde. C'est la
-   règle déjà écrite ici pour le chargement (« une réponse absente n'est pas
-   une valeur », lot 16 bis). Migration 43 à écrire une fois tranché.
-   **En attendant : ne pas se servir de l'import CSV des enseignants.**
+23. ✅ **Migration 43 — un import ne change jamais un rôle** — 14 septembre.
+    Création : `prof`. Mise à jour ou réactivation : le rôle en base est
+    conservé, quoi que dise le fichier. Les lignes dont le fichier demandait
+    autre chose sont comptées et listées, à l'aperçu comme au retour — un
+    import qui ignore une instruction ne doit pas le faire en silence. Le
+    verrou « dernier administrateur » de la migration 42 a disparu avec le
+    défaut : il ne protégeait qu'une personne, et il n'a plus rien à
+    protéger. Cas 208 à 211 ajoutés, 211 cas verts.
 
 ### Pour l'administrateur — indispensable avant la rentrée
 
@@ -1125,7 +1150,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (208 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (211 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 
