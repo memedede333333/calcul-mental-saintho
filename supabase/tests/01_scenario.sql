@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 225 cas, numérotés jusqu'à 225. Les cas 194 à 211
+-- COMPTE EXACT : 232 cas, numérotés jusqu'à 232. Les cas 194 à 211
 -- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
 -- statut de connexion, import des enseignants, et la règle « un import
 -- ne change jamais un rôle ») ; les cas 212 à 224 la migration 44
@@ -2606,3 +2606,145 @@ select case when (select count(*) from activite_profs()) >= 2
             else 'ECHEC : activite_profs vide pour l administrateur' end as verdict;
 reset role;
 
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 46 — le temps de reponse, et la fiche d'un eleve
+-- ---------------------------------------------------------------------
+
+\echo '=== 226. Le temps de reponse s ACCUMULE au lieu de s ecraser ==='
+-- `dernier_temps_ms` ne repondait qu a « il a mis combien la derniere
+-- fois ». La somme et le compte repondent a « il met combien,
+-- d habitude » — la seule des deux questions qui interesse un prof.
+reset role;
+select id as m226 from eleves where email = 'bob.martin@demo.saintho.fr' \gset
+delete from maitrise where eleve_id = :'m226'::uuid and fait = '6_7';
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select enregistrer_session(p_mode=>'libre', p_tables=>'{6,7}'::smallint[],
+  p_nb_questions=>1, p_score=>1, p_duree_s=>5,
+  p_faits=>'[{"fait":"6_7","juste":true,"premier":true,"temps_ms":2000}]'::jsonb) is not null as r1;
+select enregistrer_session(p_mode=>'libre', p_tables=>'{6,7}'::smallint[],
+  p_nb_questions=>1, p_score=>1, p_duree_s=>5,
+  p_faits=>'[{"fait":"6_7","juste":true,"premier":true,"temps_ms":4000}]'::jsonb) is not null as r2;
+select enregistrer_session(p_mode=>'libre', p_tables=>'{6,7}'::smallint[],
+  p_nb_questions=>1, p_score=>1, p_duree_s=>5,
+  p_faits=>'[{"fait":"6_7","juste":true,"premier":true,"temps_ms":3000}]'::jsonb) is not null as r3;
+reset role;
+select case when (select nb_temps from maitrise where eleve_id = :'m226'::uuid and fait = '6_7') = 3
+             and (select somme_temps_ms from maitrise where eleve_id = :'m226'::uuid and fait = '6_7') = 9000
+             and (select somme_temps_ms / nb_temps from maitrise
+                   where eleve_id = :'m226'::uuid and fait = '6_7') = 3000
+            then 'OK : 2000 + 4000 + 3000 donnent une moyenne de 3000 ms'
+            else 'ECHEC : le temps de reponse ne s accumule pas' end as verdict;
+
+\echo '=== 227. Une reponse SANS temps est une vue, pas une mesure ==='
+-- Sinon un `null` compterait pour zero milliseconde et rendrait tous les
+-- eleves prodigieusement rapides. Le denominateur ne bouge que quand on
+-- a vraiment mesure quelque chose.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select enregistrer_session(p_mode=>'libre', p_tables=>'{6,7}'::smallint[],
+  p_nb_questions=>1, p_score=>0, p_duree_s=>5,
+  p_faits=>'[{"fait":"6_7","juste":false,"premier":true}]'::jsonb) is not null as sans_temps;
+reset role;
+select case when (select nb_vues from maitrise where eleve_id = :'m226'::uuid and fait = '6_7') = 4
+             and (select nb_temps from maitrise where eleve_id = :'m226'::uuid and fait = '6_7') = 3
+             and (select somme_temps_ms / nb_temps from maitrise
+                   where eleve_id = :'m226'::uuid and fait = '6_7') = 3000
+            then 'OK : 4 vues, 3 mesures, la moyenne ne bouge pas'
+            else 'ECHEC : une reponse sans temps a fausse la moyenne' end as verdict;
+
+\echo '=== 228. Un DEFI alimente la meme moyenne que l entrainement ==='
+-- Le piege de la migration 26 : `p_faits` avait ete ajoute a
+-- `enregistrer_session` sans etre relaye par `terminer_defi`. Verifie
+-- en base plutot que suppose : `terminer_defi` DELEGUE a
+-- `enregistrer_session`, il n en tient pas une copie — et
+-- `enregistrer_session` est la seule fonction qui ecrive dans
+-- `maitrise`. Ce cas le prouve par le resultat.
+reset role;
+delete from maitrise where eleve_id = :'m226'::uuid and fait = '9_9';
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{9}'::smallint[], 5, null, '6A') as d228 \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select (rejoindre_defi((:'d228'::jsonb)->>'code')->>'ok')::boolean as rejoint;
+select terminer_defi(
+         p_defi_id => ((:'d228'::jsonb)->>'defi_id')::uuid,
+         p_score   => 1, p_temps_s => 8,
+         p_faits   => '[{"fait":"9_9","juste":true,"premier":true,"temps_ms":1500}]'::jsonb
+       ) is not null as defi_termine;
+reset role;
+select case when (select nb_temps from maitrise where eleve_id = :'m226'::uuid and fait = '9_9') = 1
+             and (select somme_temps_ms from maitrise
+                   where eleve_id = :'m226'::uuid and fait = '9_9') = 1500
+            then 'OK : le temps d une partie de defi entre dans la moyenne'
+            else 'ECHEC : les defis ne nourrissent pas le temps de reponse' end as verdict;
+
+\echo '=== 229. La fiche : un prof voit le travail, un admin voit en plus les horaires ==='
+-- Meme fonction, meme ecran, un bloc en moins. `portee` le dit
+-- explicitement pour que React n ait rien a deviner : un bloc absent ne
+-- se distingue pas d un bloc vide.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+select fiche_eleve(:'m226'::uuid, 30) as f_prof \gset
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select fiche_eleve(:'m226'::uuid, 30) as f_admin \gset
+reset role;
+select case when :'f_prof'::jsonb->>'portee' = 'prof'
+             and :'f_prof'::jsonb->'horaires' = 'null'::jsonb
+             and :'f_admin'::jsonb->>'portee' = 'admin'
+             and :'f_admin'::jsonb->'horaires'->'par_heure' is not null
+             and (:'f_admin'::jsonb->'horaires'->>'parties_couvre_feu') is not null
+            then 'OK : les horaires nominatifs restent a l administrateur'
+            else 'ECHEC : un prof simple lit les heures de connexion' end as verdict;
+
+\echo '=== 230. Une moyenne sans mesure vaut null, jamais zero ==='
+-- Un eleve qui n a jamais joue afficherait « 0 ms », c est-a-dire
+-- « infiniment rapide ». Une absence de donnee n est pas une valeur.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select (ajouter_eleve('neuf.demo@demo.saintho.fr','Neuf','Nina','6A')
+        ->>'eleve_id')::uuid as m230 \gset
+select fiche_eleve(:'m230'::uuid, 30) as f_neuf \gset
+select case when (:'f_neuf'::jsonb->'rapidite'->'temps_moyen_reponse_ms') = 'null'::jsonb
+             and (:'f_neuf'::jsonb->'rapidite'->>'nb_reponses_mesurees')::int = 0
+             and (:'f_neuf'::jsonb->'volume'->'duree_moyenne_partie_s') = 'null'::jsonb
+             and (:'f_neuf'::jsonb->'volume'->>'nb_parties')::int = 0
+            then 'OK : aucune mesure donne null, et zero partie donne zero'
+            else 'ECHEC : un eleve sans partie passe pour infiniment rapide'
+       end as verdict;
+
+\echo '=== 231. La grille compte les CASES AFFICHEES, pas les entrees ==='
+-- `maitrise` est indexee par `min_max` : 4x7 et 7x4 sont la meme
+-- entree. Au plafond 10, la grille montre 100 cases pour au plus 55
+-- entrees — compter les entrees divisait le score de chaque eleve par
+-- deux, sans que rien ne le signale.
+select case when (:'f_neuf'::jsonb->'maitrise'->>'cases_affichees')::int
+             = (select plafond_tables::int * plafond_tables::int
+                  from eleves where id = :'m230'::uuid)
+             and (:'f_neuf'::jsonb->'maitrise'->>'jamais_vues')::int
+               = (:'f_neuf'::jsonb->'maitrise'->>'cases_affichees')::int
+            then 'OK : la grille annonce ce que l eleve voit quand il l ouvre'
+            else 'ECHEC : le compte de la grille ne correspond pas a l ecran'
+       end as verdict;
+
+\echo '=== 232. Un ELEVE ne lit aucune fiche, pas meme la sienne ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$ declare v uuid; begin
+  select id into v from eleves where email = 'bob.martin@demo.saintho.fr';
+  perform fiche_eleve(v, 30);
+  raise notice 'ECHEC : un eleve lit sa propre fiche de suivi';
+exception when others then raise notice 'OK : fiche refusee (%)', sqlerrm; end $$;
+do $$ declare v uuid; begin
+  select id into v from eleves where email = 'bob.martin@demo.saintho.fr';
+  perform count(*) from fiche_eleve_faits(v);
+  raise notice 'ECHEC : un eleve lit le detail de ses faits';
+exception when others then raise notice 'OK : detail refuse (%)', sqlerrm; end $$;
+do $$ declare v uuid; begin
+  select id into v from eleves where email = 'bob.martin@demo.saintho.fr';
+  perform count(*) from fiche_eleve_rythme(v, 30);
+  raise notice 'ECHEC : un eleve lit sa courbe';
+exception when others then raise notice 'OK : courbe refusee (%)', sqlerrm; end $$;
+reset role;

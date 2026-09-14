@@ -10,6 +10,7 @@ import {
 } from '../api';
 import { IconMaGrille, IconSprint } from '../components/Icons';
 import { trierTablesFragiles } from '../logic/classeStats';
+import ModalFicheEleve from '../components/ModalFicheEleve';
 
 function formaterTempsPartie(secondes) {
     if (!secondes || secondes <= 0) return '0 min';
@@ -61,6 +62,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
     const [synthese, setSynthese] = useState(null);
     const [activiteEleves, setActiviteEleves] = useState([]);
     const [loadingActivite, setLoadingActivite] = useState(false);
+    const [eleveFicheId, setEleveFicheId] = useState(null);
 
     // 1. Charger la liste des classes au montage
     useEffect(() => {
@@ -669,6 +671,7 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                                     <th style={{ padding: '10px 12px', fontWeight: 700 }}>Parties</th>
                                     <th style={{ padding: '10px 12px', fontWeight: 700 }}>Jours actifs</th>
                                     <th style={{ padding: '10px 12px', fontWeight: 700 }}>Dernière activité</th>
+                                    <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'right' }}>Fiche</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -698,6 +701,25 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                                                 <td style={{ padding: '12px 12px', color: 'var(--gris)', fontSize: 13 }}>
                                                     {formatDateRelative(e.derniere_activite)}
                                                 </td>
+                                                <td style={{ padding: '12px 12px', textAlign: 'right' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEleveFicheId(e.eleve_id)}
+                                                        style={{
+                                                            border: '1px solid var(--bordure)',
+                                                            background: 'var(--ciel-pale)',
+                                                            color: 'var(--indigo)',
+                                                            padding: '5px 12px',
+                                                            borderRadius: 'var(--r-bouton)',
+                                                            fontWeight: 700,
+                                                            fontSize: 13,
+                                                            cursor: 'pointer',
+                                                            fontFamily: 'var(--texte)',
+                                                        }}
+                                                    >
+                                                        📊 Fiche
+                                                    </button>
+                                                </td>
                                             </tr>
                                         );
                                     })
@@ -726,6 +748,15 @@ export default function MaClasse({ onBack, onLancerDefi }) {
                 </div>
             )}
                 </>
+            )}
+
+            {/* Modale Fiche Élève (Lot A) */}
+            {eleveFicheId && (
+                <ModalFicheEleve
+                    eleveId={eleveFicheId}
+                    initialJours={periodeJours === 1 ? 7 : periodeJours}
+                    onClose={() => setEleveFicheId(null)}
+                />
             )}
         </div>
     );

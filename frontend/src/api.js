@@ -793,6 +793,21 @@ export async function activiteProfs() {
     return rpc('activite_profs');
 }
 
+/** Fiche complète d'un élève : rapidité mentale, maîtrise, volume, défis, horaires (si admin). */
+export async function ficheEleve(eleveId, jours = 30) {
+    return rpc('fiche_eleve', { p_eleve_id: eleveId, p_jours: jours });
+}
+
+/** Évolution du rythme jour par jour (cadence secondes/question, volume) pour courbe de progression. */
+export async function ficheEleveRythme(eleveId, jours = 30) {
+    return rpc('fiche_eleve_rythme', { p_eleve_id: eleveId, p_jours: jours });
+}
+
+/** Détail de toutes les multiplications rencontrées : niveau, taux de réussite, temps de réponse moyen. */
+export async function ficheEleveFaits(eleveId) {
+    return rpc('fiche_eleve_faits', { p_eleve_id: eleveId });
+}
+
 /* ===================================================================
  * Regroupement par défaut, pour les écrans qui préfèrent `api.xxx()`
  * ================================================================= */
@@ -814,6 +829,7 @@ export const api = {
     // enseignant
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     activiteSynthese, activiteClasse,
+    ficheEleve, ficheEleveRythme, ficheEleveFaits,
     // administration
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, ajouterEleve, modifierEleve, reparerRattachements,
     desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,

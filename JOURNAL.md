@@ -57,6 +57,74 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Lot A : Fiche Élève intégrée (micro view) et garde-fous validés
+
+**Fait**
+- `ModalFicheEleve.jsx` livré : rapidité mentale pure (`temps_moyen_reponse_ms` issu de `maitrise`), cadence globale de partie (`secondes_par_question`), 4 KPIs de volume, progression jour par jour (`fiche_eleve_rythme`), détail des faits (`fiche_eleve_faits`) avec filtres et dénominateur systématique, défis et badges.
+- Bloc `horaires` (dernière connexion, parties couvre-feu, distribution horaire 24h) STRICTEMENT réservé aux administrateurs (`portee === 'admin'`).
+- Intégration dans `MaClasse.jsx` (colonne et bouton Fiche par élève) et dans `Admin.jsx` (tableau des élèves et tableau de surveillance nocturne).
+- API client (`api.js`) enrichie : `ficheEleve`, `ficheEleveRythme`, `ficheEleveFaits`.
+- Types `database.ts` régénérés pour `maitrise` (`somme_temps_ms`, `nb_temps`) et les 3 RPC.
+- Garde-fous 100% verts : ESLint (0 erreur/warning), build Vite réussi, `check-tokens.mjs` (88 tokens actifs), `check-api.mjs` (52 RPCs appelées, 64 exposées, 0 couture rompue), et `run.sh` (232 cas SQL verts, 0 échec).
+
+**Décidé**
+- Dénominateur systématique sur chaque moyenne : affichage de `X,X s sur N réponses` (ou `— (aucune mesure)` si vide, jamais 0).
+- Distinguer expressément le calcul mental pur (`temps_moyen_reponse_ms`) de la cadence de jeu (`secondes_par_question`).
+
+**Ensuite**
+- Poser la migration 46 sur Supabase distant via l'éditeur SQL (ou connexion admin).
+- Conception du Lot B (comparateur de classe et vue macro).
+
+## 2026-09-14 — Migration 46 : le temps de réponse, et la fiche d'un élève (lot A)
+
+**Fait** — `supabase/migrations/20260914150000_temps_reponse_et_fiche_eleve.sql`
+et les cas 226 à 232. **232 cas verts**, zéro ECHEC, sur un PostgreSQL vierge
+avec les 46 migrations rejouées depuis zéro — y compris la 45 d'Antigravity et
+son cas 225. Pas encore appliquée.
+
+Deux colonnes sur `maitrise` (`somme_temps_ms`, `nb_temps`), `enregistrer_session`
+qui accumule au lieu d'écraser, et trois fonctions : `fiche_eleve` (un seul appel,
+`portee` prof/admin), `fiche_eleve_rythme` (un point par jour joué) et
+`fiche_eleve_faits` (une ligne par multiplication rencontrée).
+
+**Constaté — le piège de la migration 26 ne pouvait pas se reproduire, et je l'ai
+vérifié au lieu de le supposer.** Interrogation de `pg_proc.prosrc` : une seule
+fonction écrit dans `maitrise`, `enregistrer_session`. Et `terminer_defi` la
+**délègue** — il n'en tient pas une copie. Une seule insertion à modifier, les
+défis compris. Le cas 228 le prouve par le résultat plutôt que par la lecture.
+
+**Décidé (1)** — La moyenne plutôt que l'historique. Une table réponse par
+réponse aurait donné la même moyenne pour ~2 millions de lignes par an, sur une
+offre gratuite plafonnée à 500 Mo, et de la donnée fine sur des mineurs à
+justifier. Deux colonnes donnent le même résultat à volume constant. L'historique
+reste possible le jour où l'on voudra rejouer une partie question par question.
+
+**Décidé (2)** — Le texte de `enregistrer_session` a été repris **de la base**
+(`pg_get_functiondef`) et la modification insérée dedans, jamais un corps
+reconstitué de mémoire. C'est la leçon de la migration 22, où une réécriture de
+mémoire avait fait disparaître une branche entière.
+
+**Décidé (3)** — Amorçage assumé : `dernier_temps_ms` vaut une mesure pour les
+lignes existantes. C'est un seul échantillon par fait, et c'est écrit dans la
+migration. Sans lui, tous les élèves auraient une moyenne vide le jour de la mise
+en service, et personne n'aurait su si l'outil était cassé ou la base neuve.
+
+**Constaté (2) — deux mesures de rapidité qu'il ne faut pas confondre.** Le temps
+de réponse vient de `maitrise`, mesuré question par question par le client : c'est
+le calcul mental. Les secondes par question viennent des parties, durée divisée
+par nombre de questions : elles incluent la lecture et la frappe. Les deux sont
+justes et ne donnent pas le même chiffre — elles portent donc des noms différents
+jusque dans le SQL. Seule la seconde a un historique, et c'est elle qui répond à
+« est-ce qu'il progresse ».
+
+**Ensuite** — Antigravity : `run.sh` (232 cas attendus), appliquer la migration 46,
+régénérer `database.ts`, brancher `ficheEleve`, `ficheEleveRythme` et
+`ficheEleveFaits` dans `api.js`, puis l'écran de fiche. Le bloc horaires ne se
+dessine QUE si `portee === 'admin'` — ne pas le déduire d'un autre signal.
+Ensuite seulement, le lot B (le comparateur), à concevoir une fois la fiche vue
+en vrai.
+
+
 ## 2026-09-14 — Écran blanc en production : 225 cas verts et l'application ne démarrait pas
 
 **Fait** — Import `branding` restauré dans `App.jsx`, `RootErrorBoundary` ajouté

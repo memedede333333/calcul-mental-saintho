@@ -10,6 +10,7 @@ import {
     ModalApercuImport,
     ModalFrame,
 } from '../components/Modals';
+import ModalFicheEleve from '../components/ModalFicheEleve';
 import { formaterHeureReprise } from '../logic/couvreFeu.js';
 
 /**
@@ -76,6 +77,7 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [showAjoutProfModal, setShowAjoutProfModal] = useState(false);
     const [showImportProfModal, setShowImportProfModal] = useState(false);
     const [modalModifierProf, setModalModifierProf] = useState(null);
+    const [eleveFicheId, setEleveFicheId] = useState(null);
 
     // État d'action en cours
     const [actionEnCours, setActionEnCours] = useState(false);
@@ -502,6 +504,14 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                     </span>
                                                 )}
                                                 <span className="admin-cell-actions">
+                                                    <button
+                                                        className="admin-btn-table"
+                                                        onClick={() => setEleveFicheId(e.id)}
+                                                        disabled={actionEnCours}
+                                                        style={{ color: 'var(--action)', fontWeight: 700 }}
+                                                    >
+                                                        Fiche
+                                                    </button>
                                                     <button
                                                         className="admin-btn-table"
                                                         onClick={() => setModalModifierEleve(e)}
@@ -948,6 +958,14 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                                             <button
                                                                 type="button"
                                                                 className="admin-btn-table"
+                                                                onClick={() => setEleveFicheId(s.eleve_id)}
+                                                                style={{ marginRight: 6, color: 'var(--action)', fontWeight: 700 }}
+                                                            >
+                                                                Fiche élève
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="admin-btn-table"
                                                                 onClick={() => ouvrirDetailEleve(s)}
                                                             >
                                                                 Voir les sessions
@@ -1139,6 +1157,14 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                         setEleveSelectionneDetail(null);
                         setDetailSessionsEleve([]);
                     }}
+                />
+            )}
+
+            {/* Modal Fiche Élève Complète (Lot A) */}
+            {eleveFicheId && (
+                <ModalFicheEleve
+                    eleveId={eleveFicheId}
+                    onClose={() => setEleveFicheId(null)}
                 />
             )}
         </div>

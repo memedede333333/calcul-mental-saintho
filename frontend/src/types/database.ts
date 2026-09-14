@@ -308,9 +308,11 @@ export type Database = {
           eleve_id: string
           fait: string
           nb_reussites: number
+          nb_temps: number
           nb_vues: number
           niveau: number
           serie_rapide: number
+          somme_temps_ms: number
         }
         Insert: {
           dernier_temps_ms?: number | null
@@ -318,9 +320,11 @@ export type Database = {
           eleve_id: string
           fait: string
           nb_reussites?: number
+          nb_temps?: number
           nb_vues?: number
           niveau?: number
           serie_rapide?: number
+          somme_temps_ms?: number
         }
         Update: {
           dernier_temps_ms?: number | null
@@ -328,9 +332,11 @@ export type Database = {
           eleve_id?: string
           fait?: string
           nb_reussites?: number
+          nb_temps?: number
           nb_vues?: number
           niveau?: number
           serie_rapide?: number
+          somme_temps_ms?: number
         }
         Relationships: [
           {
@@ -757,6 +763,33 @@ export type Database = {
       est_admin: { Args: never; Returns: boolean }
       est_prof: { Args: never; Returns: boolean }
       evaluer_couvre_feu: { Args: { p_maintenant: string }; Returns: Json }
+      fiche_eleve: {
+        Args: { p_eleve_id: string; p_jours?: number }
+        Returns: Json
+      }
+      fiche_eleve_faits: {
+        Args: { p_eleve_id: string }
+        Returns: {
+          derniere_vue: string
+          fait: string
+          nb_reussites: number
+          nb_temps: number
+          nb_vues: number
+          niveau: number
+          taux_reussite: number | null
+          temps_moyen_ms: number | null
+        }[]
+      }
+      fiche_eleve_rythme: {
+        Args: { p_eleve_id: string; p_jours?: number }
+        Returns: {
+          jour: string
+          nb_parties: number
+          nb_questions: number
+          secondes_par_question: number | null
+          temps_partie_s: number
+        }[]
+      }
       generer_code_defi: { Args: never; Returns: string }
       importer_eleves: { Args: { p_eleves: Json }; Returns: Json }
       importer_profs: { Args: { p_profs: Json }; Returns: Json }

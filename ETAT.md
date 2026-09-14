@@ -4,10 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **45 migrations appliquées en
-> production**. Couvre-feu nocturne configurable, activité des classes et implication des enseignants entièrement livrés. **225 cas de test
-> verts** sur une base reconstruite depuis les 45 migrations.
-> **Correctifs Option 3 & Écran blanc livrés** : écran blanc au démarrage résolu (import `branding` restauré et `RootErrorBoundary` en place), repli hors-ligne du couvre-feu fonctionnel sans rémanence de cache (`lireCouvreFeuLocal`), prise en compte immédiate du réveil iPad (`visibilitychange`), et exploitation directe des colonnes serveur PostgreSQL dans l'Admin (`pendant_couvre_feu`, `parties_couvre_feu`).
+> Dernière mise à jour : **14 septembre 2026** — **Lot A (Fiche Élève) entièrement implémenté et testé**.
+> Migration 46 (`20260914150000_temps_reponse_et_fiche_eleve.sql`) écrite et validée avec **232 cas de test verts (0 échec)**.
+> Frontend livré : `ModalFicheEleve.jsx` intégré dans `MaClasse.jsx` et `Admin.jsx`, `api.js` et `database.ts` enrichis (`ficheEleve`, `ficheEleveRythme`, `ficheEleveFaits`), ESLint + check-tokens (88 tokens) + check-api (52 RPCs) tous validés à 100%.
 > **Sauvegarde & Sécurité validées** : dump complet compressé de la base Supabase (313 élèves) testé avec intégrité vérifiée et copie Google Drive.
 > **Option 3 livrée** : Couvre-feu 21h30-07h30 résistant au mode avion / hors-ligne, écran d'accueil avec heure dynamique de réveil, MaClasse enrichi avec l'onglet « Activité & Temps de jeu », console Admin dotée de l'onglet « 🌙 Couvre-feu & Nuit » et suivi de l'implication des enseignants.
 > **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
@@ -396,6 +395,44 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Le temps de réponse se mesure en moyenne, pas au dernier coup — et ça ne coûte
+aucune ligne de stockage.**
+*(14 septembre 2026, migration 46.)* `maitrise` ne gardait que
+`dernier_temps_ms` : « il a mis 4,2 s la dernière fois ». Un professeur veut
+savoir « il met combien, d'habitude ». Les temps arrivaient pourtant du client à
+chaque partie dans `p_faits` (migration 26) — ils servaient à calculer la
+maîtrise, puis ils étaient jetés.
+
+Deux colonnes de plus, `somme_temps_ms` et `nb_temps`, donnent une vraie moyenne
+par élève **et par multiplication**, en gardant une seule ligne par élève et par
+fait. L'alternative — un historique réponse par réponse — donnait la même moyenne
+pour environ deux millions de lignes par an. Elle reste possible le jour où l'on
+voudra rejouer une partie question par question ; ce jour n'est pas venu.
+
+Vérifié en base avant d'écrire : `enregistrer_session` est la **seule** fonction
+qui écrive dans `maitrise`, et `terminer_defi` la délègue au lieu d'en tenir une
+copie. Le piège de la migration 26 ne pouvait donc pas se reproduire — et le cas
+228 le prouve par le résultat, en faisant passer le temps d'une partie de défi
+dans la même moyenne.
+
+**Deux mesures de rapidité, et il ne faut jamais les confondre.**
+*(14 septembre 2026.)* Le **temps de réponse** (`maitrise`) est mesuré question
+par question par le client : c'est le temps de calcul mental. Les **secondes par
+question** (`fiche_eleve_rythme`) sont la durée d'une partie divisée par son
+nombre de questions : elles incluent la lecture de l'énoncé et la frappe sur la
+vitre. Les deux sont justes et ne donnent pas le même chiffre. Elles portent donc
+des noms différents jusque dans le SQL, et l'écran ne doit jamais les additionner
+ni les substituer l'une à l'autre. Seule la seconde a un historique : elle existe
+pour toutes les parties passées, y compris celles d'avant la migration 46.
+
+**La fiche d'un élève est un seul appel, avec deux niveaux de lecture.**
+*(14 septembre 2026, migration 46 — tranché par Aymeri.)* Un administrateur doit
+avoir le travail scolaire **et** les horaires au même endroit, pas sur deux
+écrans. `fiche_eleve()` renvoie donc un champ `portee` qui vaut `prof` ou `admin`,
+et le bloc `horaires` n'est présent que dans le second cas. Même écran, un bloc en
+moins. `portee` est explicite pour que React n'ait rien à déduire : un bloc absent
+ne se distingue pas d'un bloc vide.
 
 **Le couvre-feu est une mesure de soin, tenue par l'écran. Le serveur ne refuse rien.**
 *(14 septembre 2026, migration 44 — tranché par Aymeri.)*
@@ -1114,6 +1151,18 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     administrateur), et **ajouter la ligne au registre de traitement RGPD** — ce
     module enregistre et affiche des horaires de connexion de mineurs.
 
+25. ⬜ **Migration 46 — temps de réponse et fiche élève (lot A)** — écrite et
+    testée le 14 septembre, **pas encore appliquée**. Deux colonnes sur
+    `maitrise`, `enregistrer_session` qui accumule au lieu d'écraser, et trois
+    fonctions : `fiche_eleve` (un appel, `portee` prof/admin), `fiche_eleve_rythme`
+    (un point par jour joué) et `fiche_eleve_faits` (une ligne par multiplication
+    rencontrée). Cas 226 à 232, 232 cas verts.
+    **Lot B — le comparateur** reste à concevoir : classer les élèves entre eux
+    par maîtrise, rapidité, régularité ou sur une table donnée. À faire APRÈS
+    avoir regardé le lot A en vrai, et avec un seuil de volume minimum par
+    classement — sans lui, l'élève qui a répondu à une seule question vite sort
+    premier.
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1223,7 +1272,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (224 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (232 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 
