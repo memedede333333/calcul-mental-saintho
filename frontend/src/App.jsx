@@ -13,6 +13,7 @@ import MaClasse from './screens/MaClasse';
 import { sessionActive, quiSuisJe, seDeconnecter, viderFile, monProfil, emailSession, couvreFeu } from './api';
 import { effacerDefiEnCours } from './logic/defiStorage';
 import { lireCouvreFeuLocal, sauvegarderCouvreFeuLocal } from './logic/couvreFeu';
+import branding from './branding';
 
 /**
  * App — Routeur principal + restauration de session
@@ -262,17 +263,17 @@ export default function App() {
                     <div style={{
                         width: 80, height: 80, borderRadius: 16,
                         background: 'var(--indigo)',
-                        color: 'var(--gold)',
+                        color: 'var(--podium)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--font-display)', fontWeight: 800,
+                        fontFamily: 'var(--titre)', fontWeight: 800,
                         fontSize: 24, letterSpacing: 2,
                     }}>
                         {branding.monogram}
                     </div>
                     <div className="spinner" aria-label="Chargement" />
                     <p style={{
-                        color: 'var(--text-soft)', fontWeight: 700,
-                        fontSize: 14,
+                        color: 'var(--gris)', fontWeight: 700,
+                        fontSize: 14, fontFamily: 'var(--texte)',
                     }}>
                         Chargement…
                     </p>
@@ -302,13 +303,13 @@ export default function App() {
                 }}>
                     <span style={{ fontSize: 56 }}>📡</span>
                     <h2 className="font-display" style={{
-                        fontSize: 22, fontWeight: 800, color: 'var(--navy)',
+                        fontSize: 22, fontWeight: 800, color: 'var(--indigo)',
                     }}>
                         Le serveur ne répond pas
                     </h2>
                     <p style={{
-                        color: 'var(--text-soft)', fontWeight: 600,
-                        fontSize: 15, lineHeight: 1.5, maxWidth: 340,
+                        color: 'var(--gris)', fontWeight: 600,
+                        fontSize: 15, lineHeight: 1.5, maxWidth: 340, fontFamily: 'var(--texte)',
                     }}>
                         {erreurMessage}
                     </p>
@@ -321,7 +322,7 @@ export default function App() {
                     </button>
                     <button
                         className="btn btn--ghost"
-                        style={{ fontSize: 14, padding: '10px 24px', color: 'var(--coral)' }}
+                        style={{ fontSize: 14, padding: '10px 24px', color: 'var(--rouge)' }}
                         onClick={handleDeconnexion}
                     >
                         Se déconnecter
@@ -343,13 +344,13 @@ export default function App() {
                 }}>
                     <span style={{ fontSize: 56 }}>🔒</span>
                     <h2 className="font-display" style={{
-                        fontSize: 22, fontWeight: 800, color: 'var(--navy)',
+                        fontSize: 22, fontWeight: 800, color: 'var(--indigo)',
                     }}>
                         Compte non reconnu
                     </h2>
                     <p style={{
-                        color: 'var(--text-soft)', fontWeight: 600,
-                        fontSize: 15, lineHeight: 1.5, maxWidth: 340,
+                        color: 'var(--gris)', fontWeight: 600,
+                        fontSize: 15, lineHeight: 1.5, maxWidth: 340, fontFamily: 'var(--texte)',
                     }}>
                         {identite?.message || "Ce compte n'est pas reconnu. Demande à ton professeur."}
                     </p>
@@ -357,22 +358,22 @@ export default function App() {
                     {sessionEmail && (
                         <div className="card" style={{
                             padding: '14px 18px',
-                            background: 'var(--surface-alt)',
-                            border: '2px solid var(--border)',
+                            background: 'var(--surface)',
+                            border: '2px solid var(--bordure)',
                             borderRadius: 14,
                             maxWidth: 360,
                             width: '100%',
                             textAlign: 'center',
                         }}>
                             <p style={{
-                                fontSize: 13, fontWeight: 800, color: 'var(--navy)',
+                                fontSize: 13, fontWeight: 800, color: 'var(--indigo)',
                                 wordBreak: 'break-all',
                             }}>
                                 Connecté avec : {sessionEmail}
                             </p>
                             <p style={{
-                                fontSize: 11, fontStyle: 'italic', color: 'var(--text-soft)',
-                                marginTop: 6, lineHeight: 1.4,
+                                fontSize: 11, fontStyle: 'italic', color: 'var(--gris)',
+                                marginTop: 6, lineHeight: 1.4, fontFamily: 'var(--texte)',
                             }}>
                                 Ce n'est pas ton adresse ? Déconnecte-toi et reconnecte-toi avec ton compte du collège.
                             </p>

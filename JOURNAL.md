@@ -57,6 +57,68 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Relecture de l'Option 3 : le repli hors-ligne ne se déclenche jamais
+
+**Fait** — Migrations 44 et 45 appliquées, écrans livrés, commit `79aa246`.
+Relecture dans le code, pas sur le rapport.
+
+**Relu sans rien à reprendre** — La migration 45 (`activite_profs`) a été écrite
+hors du partage habituel ; elle est correcte. Elle porte son `est_admin()`, son
+`grant execute`, et surtout elle compte les parties dans `sessions_profs` et non
+dans `sessions_jeu` : c'était le piège évident, les deux tables n'ont aucune
+intersection par construction. Le cas 225 l'exécute réellement, donc un nom de
+colonne faux dans un corps `plpgsql` — que PostgreSQL ne valide pas à la
+création — aurait été attrapé. `logic/couvreFeu.js` est juste, y compris le
+créneau qui franchit minuit, et `App.jsx` programme bien la bascule sur
+`prochaine_bascule`.
+
+**Constaté (1) — le repli hors-ligne est du code mort, et il peut enfermer un
+élève dehors en pleine classe.**
+`sauvegarderCouvreFeuLocal(res.data)` écrit dans `localStorage` la réponse
+serveur **entière**, `en_cours` compris. Or `estEnCouvreFeu()` commence par
+`if (typeof config.en_cours === 'boolean') return config.en_cours;` — et
+`couvreFeuData` est initialisé à `lireCouvreFeuLocal()`. La branche de calcul
+hors-ligne est donc **inatteignable** dès qu'un iPad a été connecté une fois :
+l'application rejoue un instantané figé.
+
+Les deux sens sont mauvais, et le second est le sérieux :
+· dernier appel à 18h (`en_cours: false`), iPad en mode avion à 23h → aucun
+  couvre-feu, exactement ce que la fonction promettait d'empêcher ;
+· dernier appel à 22h (`en_cours: true`), wifi en panne le lendemain à 10h →
+  **l'élève est verrouillé en pleine séance**, et le professeur n'a aucun moyen
+  de comprendre pourquoi.
+Correctif : ne pas persister les champs calculés. Les retirer à la **lecture**
+(`lireCouvreFeuLocal`) plutôt qu'à l'écriture, pour réparer aussi les iPads qui
+ont déjà écrit la mauvaise valeur.
+
+**Constaté (2) — rien ne réévalue le couvre-feu au réveil de l'iPad.**
+La bascule est programmée par un `setTimeout`. Sur iPad, l'application passe son
+temps en arrière-plan et iOS suspend les minuteries : ouverte à 20h et mise en
+veille, elle ne verrouille pas à 21h30. Il manque un `visibilitychange` qui
+rappelle `couvreFeu()` au retour au premier plan.
+
+**Constaté (3) — l'écran refait trois calculs que le serveur lui donne déjà.**
+`activite_eleve_detail` renvoie `pendant_couvre_feu` et `activite_nocturne`
+renvoie `parties_couvre_feu` : **ni l'un ni l'autre n'est lu**. `Admin.jsx`
+recalcule le créneau dans `formaterBadgeHoraire()` avec `d.getHours()`, donc
+dans le fuseau du navigateur et non à Paris, et recompte les parties nocturnes
+en filtrant sur le **libellé** du badge (`.label.includes('Couvre-feu')`) — un
+comptage assis sur une chaîne d'affichage, qui tombera à zéro au premier
+changement de formulation. C'est la sixième fois que ce projet fabrique une
+population dans un écran ; `check-api.mjs` ne voit pas ce cas, parce qu'il
+surveille les RPC appelées, pas les colonnes ignorées.
+
+Et le libellé « 🟠 Soirée (20h-21h30) » écrit en dur nomme une borne qui est
+désormais réglable : il mentira au premier déplacement du couvre-feu. Le seuil
+de 20h00 est par ailleurs une deuxième définition de la soirée, inventée par
+l'écran — si cette notion doit exister, elle appartient au serveur, à côté de
+celle du couvre-feu.
+
+**Ensuite** — Antigravity : les trois correctifs ci-dessus, tous côté React,
+aucun SQL à changer. Aymeri : la ligne au registre de traitement RGPD reste
+ouverte (§5 d'`ETAT.md`).
+
+
 ## 2026-09-14 — Option 3 & Migration 45 : Couvre-feu nocturne, activité des classes et implication des enseignants
 
 **Fait**
