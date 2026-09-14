@@ -349,7 +349,7 @@ export default function Login({ onIdentite }) {
                             <button
                                 type="submit"
                                 className="btn btn--navy"
-                                disabled={loading || codeOtp.length < 6}
+                                disabled={loading || code.length < 6}
                                 style={{ width: '100%', fontSize: 17, padding: 14 }}
                             >
                                 {loading ? 'Vérification…' : 'Valider'}

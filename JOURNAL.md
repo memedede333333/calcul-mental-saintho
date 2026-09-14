@@ -57,6 +57,57 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Écran blanc en production : 225 cas verts et l'application ne démarrait pas
+
+**Fait** — Import `branding` restauré dans `App.jsx`, `RootErrorBoundary` ajouté
+dans `main.jsx`, déployé. Relu dans le code : l'import est bien là (ligne 16), et
+la barrière est une vraie classe avec `getDerivedStateFromError`, placée autour
+d'`<App />`. Rien à reprendre sur le correctif.
+
+**Constaté — ce qui a réellement échoué, ce n'est pas l'oubli, c'est ce qui aurait
+dû l'attraper.** Un `ReferenceError` sur une variable non importée est la faute
+la plus ordinaire qui soit. Elle est passée parce que le projet n'a **aucun
+linter** : `devDependencies` contient `vite`, `@vitejs/plugin-react` et les
+`@types`, rien d'autre. `no-undef` d'ESLint l'aurait signalée en une seconde.
+
+Et la forme de l'incident est connue. C'est la troisième fois :
+· lot 20 — le bouton « ajouter un élève » disparaît, le SQL intact, 183 cas verts ;
+· migration 42 — `run.sh` s'arrête avant le premier cas, personne ne le voit ;
+· aujourd'hui — 225 cas verts, le build vert, et 350 élèves devant une page ivoire.
+
+À chaque fois : **le serveur avait raison, les tests étaient verts, et ce qui
+arrivait à l'utilisateur était cassé.** Nos deux garde-fous surveillent le pont
+entre le SQL et les écrans. Aucun ne vérifie que l'application *démarre*.
+
+**Constaté (2) — la barrière ne couvre pas le cas le plus probable pour la
+suite.** Un `ErrorBoundary` intercepte les erreurs de rendu. Il n'intercepte pas
+ce qui est levé pendant le **chargement des modules** — or `api.js` fait
+exactement ça : `if (!URL || !ANON) throw new Error(...)` au niveau du module.
+`main.jsx` importe `App`, qui importe `api.js` : le throw part **avant** que
+`createRoot().render()` ne s'exécute, et la barrière n'est jamais montée. Écran
+blanc de nouveau.
+
+Ce n'est pas théorique : la scission des variables d'environnement prévue pour
+l'environnement local (`.env.development`, `.env.prod`, sortie des valeurs de
+`.env.local`) est précisément le geste qui produit un `VITE_SUPABASE_URL`
+absent sur un build Vercel.
+
+**Décidé** — Deux garde-fous à ajouter, par ordre d'efficacité :
+1. Un filet dans `index.html` — quelques lignes inline qui, si `#root` est
+   encore vide après quelques secondes, y écrivent un message lisible. Il ne
+   dépend pas de React, donc il couvre **toutes** les causes d'écran blanc, y
+   compris celles que la barrière ne voit pas.
+2. ESLint avec `no-undef` dans `npm run build`. Coût nul, et il attrape
+   exactement la faute d'aujourd'hui.
+Et, quand l'environnement local existera, une vérification de démarrage : servir
+`dist/`, l'ouvrir sans interface, échouer si `#root` est vide ou si la console
+porte une erreur. C'est le troisième garde-fou, celui qui manquait.
+⬜ *à valider par Aymeri, à écrire par Antigravity*
+
+**Ensuite** — Antigravity : les deux garde-fous ci-dessus. Aymeri : la ligne au
+registre de traitement RGPD reste ouverte (§5).
+
+
 ## 2026-09-14 — Correction de l'écran blanc au démarrage et application des 3 correctifs de relecture Option 3
 
 **Fait**

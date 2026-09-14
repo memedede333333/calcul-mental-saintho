@@ -237,19 +237,6 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
         setActionEnCours(false);
     };
 
-    const handleConfirmationChangerClasse = async (eleveId, nouvelleClasse) => {
-        setActionEnCours(true);
-        const res = await modifierEleve(eleveId, { classe: nouvelleClasse });
-        setModalClasseEleve(null);
-        if (res.ok) {
-            setMessageFeedback('✅ Classe mise à jour.');
-            await rechargerDonnees();
-        } else {
-            setMessageFeedback(`❌ ${res.error || 'Erreur lors du changement de classe.'}`);
-        }
-        setActionEnCours(false);
-    };
-
     // Actions Enseignants
     const handleChangementRoleProf = async (prof, nouveauRole) => {
         if (prof.prof_id === monProfId) return;
