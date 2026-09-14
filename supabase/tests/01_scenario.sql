@@ -11,7 +11,9 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 193 cas, numérotés jusqu'à 193. Le 189 a été retiré
+-- COMPTE EXACT : 208 cas, numérotés jusqu'à 208. Les cas 194 à 208
+-- couvrent les migrations 39 à 42 (réveil quotidien, modifier_prof,
+-- statut de connexion et import des enseignants). Le 189 a été retiré
 -- (remplacé par le 192, qui ne vaut qu'après la migration 38) ; les cas
 -- 29 à 31 l'ont été depuis longtemps ; 38b-38d et 180b complètent leurs aînés. Les numéros 29 à 31 ont
 -- été retirés et ne sont pas réattribués, pour que les numéros cités dans
@@ -2042,3 +2044,269 @@ select coalesce(
 select case when :'doublons' = ''
             then 'OK : une fonction, une signature'
             else 'ECHEC : signatures en double -> ' || :'doublons' end as verdict;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 39 — le reveil quotidien
+-- ---------------------------------------------------------------------
+
+\echo '=== 194. Un visiteur ANONYME peut appeler ping() ==='
+-- Sur l offre gratuite, un projet inactif sept jours est suspendu et ne
+-- redemarre pas tout seul. Le workflow GitHub appelle ping() avec la
+-- seule cle anon : si ce droit disparait, l appel echoue en silence
+-- pendant les vacances et la base est eteinte a la rentree.
+reset role;
+set role anon;
+do $$
+declare r text;
+begin
+  begin
+    execute 'select public.ping()' into r;
+  exception when insufficient_privilege then
+    raise notice 'ECHEC : anon ne peut plus appeler ping, le reveil quotidien est mort';
+    return;
+  end;
+  if r = 'ok' then raise notice 'OK : le reveil quotidien passe (%)', r;
+  else raise notice 'ECHEC : ping repond % au lieu de ok', r; end if;
+end $$;
+reset role;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATIONS 40 & 41 — modifier un enseignant
+-- ---------------------------------------------------------------------
+
+\echo '=== 195. Changer l adresse d un enseignant RATTACHE ne touche pas user_id ==='
+-- Meme raison que pour les eleves (migration 35) : un prof connecte est
+-- reconnu par son compte Auth, pas par son adresse. Detacher puis
+-- rattacher serait un piege — un renommage Google Workspace garde le
+-- meme compte, donc le trigger de creation ne se declencherait jamais.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_prof((select id from profs where email = 'maths.demo@demo.saintho.fr'),
+                     p_email => 'mme.calcul@demo.saintho.fr')->>'ok' as adresse_corrigee;
+reset role;
+select case when (select user_id from profs where nom = 'Mme Calcul') = :'PROF2'::uuid
+             and (select email from profs where nom = 'Mme Calcul') = 'mme.calcul@demo.saintho.fr'
+            then 'OK : adresse changee, compte Google conserve'
+            else 'ECHEC : le prof a perdu son compte en changeant d adresse' end as verdict;
+
+\echo '=== 196. Une adresse deja portee par un autre enseignant est refusee ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+do $$ begin
+  perform modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
+                        p_email => 'mme.calcul@demo.saintho.fr');
+  raise notice 'ECHEC : deux enseignants portent la meme adresse';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 197. Une adresse deja portee par un ELEVE est refusee ==='
+-- Sans ce controle, une fiche prof prendrait le compte Google d une
+-- eleve : elle arriverait avec une session valide et sans fiche.
+do $$ begin
+  perform modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
+                        p_email => 'alice.dupont@demo.saintho.fr');
+  raise notice 'ECHEC : une adresse d eleve a ete donnee a un prof';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+\echo '=== 198. Corriger la coquille d une fiche JAMAIS rattachee la rattache ==='
+-- Le cas Come de Mercey, 13 septembre : une coquille corrigee a la main
+-- dans le tableau de bord Supabase avait laisse le compte Google
+-- orphelin. `modifier_prof` fait ce qu un `update` direct ne fait pas.
+reset role;
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000198', 'come.demo@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_prof('coquile.demo@demo.saintho.fr', 'M. Come', 'prof')->>'ok' as fiche_avec_coquille;
+reset role;
+select case when (select user_id from profs where email = 'coquile.demo@demo.saintho.fr') is null
+            then 'OK : orphelin avant correction, c est le point de depart'
+            else 'ECHEC : la fiche est deja rattachee, le test ne prouve rien' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_prof((select id from profs where email = 'coquile.demo@demo.saintho.fr'),
+                     p_email => 'come.demo@demo.saintho.fr')->>'ok' as coquille_corrigee;
+reset role;
+select case when (select user_id from profs where email = 'come.demo@demo.saintho.fr')
+             = 'cccccccc-0000-0000-0000-000000000198'
+            then 'OK : le compte Google est rattache dans la foulee'
+            else 'ECHEC : prof sans acces, il faudra reparer a la main' end as verdict;
+
+\echo '=== 199. Un professeur NON administrateur ne modifie aucun enseignant ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin
+  perform modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
+                        p_nom => 'Nom impose par un collegue');
+  raise notice 'ECHEC : un prof simple modifie les comptes enseignants';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 42 — statut de connexion et import des enseignants
+-- ---------------------------------------------------------------------
+
+\echo '=== 200. liste_profs dit qui est rattache, et depuis auth.users ==='
+-- `connecte` vient de profs.user_id, `derniere_connexion` de
+-- auth.users.last_sign_in_at. Ce ne sont pas les memes colonnes que
+-- cote eleves, ou `derniere_connexion` est la derniere PARTIE jouee.
+reset role;
+update auth.users set last_sign_in_at = timestamptz '2026-09-12 08:30:00+02'
+ where id = :'PROF2'::uuid;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select connecte from liste_profs() where nom = 'Mme Calcul')
+             and (select derniere_connexion from liste_profs() where nom = 'Mme Calcul')
+                 = timestamptz '2026-09-12 08:30:00+02'
+             and not (select connecte from liste_profs() where nom = 'M. Nouveau')
+             and (select derniere_connexion from liste_profs() where nom = 'M. Nouveau') is null
+            then 'OK : rattachement et date de derniere connexion'
+            else 'ECHEC : l ecran Administration affichera un statut faux' end as verdict;
+
+\echo '=== 201. L apercu d import n ECRIT rien ==='
+-- Un apercu qui ment est pire que pas d apercu du tout (migration 24).
+reset role;
+select count(*) as profs_avant from profs \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select apercu_import_profs('[
+  {"ligne":"2","email":"nouvelle.demo@demo.saintho.fr","nom":"Mme Nouvelle","role":"prof"},
+  {"ligne":"3","email":"nouvelle.demo@demo.saintho.fr","nom":"Doublon","role":"prof"},
+  {"ligne":"4","email":"pas-une-adresse","nom":"Sans arobase"},
+  {"ligne":"5","email":"mme.calcul@demo.saintho.fr","nom":"Mme Calcul"}
+]'::jsonb) as apercu \gset
+reset role;
+select case when (select count(*) from profs) = :profs_avant
+            then 'OK : l apercu regarde, il n ecrit pas'
+            else 'ECHEC : l apercu a cree des enseignants' end as verdict;
+
+\echo '=== 202. Les populations de l apercu s additionnent exactement ==='
+-- creations + mises_a_jour + ignorees = lignes_lues, et
+-- dont_reactivations est un SOUS-ENSEMBLE de mises_a_jour — le mot
+-- « dont » est dans le nom pour qu on ne l additionne jamais.
+select case when ((:'apercu'::jsonb->>'creations')::int
+                + (:'apercu'::jsonb->>'mises_a_jour')::int
+                + (:'apercu'::jsonb->>'ignorees')::int)
+             = (:'apercu'::jsonb->>'lignes_lues')::int
+             and (:'apercu'::jsonb->>'dont_reactivations')::int
+                 <= (:'apercu'::jsonb->>'mises_a_jour')::int
+            then 'OK : ' || (:'apercu'::jsonb->>'creations') || ' creations + '
+                          || (:'apercu'::jsonb->>'mises_a_jour') || ' maj + '
+                          || (:'apercu'::jsonb->>'ignorees') || ' ignorees = '
+                          || (:'apercu'::jsonb->>'lignes_lues') || ' lues'
+            else 'ECHEC : les compteurs de l apercu ne totalisent pas les lignes lues'
+       end as verdict;
+
+\echo '=== 203. Deux fois la meme adresse dans le fichier : la 2e est ignoree ==='
+-- Le defaut trouve par la maquette d import des eleves : le meme
+-- e-mail sur deux lignes etait traite DEUX fois, et compte deux fois.
+select case when (select count(*) from jsonb_array_elements(:'apercu'::jsonb->'lignes_ignorees') l
+                   where l->>'raison' like 'e-mail deja present ligne%') = 1
+             and (select count(*) from jsonb_array_elements(:'apercu'::jsonb->'lignes_ignorees') l
+                   where l->>'raison' like 'e-mail invalide%') = 1
+            then 'OK : doublon et adresse invalide nommes ligne par ligne'
+            else 'ECHEC : le doublon serait importe deux fois' end as verdict;
+
+\echo '=== 204. L import cree, rattache immediatement, reactive, et trace ==='
+reset role;
+insert into auth.users (id, email)
+values ('cccccccc-0000-0000-0000-000000000204', 'arrivee.demo@demo.saintho.fr');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select desactiver_prof((select id from profs where email = 'nouveau.prof@demo.saintho.fr'))->>'ok'
+       as prof_desactive;
+select importer_profs('[
+  {"ligne":"2","email":"arrivee.demo@demo.saintho.fr","nom":"Mme Arrivee","role":"prof"},
+  {"ligne":"3","email":"nouveau.prof@demo.saintho.fr","nom":"M. Nouveau","role":"prof"}
+]'::jsonb) as import \gset
+reset role;
+select case when (:'import'::jsonb->>'crees')::int = 1
+             and (:'import'::jsonb->>'mis_a_jour')::int = 1
+             and (:'import'::jsonb->>'dont_reactivations')::int = 1
+             and (:'import'::jsonb->>'rattaches')::int = 1
+             and (select user_id from profs where email = 'arrivee.demo@demo.saintho.fr')
+                 = 'cccccccc-0000-0000-0000-000000000204'
+             and (select actif from profs where email = 'nouveau.prof@demo.saintho.fr')
+            then 'OK : 1 creee et rattachee, 1 reactivee'
+            else 'ECHEC : ' || :'import' end as verdict;
+select case when exists (select 1 from journal_admin
+                          where action = 'import_profs'
+                            and (detail->>'crees')::int = 1)
+            then 'OK : l import est au journal d audit'
+            else 'ECHEC : un import de masse sans trace' end as verdict;
+
+\echo '=== 205. L import ne DESACTIVE personne : les absents sont signales ==='
+-- Desactiver en masse sur la foi d un export rate couperait l acces a
+-- toute une equipe un lundi matin. La regle des eleves vaut ici aussi.
+select case when jsonb_array_length(:'import'::jsonb->'actifs_absents_du_fichier') > 0
+             and (select bool_and(actif) from profs
+                   where email in (select jsonb_array_elements(
+                                     :'import'::jsonb->'actifs_absents_du_fichier')->>'email'))
+            then 'OK : ' || jsonb_array_length(:'import'::jsonb->'actifs_absents_du_fichier')
+                         || ' absent(s) du fichier, aucun desactive'
+            else 'ECHEC : l import a desactive des enseignants absents du fichier'
+       end as verdict;
+
+\echo '=== 206. Import et apercu sont reserves a l administrateur ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin
+  perform apercu_import_profs('[{"ligne":"2","email":"x@demo.saintho.fr","nom":"X"}]'::jsonb);
+  raise notice 'ECHEC : un prof simple previsualise un import d enseignants';
+exception when others then raise notice 'OK : apercu refuse (%)', sqlerrm; end $$;
+do $$ begin
+  perform importer_profs('[{"ligne":"2","email":"x@demo.saintho.fr","nom":"X"}]'::jsonb);
+  raise notice 'ECHEC : un prof simple importe des enseignants';
+exception when others then raise notice 'OK : import refuse (%)', sqlerrm; end $$;
+
+\echo '=== 207. L import ne retrograde JAMAIS le dernier administrateur actif ==='
+-- Sans ce verrou, un fichier suffirait a enfermer tout le monde dehors
+-- et il faudrait repasser par la console Supabase.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
+                     p_role => 'prof')->>'ok' as il_ne_reste_qu_un_admin;
+select importer_profs('[
+  {"ligne":"2","email":"prof.demo@demo.saintho.fr","nom":"M. Demonstration","role":"prof"}
+]'::jsonb)->>'ok' as import_lance;
+reset role;
+select case when (select role from profs where email = 'prof.demo@demo.saintho.fr') = 'admin'
+             and (select count(*) from profs where role = 'admin' and actif) >= 1
+            then 'OK : le dernier administrateur est reste administrateur'
+            else 'ECHEC : plus aucun administrateur, personne ne peut plus rentrer'
+       end as verdict;
+
+\echo '=== 208. A TRANCHER : un fichier sans colonne « role » retrograde les autres admins ==='
+-- Constate par execution le 14 septembre, sur la migration 42.
+-- `valider_lignes_import_profs` remplace un role ABSENT par 'prof'. Un
+-- export d annuaire (email, nom, prenom) — le format le plus probable —
+-- vaut donc « retrograde tout le monde ». Le verrou du cas 207 sauve le
+-- DERNIER admin, jamais les autres : l administrateur qui lance l import
+-- se retrograde lui-meme, et le retour dit « ok » sans un mot.
+-- Un role absent n est pas un role : c est l absence d instruction.
+-- Tant que ce n est pas tranche, ce cas VERIFIE la seule garantie qui
+-- tienne aujourd hui — il reste toujours au moins un administrateur —
+-- et AFFICHE la retrogradation constatee sans crier a la regression.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_prof((select id from profs where email = 'cyrille@demo.saintho.fr'),
+                     p_role => 'admin')->>'ok' as deux_admins_a_nouveau;
+select importer_profs('[
+  {"ligne":"2","email":"prof.demo@demo.saintho.fr","nom":"M. Demonstration"},
+  {"ligne":"3","email":"cyrille@demo.saintho.fr","nom":"Cyrille Moreau"}
+]'::jsonb)->>'ok' as import_sans_colonne_role;
+reset role;
+select case when (select count(*) from profs where role = 'admin' and actif) = 0
+            then 'ECHEC : plus aucun administrateur apres un import'
+            when (select count(*) from profs where role = 'admin' and actif) = 2
+            then 'OK : les deux administrateurs ont garde leur role'
+            else 'A TRANCHER : il reste '
+                 || (select count(*) from profs where role = 'admin' and actif)
+                 || ' administrateur sur 2 — un fichier sans colonne role retrograde'
+                 || ' celui qui importe. Voir ETAT.md, migration 43 proposee.'
+       end as verdict;
+
+-- On rend la base a son etat courant : deux administrateurs actifs.
+reset role;
+update profs set role = 'admin' where email in ('prof.demo@demo.saintho.fr', 'cyrille@demo.saintho.fr');

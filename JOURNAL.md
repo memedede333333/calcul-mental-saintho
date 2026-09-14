@@ -57,6 +57,63 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-14 — Les migrations 39 à 42 avaient été livrées sans un seul cas de test
+
+**Fait** — Cas 194 à 208 dans `supabase/tests/01_scenario.sql`, et un correctif
+dans `supabase/tests/00_prelude_local.sql`. Le scénario complet passe au vert,
+208 cas, zéro ECHEC — exécuté sur un PostgreSQL vierge, migrations rejouées
+depuis zéro.
+
+Ce que les nouveaux cas couvrent : `ping()` appelable par `anon` (194) ;
+`modifier_prof` — adresse changée sans toucher `user_id` (195), adresse déjà
+portée par un enseignant (196) ou par un élève (197) refusée, coquille corrigée
+qui rattache le compte Google (198, le cas Côme), réservé à l'administrateur
+(199) ; `liste_profs` avec `connecte` et `derniere_connexion` lus dans
+`auth.users` (200) ; l'import d'enseignants — aperçu qui n'écrit rien (201),
+`creations + mises_a_jour + ignorees = lignes_lues` (202), doublon d'adresse
+nommé ligne par ligne (203), création avec rattachement immédiat, réactivation
+et entrée au journal (204), aucune désactivation automatique (205), réservé à
+l'administrateur (206), dernier administrateur protégé (207).
+
+**Constaté (1) — `run.sh` ne démarrait plus depuis la migration 42.**
+`liste_profs()` lit `auth.users.last_sign_in_at` ; l'`auth.users` simulée du
+prélude n'a que `id` et `email`. La migration ne se créait pas, `psql` sortait
+en erreur, et le scénario s'arrêtait **avant le premier cas**. Autrement dit :
+le garde-fou était à terre depuis hier et les « 193 cas verts » de l'en-tête ne
+couvraient plus rien. Trois lignes dans le prélude, et le compte est bon.
+
+La leçon : le prélude est une **imitation** d'`auth.users`. Toute migration qui
+lit une nouvelle colonne de ce schéma doit l'ajouter là aussi, sinon elle
+éteint la suite de tests au lieu de la faire échouer — et une suite éteinte ne
+crie pas.
+
+**Constaté (2) — l'import d'enseignants rétrograde les administrateurs.**
+`valider_lignes_import_profs` remplace un rôle **absent** par `'prof'`. Un
+export d'annuaire (`email, nom, prénom`), qui est le format le plus probable,
+vaut donc « rétrograde tout le monde ». Le verrou du cas 207 ne protège que le
+**dernier** administrateur actif : mesuré en base, deux administrateurs avant
+l'import, un après — et c'est **celui qui lance l'import** qui perd ses droits,
+avec un retour `"ok": true` qui ne mentionne aucun changement de rôle.
+
+C'est la famille des bugs de population appliquée à une colonne manquante :
+l'absence d'une donnée a été lue comme une valeur. La même erreur que
+`nb_sessions = 0` pendant le chargement (lot 16 bis).
+
+**Décidé** — Le cas 208 ne crie pas « ECHEC » : il vérifie la seule garantie qui
+tienne aujourd'hui — il reste toujours au moins un administrateur — et affiche
+la rétrogradation constatée sous l'étiquette « A TRANCHER ». Un scénario rouge
+en permanence finit par ne plus être lu ; le défaut, lui, doit rester visible.
+Il basculera en ECHEC dès que la règle sera tranchée.
+⬜ *en attente de la décision d'Aymeri*
+
+**Ensuite** — Antigravity : lancer `./supabase/tests/run.sh` et confirmer les
+208 cas au vert, puis commiter. Aymeri : trancher la règle du rôle absent — ma
+recommandation est qu'une ligne sans clé `role` **garde le rôle existant** sur
+une mise à jour, et ne vaille `prof` que sur une création ; seul un
+`"role":"prof"` explicite rétrograde. Migration 43 à écrire ensuite, avec son
+cas de test. **En attendant, ne pas se servir de l'import CSV des enseignants.**
+
+
 ## 2026-09-13 — Bascule vers un nouveau chat : le partage du travail était mal décrit
 
 **Fait**

@@ -4,8 +4,14 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **13 septembre 2026** — **42 migrations appliquées, 193 cas
-> de test verts**. L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont dans le code.**
+> Dernière mise à jour : **14 septembre 2026** — **42 migrations appliquées, 208 cas
+> de test verts**.
+> **Les migrations 39 à 42 ont enfin leurs cas de test** (194 à 208). En les écrivant,
+> deux constats : `run.sh` ne démarrait plus depuis la migration 42 (l'`auth.users`
+> simulée du prélude n'a pas `last_sign_in_at`, la migration ne se créait pas et le
+> scénario s'arrêtait AVANT le premier cas) ; et **un import d'enseignants dont le
+> fichier n'a pas de colonne « rôle » rétrograde tous les administrateurs sauf le
+> dernier — dont celui qui lance l'import** (cas 208, à trancher, voir §5). L'application s'appelle `matHo`. **Les 36 maquettes de la refonte v10 sont dans le code.**
 > **Sauvegarde & Sécurité finalisées** : rôle `matho_sauvegarde` opérationnel en lecture seule (migrations 37 & 38 appliquées, fuite PUBLIC colmatée), double dump (complet + données seules réinjectables) testé et validé par restauration à blanc (313 élèves revenus sans erreur). Double automatisme en place : sentinelle GitHub Actions le vendredi à 20h17 Paris et LaunchAgent Mac (`launchd`) le vendredi à 18h00 avec synchronisation Google Drive.
 > **Migrations 39 à 42 appliquées** : réveil quotidien Supabase anon restauré (migration 39, curl 200 et GitHub Actions vert), édition des professeurs par les admins avec maintien de `user_id` (migration 40), signature unique de `modifier_prof` (migration 41), statut de connexion des professeurs avec date/heure de dernière connexion et import CSV en masse des enseignants (`apercu_import_profs` / `importer_profs`) avec protection du dernier admin et rattachement automatique immédiat (migration 42). Défis étendus jusqu'à la table de 20 (`Challenges.jsx`), label corrigé dans `Practice.jsx`. Dump et backup complet + données synchronisés dans Google Drive.
 > Bug de saisie du chiffre `0` corrigé dans le frontend et déployé en production sur Vercel.
@@ -984,6 +990,32 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     RLS a besoin, et `enregistrer_session`, jamais accordée depuis la
     migration 26. 192 cas de test verts.
 
+22. ✅ **Cas de test 194 à 208 — les migrations 39 à 42 sont enfin couvertes**
+    — 14 septembre. Réveil quotidien appelable par `anon`, `modifier_prof`
+    (adresse changée sans toucher `user_id`, adresse déjà prise refusée côté
+    prof et côté élève, coquille corrigée qui rattache — le cas Côme,
+    réservé à l'administrateur), `liste_profs` avec l'état de connexion lu
+    dans `auth.users`, et l'import d'enseignants (aperçu qui n'écrit rien,
+    populations qui s'additionnent, doublon nommé, création + rattachement
+    immédiat + réactivation + journal, aucune désactivation automatique,
+    réservé à l'administrateur, dernier admin protégé). **Correctif de
+    prélude au passage** : `run.sh` ne démarrait plus depuis la migration 42.
+
+⬜ **À TRANCHER — l'import d'enseignants rétrograde les administrateurs.**
+   *(14 septembre, constaté par exécution, cas 208.)*
+   `valider_lignes_import_profs` remplace un rôle **absent** par `'prof'`.
+   Un export d'annuaire (`email, nom, prénom`) — le format le plus probable —
+   vaut donc « rétrograde tout le monde ». Le verrou ne sauve que le
+   **dernier** administrateur : celui qui lance l'import se rétrograde
+   lui-même, et le retour dit `"ok": true` sans un mot. Vérifié en base : deux
+   administrateurs avant, un après.
+   Proposition : un rôle absent n'est pas un rôle, c'est l'absence
+   d'instruction — sur une mise à jour, une ligne sans clé `role` garde le
+   rôle existant ; seul un `"role":"prof"` explicite rétrograde. C'est la
+   règle déjà écrite ici pour le chargement (« une réponse absente n'est pas
+   une valeur », lot 16 bis). Migration 43 à écrire une fois tranché.
+   **En attendant : ne pas se servir de l'import CSV des enseignants.**
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1093,7 +1125,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (193 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (208 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 

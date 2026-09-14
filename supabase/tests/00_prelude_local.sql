@@ -16,8 +16,12 @@ end $$;
 create schema if not exists auth;
 
 create table auth.users (
-  id    uuid primary key default gen_random_uuid(),
-  email text unique
+  id               uuid primary key default gen_random_uuid(),
+  email            text unique,
+  -- Depuis la migration 42, `liste_profs()` lit cette colonne pour afficher
+  -- la derniere connexion Google d'un enseignant. Sans elle ici, la migration
+  -- 42 ne se cree pas et run.sh s'arrete AVANT le premier cas de test.
+  last_sign_in_at  timestamptz
 );
 
 create or replace function auth.uid() returns uuid
