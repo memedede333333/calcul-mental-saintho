@@ -213,12 +213,13 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
     }, [identite]);
 
     // --- Créer un défi ---
-    const handleCreateDefi = useCallback(async (type, tables, classe, dureeS) => {
+    const handleCreateDefi = useCallback(async (type, tables, classe, dureeS, nbQuestions) => {
         const res = await creerDefi({
             type: type.id,
             tables,
             classe,
             dureeS: type.id === 'countdown' ? (dureeS || 60) : null,
+            nbQuestions: type.id === 'sprint' ? (nbQuestions || 20) : 20,
         });
         if (!res.ok) return res;
         setDefiInfo({
@@ -227,6 +228,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             type: type.id,
             tables,
             duree_s: type.id === 'countdown' ? (dureeS || 60) : null,
+            nb_questions: type.id === 'sprint' ? (nbQuestions || 20) : 20,
         });
         setChallengeType(type);
         setPhase('defi-code');
@@ -603,6 +605,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     const [nomsHorsPlafond, setNomsHorsPlafond] = useState([]);
     const [loadingNoms, setLoadingNoms] = useState(false);
     const [countdownDuration, setCountdownDuration] = useState(60); // 30, 60, 90, 120 (défaut 1 min)
+    const [sprintQuestions, setSprintQuestions] = useState(20); // 10, 20, 30, 45, 60 (défaut 20)
 
     // Modes autorisés en défi : sprint et countdown
     const currentModeId = type?.id === 'countdown' ? 'countdown' : 'sprint';
@@ -692,7 +695,13 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
         setCreating(true);
         setCreateError(null);
         const currentType = CHALLENGE_TYPES.find(t => t.id === currentModeId) || CHALLENGE_TYPES[0];
-        const res = await onCreateDefi(currentType, tables, selectedClasse, currentModeId === 'countdown' ? countdownDuration : null);
+        const res = await onCreateDefi(
+            currentType,
+            tables,
+            selectedClasse,
+            currentModeId === 'countdown' ? countdownDuration : null,
+            currentModeId === 'sprint' ? sprintQuestions : 20
+        );
         if (!res.ok) {
             setCreateError(res.error || res.data?.message || 'Impossible de créer le défi.');
             setCreating(false);
@@ -703,7 +712,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
     const availableTables = ALL_TABLES.filter(t => t >= 2);
 
     const modeLabel = currentModeId === 'sprint' ? 'Sprint' : 'Contre‑la‑montre';
-    const durationLabel = currentModeId === 'sprint' ? '20 questions' : formaterDuree(countdownDuration);
+    const durationLabel = currentModeId === 'sprint' ? `${sprintQuestions} questions` : formaterDuree(countdownDuration);
     const sortedTables = [...tables].sort((a, b) => a - b);
     const summaryText = `${modeLabel} · table${sortedTables.length > 1 ? 's' : ''} ${sortedTables.join(', ')} · ${selectedClasse || 'Sans classe'} · ${durationLabel}`;
 
@@ -770,7 +779,7 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                                 fontFamily: 'var(--texte)', fontSize: 15, fontWeight: 600,
                                 color: currentModeId === 'sprint' ? 'var(--ciel-pale)' : 'var(--gris)',
                             }}>
-                                20 questions · 3 s
+                                {sprintQuestions} questions · 3 s
                             </div>
                         </div>
                     </div>
@@ -806,6 +815,43 @@ function ChallengeConfigProf({ type, setType, tables, setTables, onBack, onCreat
                         </div>
                     </div>
                 </div>
+
+                {currentModeId === 'sprint' && (
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 8,
+                        background: 'var(--surface)', borderRadius: 18, padding: '14px 16px',
+                        boxShadow: 'var(--ombre-carte)',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--texte)', fontSize: 13, fontWeight: 700,
+                            color: 'var(--gris)', letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}>
+                            Nombre de questions
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                            {[10, 20, 30, 45, 60].map(q => {
+                                const isSel = sprintQuestions === q;
+                                return (
+                                    <button
+                                        key={q}
+                                        type="button"
+                                        onClick={() => setSprintQuestions(q)}
+                                        style={{
+                                            height: 48, borderRadius: 12,
+                                            border: isSel ? '2px solid var(--action)' : '1px solid var(--bordure)',
+                                            background: isSel ? 'var(--action)' : 'var(--ivoire)',
+                                            color: isSel ? 'var(--action-texte)' : 'var(--indigo)',
+                                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 16,
+                                            cursor: 'pointer', transition: 'all 0.12s ease',
+                                        }}
+                                    >
+                                        {q}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {currentModeId === 'countdown' && (
                     <div style={{
@@ -1698,7 +1744,7 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
 
     const isSuccess = useMemo(() => {
         if (!result) return false;
-        if (type.id === 'sprint') return (result.scorePremierEssai || 0) >= 16;
+        if (type.id === 'sprint') return (result.scorePremierEssai || 0) >= Math.round((result.answered || 20) * 0.8);
         if (type.id === 'flawless') return (result.streak || 0) >= 10;
         if (type.id === 'countdown') return (result.score || 0) >= 15;
         if (type.id === 'climb') return (result.highestTable || 0) >= 10 || result.perfect;
@@ -1906,7 +1952,12 @@ function DefiCodeScreen({ defiInfo, estProf, onStart, onBack }) {
     const classe = avancement?.classe || defiInfo?.classe || null;
     const modeKey = defiInfo?.type || 'sprint';
     const dureeS = defiInfo?.duree_s || 60;
-    const modeLabel = modeKey === 'countdown' ? `Contre‑la‑montre (${formaterDuree(dureeS)})` : 'Sprint';
+    const nbQ = Array.isArray(defiInfo?.questions)
+        ? defiInfo.questions.length
+        : (defiInfo?.nb_questions || 20);
+    const modeLabel = modeKey === 'countdown'
+        ? `Contre‑la‑montre (${formaterDuree(dureeS)})`
+        : `Sprint (${nbQ} questions)`;
 
     const formatTablesLabel = (tbls) => {
         if (!tbls || !tbls.length) return 'toutes les tables';
@@ -2146,8 +2197,11 @@ function DefiIntro({ defiInfo, challengeType, onStart, onBack, enCouvreFeu, heur
     const modeKey = challengeType?.id || defiInfo?.type || 'sprint';
 
     const dureeTexte = formaterDuree(defiInfo?.duree_s);
+    const nbQ = Array.isArray(defiInfo?.questions)
+        ? defiInfo.questions.length
+        : (defiInfo?.nb_questions || 20);
     const modeLabels = {
-        sprint: { name: 'Sprint', desc: '20 questions · 3 secondes chacune' },
+        sprint: { name: 'Sprint', desc: `${nbQ} questions · 3 secondes chacune` },
         countdown: {
             name: 'Contre-la-montre',
             desc: dureeTexte ? `${dureeTexte} · max de bonnes réponses` : 'Max de bonnes réponses',
