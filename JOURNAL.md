@@ -57,7 +57,20 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
-## 2026-09-14 — Le bouton « Fiche » de l'onglet Élèves : `e.id` au lieu de `e.eleve_id`
+## 2026-09-15 — Sélecteur de questions en défi Sprint (10 · 20 · 30 · 45 · 60)
+
+**Demandé** — Pouvoir choisir le nombre de questions lors du lancement d'un défi Sprint pour la classe, avec les pastilles 10, 20, 30, 45 et 60 questions (20 par défaut). Conserver rigoureusement la charte graphique et adapter tous les écrans d'annonce côté prof et côté élève.
+
+**Fait**
+- **Interface prof (`Challenges.jsx`)** : ajout du sélecteur de pastilles pour le Sprint (`10 · 20 · 30 · 45 · 60`), reprenant au pixel près la charte graphique du Contre-la-montre (carte surface, typographie uppercase, bordure et fond `--action`, transition).
+- **Transmission API** : `handleCreateDefi` et `ChallengeConfigProf` transmettent `nbQuestions` au backend `creerDefi` (`p_nb_questions`), qui supportait déjà nativement la génération dynamique de questions.
+- **Écran de projection prof (`DefiCodeScreen`)** : l'en-tête projeté affiche dynamiquement `Sprint (X questions)` au lieu du texte statique `Sprint`.
+- **Écran d'annonce élève (`DefiIntro` / Maquette 8)** : affiche dynamiquement `X questions · 3 secondes chacune` au lieu de `20 questions`.
+- **Écran de prévisualisation (`JoinChallenge.jsx`)** : affichage dynamique `Sprint · X questions`.
+- **Calcul de réussite (`ChallengeResults.jsx`)** : seuil de succès proportionnel à 80% du nombre de questions au lieu du seuil fixe `16`.
+- Validation : `npm run build` (ESLint 0 erreur, CSS tokens 100% valides, 54 RPC vérifiées). Commité et poussé sur master (`70c426e`).
+
+---
 
 **Constaté** — Signalé par Aymeri : dans Administration › Élèves, le bouton
 « Fiche » ne fait rien, pour un élève actif comme désactivé.
