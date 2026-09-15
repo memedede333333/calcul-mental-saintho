@@ -35,7 +35,7 @@ const QUESTION_TIMER = 3; // secondes par question
 const CHALLENGE_TYPES = [
     {
         id: 'sprint', emoji: '⚡', name: 'Sprint',
-        desc: '20 questions — le plus rapide gagne !',
+        desc: 'Le plus rapide gagne !',
         color: '--coral', questions: 20, shareable: true,
     },
     {
