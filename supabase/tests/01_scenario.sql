@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 240 cas, numérotés jusqu'à 240. Les cas 194 à 211
+-- COMPTE EXACT : 249 cas, numérotés jusqu'à 249. Les cas 194 à 211
 -- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
 -- statut de connexion, import des enseignants, et la règle « un import
 -- ne change jamais un rôle ») ; les cas 212 à 224 la migration 44
@@ -2866,4 +2866,197 @@ exception when others then raise notice 'OK : comparaison refusee (%)', sqlerrm;
 do $$ begin perform comparer_eleves_entete(null,1::smallint,10::smallint,null,30);
   raise notice 'ECHEC : un eleve lit l entete de comparaison';
 exception when others then raise notice 'OK : entete refusee (%)', sqlerrm; end $$;
+reset role;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 48 — le coupe-circuit des defis entre eleves
+-- ---------------------------------------------------------------------
+-- DAVID (6B) sert de second eleve : Alice est volontairement detachee de
+-- son compte Google par le cas 184, elle ne peut donc plus rien rejoindre.
+\set DAVID '55555555-5555-5555-5555-555555555555'
+
+\echo '=== 241. Par defaut, un eleve cree un defi et son niveau est deduit ==='
+-- Liste vide = aucune restriction. Un reglage par defaut n eteint jamais
+-- une fonctionnalite : c est ce qu une base restauree doit retrouver,
+-- puisque chez elle les migrations passent AVANT les donnees.
+reset role;
+select id as e241 from eleves where email = 'bob.martin@demo.saintho.fr' \gset
+select case when public.niveau_de_classe('6A') = '6'
+             and public.niveau_de_classe('3EME1') = '3'
+             and public.niveau_de_classe('ULIS') = 'ULIS'
+             and public.niveau_de_classe('') is null
+            then 'OK : le niveau se deduit, et une classe sans chiffre devient son propre niveau'
+            else 'ECHEC : la deduction du niveau est fausse' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when (reglages_defis()->>'je_peux_creer')::boolean
+             and reglages_defis()->>'mon_niveau' = '6'
+            then 'OK : le serveur repond lui-meme si le bouton doit exister'
+            else 'ECHEC : ' || reglages_defis()::text end as verdict;
+select (creer_defi('sprint', '{6,7}'::smallint[], 10) ->> 'code') is not null as defi_cree;
+
+\echo '=== 242. Interrupteur general coupe : la creation est refusee net ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_reglages_defis(p_actif => false)->>'actif' as coupe;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$ begin
+  perform creer_defi('sprint', '{6,7}'::smallint[], 10);
+  raise notice 'ECHEC : un eleve a cree un defi pendant la suspension';
+exception when others then
+  if sqlerrm like '%suspendus par les enseignants%'
+    then raise notice 'OK : refuse (%)', sqlerrm;
+    else raise notice 'ECHEC : mauvais message (%)', sqlerrm; end if;
+end $$;
+select case when (reglages_defis()->>'je_peux_creer')::boolean = false
+            then 'OK : l ecran saura masquer le bouton'
+            else 'ECHEC : le serveur dit encore oui' end as verdict;
+
+\echo '=== 243. Un defi d ELEVE est GELE, pas ferme, et ses scores restent ==='
+-- Le defi n est ni supprime ni clos : il devient injoignable. Les
+-- participations deja enregistrees ne bougent pas d un pouce.
+reset role;
+select id as d243 from defis where cree_par_eleve = :'e241'::uuid
+ order by cree_le desc limit 1 \gset
+select code as c243 from defis where id = :'d243'::uuid \gset
+select count(*) as parts_avant from defis_participants where defi_id = :'d243'::uuid \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+select rejoindre_defi(:'c243') as r243 \gset
+reset role;
+select case when (:'r243'::jsonb->>'ok')::boolean = false
+             and :'r243'::jsonb->>'raison' = 'suspendu'
+             and :'r243'::jsonb->>'message' like '%suspendus par les enseignants%'
+             and (select statut from defis where id = :'d243'::uuid) = 'ouvert'
+             and (select count(*) from defis_participants where defi_id = :'d243'::uuid) = :parts_avant
+            then 'OK : injoignable, mais toujours ouvert et sans perte'
+            else 'ECHEC : le gel ferme le defi ou perd des donnees' end as verdict;
+
+\echo '=== 244. Un defi de PROFESSEUR continue de tourner pendant la coupure ==='
+-- La suspension vise les defis entre eleves. Le travail prescrit par un
+-- professeur n en depend pas : ce serait couper le cours avec la recreation.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('sprint', '{6}'::smallint[], 10, null, '6A') as d244 \gset
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+select rejoindre_defi((:'d244'::jsonb)->>'code') as r244 \gset
+select case when (:'r244'::jsonb->>'ok')::boolean
+            then 'OK : le defi du professeur est rejoint normalement'
+            else 'ECHEC : la suspension bloque aussi le travail prescrit ('
+                 || (:'r244'::jsonb->>'message') || ')' end as verdict;
+
+\echo '=== 245. Coupure par NIVEAU : le 6e est bloque, le 5e passe ==='
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_reglages_defis(p_actif => true, p_niveaux => array['5'])->>'actif' as retabli;
+reset role;
+select id as e245 from eleves where classe = '5A' and actif order by nom limit 1 \gset
+select user_id as u245 from eleves where id = :'e245'::uuid \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select case when (reglages_defis()->>'je_peux_creer')::boolean = false
+            then 'OK : le 6e est hors de la liste, donc bloque'
+            else 'ECHEC : la restriction par niveau ne mord pas' end as verdict;
+reset role;
+select case when public.defis_eleves_autorises(:'e245'::uuid)
+            then 'OK : le 5e figure dans la liste, il passe'
+            else 'ECHEC : le niveau autorise est bloque lui aussi' end as verdict;
+
+\echo '=== 246. C est le niveau de CELUI QUI REJOINT qui compte ==='
+-- Un 6e suspendu n entre pas dans le defi d un 5e autorise. Sinon le
+-- coupe-circuit se contournerait en demandant le code a un copain d un
+-- autre niveau.
+reset role;
+update eleves set user_id = 'cccccccc-0000-0000-0000-000000000246'
+ where id = :'e245'::uuid and user_id is null;
+insert into auth.users (id, email)
+select 'cccccccc-0000-0000-0000-000000000246', email from eleves where id = :'e245'::uuid
+on conflict (id) do nothing;
+set role authenticated;
+select set_config('request.jwt.claim.sub',
+  coalesce((select user_id::text from eleves where id = :'e245'::uuid),
+           'cccccccc-0000-0000-0000-000000000246'), false);
+select creer_defi('sprint', '{5}'::smallint[], 10) as d246 \gset
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select rejoindre_defi((:'d246'::jsonb)->>'code') as r246 \gset
+select case when (:'r246'::jsonb->>'ok')::boolean = false
+             and :'r246'::jsonb->>'raison' = 'suspendu'
+            then 'OK : le 6e suspendu n entre pas par le defi d un 5e'
+            else 'ECHEC : le coupe-circuit se contourne avec le code d un copain' end as verdict;
+
+\echo '=== 247. terminer_defi n est JAMAIS bloque — on coupe l entree, pas la sortie ==='
+-- LE point de cette migration. Un eleve qui a rejoint AVANT la coupure
+-- doit pouvoir finir et enregistrer. Refuser l ecriture lui effacerait un
+-- defi reellement joue — la lecon du couvre-feu, ou la file d attente
+-- hors-ligne aurait jete des parties legitimes.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_reglages_defis(p_actif => true, p_niveaux => array[]::text[])->>'actif' as tout_ouvert;
+select set_config('request.jwt.claim.sub', :'BOB', false);
+select creer_defi('sprint', '{6}'::smallint[], 5) as d247 \gset
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+select (rejoindre_defi((:'d247'::jsonb)->>'code')->>'ok')::boolean as david_a_rejoint;
+-- La coupure tombe MAINTENANT, alors qu Alice est en train de jouer.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_reglages_defis(p_actif => false)->>'actif' as coupe_en_pleine_partie;
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+select terminer_defi(
+         p_defi_id => ((:'d247'::jsonb)->>'defi_id')::uuid,
+         p_score   => 4, p_temps_s => 12,
+         p_faits   => '[{"fait":"6_6","juste":true,"premier":true,"temps_ms":1700}]'::jsonb
+       ) as t247 \gset
+reset role;
+select case when (:'t247'::jsonb) is not null
+             and exists (select 1 from defis_participants
+                          where defi_id = ((:'d247'::jsonb)->>'defi_id')::uuid
+                            and eleve_id = (select id from eleves where email='david.petit@demo.saintho.fr'))
+            then 'OK : la partie commencee avant la coupure s enregistre'
+            else 'ECHEC : on a efface un defi reellement joue' end as verdict;
+
+\echo '=== 248. Une classe sans chiffre a sa case, et la liste renseignee la bloque ==='
+-- On passe par `modifier_eleve`, pas par un `update` direct : le
+-- declencheur `eleves_protection` annule toute ecriture qui ne vient pas
+-- d un professeur, y compris celle d un superutilisateur sans jeton. Le
+-- test emprunte donc le meme chemin que l ecran Administration — c est
+-- la regle du projet, et elle s applique aussi aux tests.
+reset role;
+select id as e248 from eleves where classe = '6A' and actif order by nom limit 1 \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_eleve(:'e248'::uuid, p_classe => 'ULIS')->>'ok' as passe_en_ulis;
+select modifier_reglages_defis(p_actif => true, p_niveaux => array['6','5'])->>'actif' as regle;
+select case when (reglages_defis()->'niveaux_existants') ? 'ULIS'
+            then 'OK : l ecran d administration verra une case ULIS'
+            else 'ECHEC : une classe reelle n a pas de case' end as verdict;
+reset role;
+select case when not public.defis_eleves_autorises(:'e248'::uuid)
+            then 'OK : hors de la liste renseignee, donc bloque'
+            else 'ECHEC : un niveau absent de la liste passe quand meme' end as verdict;
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_eleve(:'e248'::uuid, p_classe => '6A')->>'ok' as remis_en_6a;
+reset role;
+
+\echo '=== 249. Reserve a l administrateur, et trace au journal ==='
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF2', false);
+do $$ begin
+  perform modifier_reglages_defis(p_actif => false);
+  raise notice 'ECHEC : un prof simple a coupe les defis';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+do $$ begin
+  perform modifier_reglages_defis(p_actif => false);
+  raise notice 'ECHEC : un eleve a coupe les defis';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
+reset role;
+select case when exists (select 1 from journal_admin
+                          where action = 'modification_defis_eleves'
+                            and detail->'avant' is not null
+                            and detail->'apres' is not null)
+            then 'OK : chaque coupure est au journal, avant et apres'
+            else 'ECHEC : on peut couper sans laisser de trace' end as verdict;
+-- On rend la base a son etat courant : defis ouverts, aucune restriction.
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select modifier_reglages_defis(p_actif => true, p_niveaux => array[]::text[])->>'actif' as remis;
 reset role;

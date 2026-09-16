@@ -6,7 +6,7 @@ import {
     creerDefi, rejoindreDefi, terminerDefi,
     classementDefi, avancementDefi, suivreDefi,
     listeClasses, apercuDefiClasse, definirPlafondClasse,
-    presentsDefi, elevesHorsPlafond,
+    presentsDefi, elevesHorsPlafond, reglagesDefis,
 } from '../api';
 import Keypad from '../components/Keypad';
 import TimerRing from '../components/TimerRing';
@@ -496,9 +496,34 @@ function ChallengeConfig({ type, setType, tables, setTables, plafond, estProf, o
     const isClimb = type.id === 'climb';
     const availableTables = ALL_TABLES.filter(t => t >= 2 && t <= Math.max(10, plafond));
 
+    const [reglages, setReglages] = useState(null);
+    const [creatingDefi, setCreatingDefi] = useState(false);
+    const [defiError, setDefiError] = useState(null);
+
+    useEffect(() => {
+        let active = true;
+        reglagesDefis().then(res => {
+            if (active && res.ok && res.data) {
+                setReglages(res.data);
+            }
+        }).catch(() => {});
+        return () => { active = false; };
+    }, []);
+
     const toggle = (t) => {
         if (t > plafond) return;
         setTables(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+    };
+
+    const handleCreerDefiAmi = async () => {
+        if (tables.length === 0 || creatingDefi) return;
+        setCreatingDefi(true);
+        setDefiError(null);
+        const res = await onCreateDefi(type, tables, null, type.id === 'countdown' ? 60 : null, 20);
+        if (!res.ok) {
+            setDefiError(res.error || res.data?.message || 'Impossible de créer le défi.');
+            setCreatingDefi(false);
+        }
     };
 
     return (
@@ -582,14 +607,50 @@ function ChallengeConfig({ type, setType, tables, setTables, plafond, estProf, o
                 </div>
             )}
 
-            <button
-                className="btn btn--gold"
-                style={{ width: '100%', fontSize: 22, padding: 16 }}
-                disabled={!isClimb && tables.length === 0}
-                onClick={() => onStart(tables)}
-            >
-                Jouer seul ⚔️
-            </button>
+            {defiError && (
+                <div style={{
+                    padding: '12px 16px', borderRadius: 14, background: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--rouge)', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 14,
+                    marginBottom: 12, textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)',
+                }}>
+                    {defiError}
+                </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+                    <button
+                        className="btn btn--gold"
+                        style={{ flex: 1, fontSize: 18, padding: 16 }}
+                        disabled={!isClimb && tables.length === 0}
+                        onClick={() => onStart(tables)}
+                    >
+                        Jouer seul ⚔️
+                    </button>
+                    {type.shareable && reglages?.je_peux_creer && (
+                        <button
+                            type="button"
+                            className="btn btn--purple"
+                            disabled={tables.length === 0 || creatingDefi}
+                            onClick={handleCreerDefiAmi}
+                            style={{
+                                flex: 1, fontSize: 18, padding: 16,
+                            }}
+                        >
+                            {creatingDefi ? 'Création…' : 'Défier un ami 👥'}
+                        </button>
+                    )}
+                </div>
+
+                {type.shareable && reglages?.je_peux_creer === false && (
+                    <div style={{
+                        textAlign: 'center', fontFamily: 'var(--texte)', fontSize: 13,
+                        fontWeight: 600, color: 'var(--gris)', padding: '4px 8px',
+                    }}>
+                        Les défis entre élèves sont temporairement suspendus par les enseignants.
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

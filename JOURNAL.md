@@ -57,6 +57,51 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-16 — Intégration frontend du coupe-circuit défis élèves et bouton « Défier un ami »
+
+**Fait** — Branché l'API (`reglagesDefis`, `modifierReglagesDefis`), types `database.ts`, et les écrans :
+- `Admin.jsx` : onglet et carte de configuration « Défis entre élèves » réservé aux administrateurs (`estAdmin`), interrupteur général et boutons à bascule par niveau réel (`6ᵉ`, `5ᵉ`, `4ᵉ`, `3ᵉ`, etc.) calqués sur le couvre-feu.
+- `Challenges.jsx` : bouton « Défier un ami 👥 » (`btn--purple`) affiché si le mode est partageable et `reglages?.je_peux_creer`, bandeau informatif doux si la création est suspendue.
+- `JoinChallenge.jsx` : gestion propre du code retour `raison === 'suspendu'` avec message d'explication.
+- Validation `npm run build` : zéro erreur ESLint, build Vite ok, validation des tokens CSS (88 tokens actifs) et validation du contrat API RPC (56 RPC, 68 fonctions).
+
+**Ensuite** — Appliquer la migration 48 sur Supabase (Dashboard SQL Editor).
+
+## 2026-09-16 — Migration 48 : le coupe-circuit des défis entre élèves
+
+**Fait** — `supabase/migrations/20260916100000_coupe_circuit_defis_eleves.sql` et
+les cas 241 à 249. **249 cas verts**, zéro ECHEC, 48 migrations rejouées depuis
+zéro. Pas encore appliquée.
+
+Une table à une ligne, quatre fonctions (dont deux internes), et **deux `if`**
+insérés dans le texte existant de `creer_defi` et `rejoindre_defi` — repris de la
+base, jamais reconstitués. Aucune des six fonctions de défi n'est refondue, aucun
+défi existant ni score ne bouge.
+
+**Décidé — on coupe l'entrée, jamais la sortie.** `terminer_defi` n'est pas
+touchée. Le cas 247 coupe les défis pendant qu'un élève joue et vérifie que sa
+partie s'enregistre quand même.
+
+**Constaté en exécutant — mon amorçage était faux, et il l'aurait été à la pire
+occasion.** La première version remplissait `niveaux_autorises` avec les niveaux
+trouvés en base. `run.sh` a refusé de démarrer : sur une base reconstruite, les
+migrations passent avant les données, la liste naissait vide, et tout le collège
+se retrouvait coupé. C'est précisément la procédure de `RESTAURATION.md` — une
+restauration aurait donc éteint les défis sans que personne comprenne pourquoi.
+Règle retenue et écrite au §3 : **liste vide = aucune restriction**, un réglage par
+défaut n'éteint jamais une fonctionnalité.
+
+**Constaté aussi** — le cas 248 a d'abord échoué parce que j'écrivais la classe
+d'un élève par un `update` direct : le déclencheur `eleves_protection` l'annulait,
+faisant exactement son travail. Le test passe désormais par `modifier_eleve`,
+comme l'écran Administration. La règle « on ne corrige pas une fiche à la main »
+vaut aussi pour les tests.
+
+**Ensuite** — Antigravity : `run.sh` (249 attendus), appliquer la 48, régénérer
+`database.ts`, brancher `reglagesDefis` et `modifierReglagesDefis`, puis les deux
+écrans — la carte de réglage dans l'Administration et le bouton « Défier un ami ».
+
+
 ## 2026-09-15 — Sélecteur de questions Sprint : deux libellés figés ont survécu
 
 **Relu dans le code** (commits `70c426e` et `94b9e27`). Le gros du travail est

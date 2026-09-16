@@ -4,6 +4,7 @@ import {
     listeEleves, listeProfs, creerProf, modifierProf, desactiverProf,
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, reparerRattachements, journalAdmin,
     couvreFeu, modifierCouvreFeu, activiteNocturne, activiteEleveDetail, activiteProfs,
+    reglagesDefis, modifierReglagesDefis,
 } from '../api.js';
 import {
     ModalDesactiverEleve,
@@ -62,6 +63,11 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
     const [eleveSelectionneDetail, setEleveSelectionneDetail] = useState(null);
     const [detailSessionsEleve, setDetailSessionsEleve] = useState([]);
     const [loadingDetailEleve, setLoadingDetailEleve] = useState(false);
+
+    // Coupe-circuit défis entre élèves
+    const [defisReglages, setDefisReglages] = useState(null);
+    const [defisForm, setDefisForm] = useState({ actif: true, niveaux: [] });
+    const [defisEnregistrement, setDefisEnregistrement] = useState(false);
 
     // Filtres onglet Élèves
     const [classeFiltre, setClasseFiltre] = useState('Toutes');
@@ -179,6 +185,55 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
             }
         } finally {
             setCfEnregistrement(false);
+        }
+    };
+
+    // Charger et sauvegarder les réglages du coupe-circuit défis élèves
+    const rechargerReglagesDefis = useCallback(async () => {
+        if (!estAdmin) return;
+        try {
+            const res = await reglagesDefis();
+            if (res.ok && res.data) {
+                setDefisReglages(res.data);
+                setDefisForm({
+                    actif: res.data.actif ?? true,
+                    niveaux: Array.isArray(res.data.niveaux_autorises) ? res.data.niveaux_autorises : [],
+                });
+            }
+        } catch {
+            // Repli
+        }
+    }, [estAdmin]);
+
+    useEffect(() => {
+        if (estAdmin) {
+            rechargerReglagesDefis();
+        }
+    }, [estAdmin, rechargerReglagesDefis]);
+
+    const handleSauvegarderDefisReglages = async (e) => {
+        e?.preventDefault();
+        setDefisEnregistrement(true);
+        setMessageFeedback('');
+        try {
+            const res = await modifierReglagesDefis({
+                actif: defisForm.actif,
+                niveaux: defisForm.niveaux,
+            });
+            if (res.ok && res.data) {
+                setDefisReglages(res.data);
+                setDefisForm({
+                    actif: res.data.actif ?? true,
+                    niveaux: Array.isArray(res.data.niveaux_autorises) ? res.data.niveaux_autorises : [],
+                });
+                setMessageFeedback('✅ Réglages des défis entre élèves enregistrés.');
+            } else {
+                setMessageFeedback(`❌ ${res.error || 'Erreur lors de la mise à jour des défis élèves.'}`);
+            }
+        } catch (err) {
+            setMessageFeedback(`❌ ${err.message || 'Erreur réseau.'}`);
+        } finally {
+            setDefisEnregistrement(false);
         }
     };
 
@@ -330,6 +385,15 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                             onClick={() => setTab('couvre_feu')}
                         >
                             <span>🌙 Couvre-feu & Nuit</span>
+                        </button>
+                    )}
+
+                    {estAdmin && (
+                        <button
+                            className={`admin-sidebar-tab${tab === 'defis_eleves' ? ' admin-sidebar-tab--active' : ''}`}
+                            onClick={() => setTab('defis_eleves')}
+                        >
+                            <span>Défis entre élèves</span>
                         </button>
                     )}
 
@@ -986,6 +1050,119 @@ export default function Admin({ onBack, identite, onIdentiteChange }) {
                                         </table>
                                     </div>
                                 )}
+                            </div>
+                            <div style={{ flex: 1 }} />
+                        </>
+                    ) : tab === 'defis_eleves' ? (
+                        <>
+                            <div className="admin-topbar">
+                                <div>
+                                    <h2 className="admin-heading">Défis entre élèves</h2>
+                                    <div style={{ fontFamily: 'var(--texte)', fontSize: 14, color: 'var(--gris)', marginTop: 2 }}>
+                                        Autorisation et coupe-circuit des défis créés par les élèves
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Carte de réglage du coupe-circuit défis élèves */}
+                            <div style={{
+                                background: 'var(--surface)', borderRadius: 24, padding: '22px 24px',
+                                border: '1px solid var(--bordure)', boxShadow: 'var(--ombre-carte)',
+                                marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 18,
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                                    <div>
+                                        <h3 style={{ fontFamily: 'var(--titre)', fontWeight: 700, fontSize: 18, color: 'var(--indigo)', margin: 0 }}>
+                                            Coupe-circuit général
+                                        </h3>
+                                        <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', marginTop: 2 }}>
+                                            Permet aux élèves de générer un code défi (valable 24 h). En cas de coupure, la création et l'accès sont gelés sans supprimer les défis existants.
+                                        </div>
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={defisForm.actif}
+                                            onChange={e => setDefisForm(prev => ({ ...prev, actif: e.target.checked }))}
+                                            style={{ width: 18, height: 18, accentColor: 'var(--indigo)', cursor: 'pointer' }}
+                                        />
+                                        <span style={{ fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15, color: defisForm.actif ? 'var(--succes)' : 'var(--gris)' }}>
+                                            {defisForm.actif ? 'Défis élèves autorisés' : 'Défis élèves suspendus'}
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 13, color: 'var(--gris)', marginBottom: 8 }}>
+                                        Niveaux autorisés :
+                                    </label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                                        {((defisReglages?.niveaux_existants && defisReglages.niveaux_existants.length > 0)
+                                            ? defisReglages.niveaux_existants
+                                            : ['6', '5', '4', '3']
+                                        ).map(niv => {
+                                            const allNivs = (defisReglages?.niveaux_existants && defisReglages.niveaux_existants.length > 0)
+                                                ? defisReglages.niveaux_existants
+                                                : ['6', '5', '4', '3'];
+                                            const tousCoches = defisForm.niveaux.length === 0;
+                                            const isChecked = tousCoches || defisForm.niveaux.includes(niv);
+                                            const labelNiv = /^[0-9]+$/.test(niv) ? `${niv}ᵉ` : niv;
+
+                                            const toggleNiveau = () => {
+                                                let currentActive = tousCoches ? [...allNivs] : [...defisForm.niveaux];
+                                                if (isChecked) {
+                                                    currentActive = currentActive.filter(n => n !== niv);
+                                                } else {
+                                                    currentActive.push(niv);
+                                                }
+                                                // Règle projet : liste vide = tous autorisés (aucune restriction)
+                                                if (currentActive.length === allNivs.length) {
+                                                    setDefisForm(prev => ({ ...prev, niveaux: [] }));
+                                                } else {
+                                                    setDefisForm(prev => ({ ...prev, niveaux: currentActive }));
+                                                }
+                                            };
+
+                                            return (
+                                                <button
+                                                    key={niv}
+                                                    type="button"
+                                                    disabled={!defisForm.actif || defisEnregistrement}
+                                                    onClick={toggleNiveau}
+                                                    style={{
+                                                        padding: '8px 18px', borderRadius: 12,
+                                                        border: isChecked && defisForm.actif ? '2px solid var(--action)' : '1px solid var(--bordure)',
+                                                        background: isChecked && defisForm.actif ? 'var(--action)' : 'var(--ivoire)',
+                                                        color: isChecked && defisForm.actif ? 'var(--action-texte)' : 'var(--indigo)',
+                                                        fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 15,
+                                                        cursor: defisForm.actif ? 'pointer' : 'not-allowed',
+                                                        opacity: defisForm.actif ? 1 : 0.5,
+                                                        transition: 'all 0.12s ease',
+                                                    }}
+                                                >
+                                                    {isChecked ? '✓ ' : ''}{labelNiv}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div style={{ fontFamily: 'var(--texte)', fontSize: 13, color: 'var(--gris)', marginTop: 8 }}>
+                                        {defisForm.niveaux.length === 0
+                                            ? 'Tous les niveaux sont actuellement autorisés.'
+                                            : `Seuls les niveaux sélectionnés (${defisForm.niveaux.map(n => /^[0-9]+$/.test(n) ? `${n}ᵉ` : n).join(', ')}) peuvent créer et rejoindre des défis entre élèves.`}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                                    <button
+                                        type="button"
+                                        onClick={handleSauvegarderDefisReglages}
+                                        disabled={defisEnregistrement}
+                                        className="btn btn--gold"
+                                        style={{ padding: '10px 22px', fontSize: 15, fontWeight: 700 }}
+                                    >
+                                        {defisEnregistrement ? 'Enregistrement…' : 'Enregistrer'}
+                                    </button>
+                                </div>
                             </div>
                             <div style={{ flex: 1 }} />
                         </>

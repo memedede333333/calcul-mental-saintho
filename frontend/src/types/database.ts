@@ -70,6 +70,30 @@ export type Database = {
         }
         Relationships: []
       }
+      reglages_defis_eleves: {
+        Row: {
+          actif: boolean
+          modifie_le: string
+          modifie_par: string | null
+          niveaux_autorises: string[]
+          unique_ligne: boolean
+        }
+        Insert: {
+          actif?: boolean
+          modifie_le?: string
+          modifie_par?: string | null
+          niveaux_autorises?: string[]
+          unique_ligne?: boolean
+        }
+        Update: {
+          actif?: boolean
+          modifie_le?: string
+          modifie_par?: string | null
+          niveaux_autorises?: string[]
+          unique_ligne?: boolean
+        }
+        Relationships: []
+      }
       defis: {
         Row: {
           classe: string | null
@@ -972,6 +996,13 @@ export type Database = {
         }
         Returns: Json
       }
+      modifier_reglages_defis: {
+        Args: {
+          p_actif?: boolean
+          p_niveaux?: string[]
+        }
+        Returns: Json
+      }
       mon_profil: { Args: never; Returns: Json }
       mon_profil_prof: { Args: never; Returns: Json }
       nb_admins_actifs: { Args: never; Returns: number }
@@ -1016,6 +1047,7 @@ export type Database = {
       qui_suis_je: { Args: never; Returns: Json }
       rattacher_par_email: { Args: { p_email: string }; Returns: string }
       reactiver_eleve: { Args: { p_eleve_id: string }; Returns: Json }
+      reglages_defis: { Args: never; Returns: Json }
       rejoindre_defi: { Args: { p_code: string }; Returns: Json }
       reparer_rattachements: { Args: never; Returns: Json }
       seuil_reponse_rapide: { Args: never; Returns: number }

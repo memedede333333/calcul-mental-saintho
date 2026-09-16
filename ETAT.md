@@ -4,9 +4,10 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **14 septembre 2026** — **47 migrations appliquées**,
-> lot A (fiche élève) et **lot B (tableau de comparaison des élèves)** en production.
-> **240 cas de test verts** sur une base reconstruite depuis les 47 migrations.
+> Dernière mise à jour : **16 septembre 2026** — **47 migrations appliquées**.
+> La **migration 48 est écrite et testée, pas encore appliquée** : le coupe-circuit
+> des défis entre élèves. **249 cas de test verts** sur une base reconstruite depuis
+> les 48 migrations.
 
 ---
 
@@ -365,6 +366,43 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**Les défis entre élèves ont un coupe-circuit — et on coupe l'entrée, jamais la
+sortie.** *(16 septembre 2026, migration 48.)* Un administrateur peut suspendre les
+défis entre élèves, en tout ou par niveau, depuis l'Administration. Deux contrôles
+seulement : `creer_defi` refuse net, `rejoindre_defi` gèle l'entrée.
+
+`terminer_defi` n'est **pas** touchée, et c'est le point central. Un élève qui a
+rejoint avant la coupure doit pouvoir finir et enregistrer : refuser l'écriture lui
+effacerait un défi réellement joué. C'est la leçon du couvre-feu, où la file
+d'attente hors-ligne aurait jeté des parties légitimes. Le cas 247 le vérifie en
+coupant pendant qu'un élève joue.
+
+Un défi suspendu n'est ni fermé ni supprimé : il devient injoignable, ses
+participations restent intactes. Et les défis créés par un professeur ne sont
+jamais concernés — suspendre la récréation ne suspend pas le cours.
+
+**La liste des niveaux est une restriction, pas une autorisation.**
+*(16 septembre 2026 — trouvé en exécutant.)* Ma première version amorçait la liste
+avec les niveaux présents en base. Sur la production ça marchait. Sur une base
+reconstruite depuis zéro, les migrations passent **avant** les données : la liste
+naissait vide et coupait tout le collège en silence — or c'est exactement ce que
+fait `RESTAURATION.md`. Donc : liste vide = aucune restriction ; une liste
+renseignée ne laisse passer que les niveaux qu'elle nomme. **Un réglage par défaut
+n'éteint jamais une fonctionnalité.**
+
+**Le niveau d'un élève est déduit de sa classe, à un seul endroit.**
+Il n'existe pas de colonne « niveau » : `niveau_de_classe()` fait la déduction
+(« 6A » → « 6 »), et une classe sans chiffre — « ULIS » — devient son propre niveau
+plutôt que de tomber dans un trou. L'écran d'administration dessine une case par
+niveau **réellement présent en base** (`niveaux_existants`), jamais quatre cases
+écrites en dur. Et c'est le serveur qui répond `je_peux_creer` : l'écran affiche ou
+masque le bouton sans comparer quoi que ce soit.
+
+**Les défis entre professeurs sont écartés.** *(16 septembre 2026 — tranché par
+Aymeri, contre ma proposition.)* Deux tables miroir et la refonte de six fonctions
+RPC sur une base en production avec 313 élèves, pour un usage occasionnel en salle
+des profs : disproportionné. Le sujet est classé, pas ajourné.
 
 **Comparer des élèves, c'est d'abord choisir un dénominateur commun.**
 *(14 septembre 2026, migration 47 — la plage tranchée par la demande d'Aymeri.)*
@@ -1177,6 +1215,14 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     populations, et ce que la période fait bouger), plus deux aides partagées,
     `fait_dans_plage` et `nb_faits_plage`. Cas 233 à 240, 240 cas verts.
 
+27. ⬜ **Migration 48 — coupe-circuit des défis entre élèves** — écrite et testée
+    le 16 septembre, **pas encore appliquée**. Table `reglages_defis_eleves`,
+    `niveau_de_classe()`, `defis_eleves_autorises()`, `reglages_defis()` et
+    `modifier_reglages_defis()` (administrateur, tracée au journal), plus deux
+    contrôles insérés dans `creer_defi` et `rejoindre_defi`. Cas 241 à 249.
+    Côté écran restent à faire : la carte de réglage dans l'Administration et le
+    bouton « Défier un ami » sur l'écran élève.
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1286,7 +1332,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (240 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (249 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 

@@ -55,6 +55,7 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
     const [defiData, setDefiData] = useState(null);
     const [moiResult, setMoiResult] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(null);
 
     // --- Gestion des touches virtuelles ---
     const handleKeyTap = useCallback((key) => {
@@ -88,6 +89,8 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                 setStatus('valide');
             } else {
                 const raison = res.data?.raison || res.raison || 'inconnu';
+                const msg = res.data?.message || res.message || null;
+                setErrorMessage(msg);
                 if (raison === 'deja_joue') {
                     const defiId = res.data?.defi_id || res.defi_id;
                     let moi = null;
@@ -104,6 +107,8 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                     setStatus('deja_joue');
                 } else if (raison === 'ferme') {
                     setStatus('ferme');
+                } else if (raison === 'suspendu') {
+                    setStatus('suspendu');
                 } else {
                     setStatus('inconnu');
                 }
@@ -323,6 +328,36 @@ export default function JoinChallenge({ onBack, onStartDefi, onViewDefi }) {
                         </div>
                         <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)' }}>
                             Ce défi est fermé ou a expiré. Demande un nouveau code à ton professeur.
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleRessaisir}
+                        style={{
+                            marginLeft: 'auto', height: 60, padding: '0 22px', borderRadius: 17,
+                            background: 'var(--surface)', border: '2px solid var(--bordure)',
+                            color: 'var(--indigo)', fontFamily: 'var(--texte)', fontWeight: 700,
+                            fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            whiteSpace: 'nowrap', flexShrink: 0,
+                        }}
+                    >
+                        Ressaisir
+                    </button>
+                </div>
+            )}
+
+            {/* ÉCRAN 34 : Refus — Défis élèves suspendus */}
+            {status === 'suspendu' && (
+                <div style={{
+                    background: 'var(--surface)', borderRadius: 24, boxShadow: 'var(--ombre-carte)',
+                    padding: 24, display: 'flex', alignItems: 'center', gap: 18,
+                }}>
+                    <div style={{ width: 10, alignSelf: 'stretch', borderRadius: 5, background: 'var(--orange)', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                        <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: 'var(--indigo)' }}>
+                            Défis entre élèves suspendus
+                        </div>
+                        <div style={{ fontFamily: 'var(--texte)', fontSize: 16, fontWeight: 600, color: 'var(--gris)' }}>
+                            {errorMessage || 'Les défis entre élèves sont temporairement suspendus par les enseignants.'}
                         </div>
                     </div>
                     <button

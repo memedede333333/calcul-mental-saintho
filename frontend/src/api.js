@@ -768,6 +768,19 @@ export async function modifierCouvreFeu({ actif, heure_debut, heure_fin, message
     });
 }
 
+/** État du coupe-circuit des défis entre élèves (actif, niveaux_autorises, niveaux_existants, je_peux_creer). */
+export async function reglagesDefis() {
+    return rpc('reglages_defis');
+}
+
+/** Modification du coupe-circuit des défis entre élèves (réservé admin). */
+export async function modifierReglagesDefis({ actif = null, niveaux = null } = {}) {
+    return rpc('modifier_reglages_defis', {
+        p_actif: actif,
+        p_niveaux: niveaux,
+    });
+}
+
 /** Synthèse d'activité globale ou par classe (inscrits, ont_joue, parties, temps_partie_s). */
 export async function activiteSynthese(classe = null, jours = 7) {
     return rpc('activite_synthese', { p_classe: classe, p_jours: jours });
@@ -858,6 +871,7 @@ export const api = {
     desactiverEleve, reactiverEleve, definirPlafondClasse, listeEleves,
     listeProfs, creerProf, modifierProf, desactiverProf, journalAdmin,
     couvreFeu, modifierCouvreFeu, activiteNocturne, activiteEleveDetail, activiteProfs,
+    reglagesDefis, modifierReglagesDefis,
 };
 
 export default api;
