@@ -95,9 +95,20 @@ fait pour les classements élèves. Cette fiche est un écran d'enseignant : la
 réutiliser aurait masqué les noms de famille là où toutes les autres fonctions du
 même écran les donnent. Le cas 253 refuse tout nom au format abrégé.
 
-**Ensuite** — Antigravity : `run.sh` (256 attendus), appliquer la 49, régénérer
-`database.ts`, brancher `ficheEleveDefis`, puis la section sous les quatre
-compteurs de l'onglet « Défis & Badges ».
+**Livré et relu** — Commit `028a9c2`, migration appliquée sur Supabase. Relecture
+dans le code : le fichier de migration au dépôt est au bit près celui qui a été
+testé (`8697503…`), ce qui n'allait pas de soi — la migration 48 avait, elle, été
+corrigée après coup, et à raison.
+
+Les quatre règles d'affichage sont tenues. **Aucune soustraction** entre les
+compteurs : `nb_termines`, `nb_sans_finir` et `attendus` sont lus tels quels, et
+la barre de fraction n'apparaît que sur `attendus != null` — donc jamais pour un
+défi entre élèves. Les chiffres sont gardés par leur mode
+(`mode === 'sprint' && nb_questions`, `mode === 'countdown' && duree_s`) : aucun
+chiffre sans signification n'est affiché. Les **trois** états ont bien leurs trois
+branches, et le mot « refusé » n'apparaît nulle part dans le fichier.
+
+Rien à reprendre.
 
 
 ## 2026-09-16 — Migration 48 appliquée : je m'étais trompé sur le nom des classes
