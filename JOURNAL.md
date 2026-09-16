@@ -57,6 +57,58 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-15 — Sélecteur de questions Sprint : deux libellés figés ont survécu
+
+**Relu dans le code** (commits `70c426e` et `94b9e27`). Le gros du travail est
+juste : l'écran d'annonce du défi construit bien son sous-titre à partir du défi
+lui-même — `${nbQ} questions · 3 secondes chacune`, avec `nbQ` lu des questions
+figées et non d'une constante. C'est ce qu'Aymeri demandait, et côté prof comme
+côté élève ça affiche la bonne valeur.
+
+Et le « seuil de victoire à 80 % » du rapport n'est pas une règle de score : il ne
+déclenche que les confettis (`isSuccess` dans `ChallengeResults`). Les badges
+continuent de venir du serveur (`serverResult.nouveaux_badges`). Aucune règle n'a
+migré de la base vers l'écran — c'était ma première inquiétude en lisant le
+rapport, elle n'était pas fondée.
+
+**CORRECTION de ma relecture — je me suis trompé sur deux des trois lignes.**
+J'avais annoncé que l'écran de préparation du Sprint affichait « 20 questions »
+à un professeur. C'est faux : `ChallengeConfig` intercepte dès la ligne 482
+(`if (estProf) return <ChallengeConfigProf …>`), et les lignes 514 et 551
+appartiennent au parcours ÉLÈVE en solo, où le Sprint fait bel et bien
+20 questions. Le libellé y est juste. La leçon est celle du projet : j'ai lu deux
+lignes sans remonter à leur composant parent, exactement l'erreur que je reproche
+aux écrans qui concluent sans regarder d'où vient la donnée.
+
+Seule la ligne 38 était réellement fautive — la description figée du mode,
+affichée sur la carte de sélection avant que le nombre ne soit choisi. Corrigée
+en « Le plus rapide gagne ! », sans nombre. C'est la bonne correction.
+
+**Constaté en vérifiant — UN ÉLÈVE NE PEUT PLUS CRÉER DE DÉFI.**
+Recherche faite sur l'ensemble du frontend : `creerDefi` n'est appelée qu'à un
+seul endroit (`Challenges.jsx:217`), alimentée par `onCreateDefi`, qui n'est
+passée qu'à `ChallengeConfigProf`. La branche élève de `ChallengeConfig` ne
+propose que « Jouer seul ⚔️ ». Aucun écran n'offre à un élève de créer un défi.
+
+Or le serveur sait le faire et l'attend : `creer_defi` gère `cree_par_eleve`, le
+plafond de 5 défis ouverts et les 24 h d'expiration ; `mes_defis` renvoie
+`je_suis_createur` précisément pour distinguer ce cas ; et le §3 d'`ETAT.md`
+porte la décision du 31 août avec sa raison entière — « Si un défi de professeur
+rapportait davantage, les défis entre copains mourraient en trois semaines — or
+ce sont eux qui font qu'un élève ouvre l'application à 19 h sans qu'on le lui
+demande. »
+
+C'est la forme exacte du lot 20 : un geste disparu de l'écran, le SQL intact,
+les tests verts, et `check-api.mjs` muet parce que `creerDefi` est toujours
+appelée — par le professeur. Le garde-fou surveille qu'une fonction est appelée,
+jamais qu'elle l'est par tous ceux qui devraient pouvoir l'appeler.
+
+**Ensuite** — Aymeri : trancher. Soit la décision du 31 août tient et il manque
+un bouton « Défier un copain » à l'élève, soit elle a changé et il faut la
+réécrire au §3 avec sa nouvelle raison. Antigravity : rien tant que ce n'est pas
+tranché.
+
+
 ## 2026-09-15 — Sélecteur de questions en défi Sprint (10 · 20 · 30 · 45 · 60)
 
 **Demandé** — Pouvoir choisir le nombre de questions lors du lancement d'un défi Sprint pour la classe, avec les pastilles 10, 20, 30, 45 et 60 questions (20 par défaut). Conserver rigoureusement la charte graphique et adapter tous les écrans d'annonce côté prof et côté élève.
