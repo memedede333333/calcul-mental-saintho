@@ -64,13 +64,13 @@ d'interface se juge à cette aune.
 | ✅ **Lots 13 à 16 bis** livrés par Antigravity et relus dans le code | fait le 04/09 |
 | ✅ **Migration 25** appliquée (présences aux défis, sessions vides, élèves hors plafond) | fait le 04/09 |
 | ✅ **Lot 17** livré (maquette 9 code projeté, bouton « Voir qui », finitions) | fait le 04/09 |
-| ⬜ **Outil de réveil automatique (keep-alive)** | Cron quotidien (GitHub Actions / UptimeRobot / cron-job.org) pour requêter la base tous les jours et empêcher la suspension après 7j d'inactivité (plan gratuit Supabase) |
-| ⬜ **Base de production & passage en prod** | Projet Supabase séparé (région EU), application des 30 migrations (**aucun seed**), variables d'environnement Vercel |
-| ⬜ Import de rentrée des 350 élèves | via la modale d'aperçu d'import CSV (Écran 36d), format `email, nom, prénom, classe` |
-| ⬜ `*.supabase.co` autorisé dans Jamf | Aymeri |
-| ⬜ Web Clip Jamf — libellé et icône | après le nom |
-| ⬜ RGPD : registre de traitement, DPO, direction | Aymeri |
-| ⬜ SMTP Workspace (secours e-mail, non urgent) | facultatif |
+| ✅ **Outil de réveil automatique (keep-alive)** | Workflow GitHub Actions actif quotidiennement à 05h17 UTC (validé et vert). |
+| ⬜ **Base de production & passage en prod** | Décision : garder `calcul-mental-dev` (déjà peuplée de 313 élèves) ou instancier un projet séparé. |
+| ✅ **Import des élèves** | 313 élèves réels importés avec leurs classes (61, 62...). |
+| ✅ **`*.supabase.co` & `accounts.google.fr` dans Jamf** | Validé le 10/09 sur iPad derrière le filtre MDM. |
+| ⬜ **Web Clip Jamf — libellé et icône** | À vérifier/pousser sur la flotte d'iPads (nom : `matHo`). |
+| ⬜ **RGPD : registre de traitement, DPO, direction** | Inscription administrative du traitement par l'établissement. |
+| ⬜ **SMTP Workspace (secours e-mail, non urgent)** | Facultatif (connexion principale par Google OAuth). |
 
 **Projet Supabase de développement** : `calcul-mental-dev`,
 référence `lkukdlspcgqtiimvwlsd`, région Francfort, PostgreSQL 17.
@@ -1214,41 +1214,17 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     défaut : il ne protégeait qu'une personne, et il n'a plus rien à
     protéger. Cas 208 à 211 ajoutés, 211 cas verts.
 
-24. ⬜ **Migration 44 — couvre-feu configurable et activité des élèves** — écrite
-    et testée le 14 septembre, **pas encore appliquée**. Une table d'un seul
-    enregistrement (`couvre_feu`), `couvre_feu()` ouverte à tout compte connecté,
-    `modifier_couvre_feu()` réservée à l'administrateur et tracée au journal, et
-    quatre fonctions d'activité réparties en deux étages étanches. Cas 212 à 224,
-    224 cas verts. Reste à faire : appliquer la migration, brancher les écrans
-    (verrouillage côté élève, onglet volume dans Ma classe, frise nocturne côté
-    administrateur), et **ajouter la ligne au registre de traitement RGPD** — ce
-    module enregistre et affiche des horaires de connexion de mineurs.
+24. ✅ **Migration 44 — couvre-feu configurable et activité des élèves** — appliquée le 14 septembre.
+    Table `couvre_feu`, `couvre_feu()` ouverte à tous, `modifier_couvre_feu()` admin, et les fonctions d'activité. Écrans branchés (verrouillage élève, Ma classe, frise nocturne).
 
-25. ⬜ **Migration 46 — temps de réponse et fiche élève (lot A)** — écrite et
-    testée le 14 septembre, **pas encore appliquée**. Deux colonnes sur
-    `maitrise`, `enregistrer_session` qui accumule au lieu d'écraser, et trois
-    fonctions : `fiche_eleve` (un appel, `portee` prof/admin), `fiche_eleve_rythme`
-    (un point par jour joué) et `fiche_eleve_faits` (une ligne par multiplication
-    rencontrée). Cas 226 à 232, 232 cas verts.
-    **Lot B — le comparateur** reste à concevoir : classer les élèves entre eux
-    par maîtrise, rapidité, régularité ou sur une table donnée. À faire APRÈS
-    avoir regardé le lot A en vrai, et avec un seuil de volume minimum par
-    classement — sans lui, l'élève qui a répondu à une seule question vite sort
-    premier.
+25. ✅ **Migration 46 — temps de réponse et fiche élève (lot A)** — appliquée le 14 septembre.
+    Temps de réponse sur `maitrise`, fonctions `fiche_eleve`, `fiche_eleve_rythme`, `fiche_eleve_faits` et modale Fiche élève intégrée.
 
-26. ⬜ **Migration 47 — le tableau de comparaison (lot B)** — écrite et testée le
-    14 septembre, **pas encore appliquée**. `comparer_eleves` (une ligne par élève,
-    toutes colonnes triables) et `comparer_eleves_entete` (la plage, les deux
-    populations, et ce que la période fait bouger), plus deux aides partagées,
-    `fait_dans_plage` et `nb_faits_plage`. Cas 233 à 240, 240 cas verts.
+26. ✅ **Migration 47 — le tableau de comparaison (lot B)** — appliquée le 14 septembre.
+    `comparer_eleves` et `comparer_eleves_entete`, composant `TableauComparateur` intégré dans Ma classe et Administration.
 
-27. ⬜ **Migration 48 — coupe-circuit des défis entre élèves** — écrite et testée
-    le 16 septembre, **pas encore appliquée**. Table `reglages_defis_eleves`,
-    `niveau_de_classe()`, `defis_eleves_autorises()`, `reglages_defis()` et
-    `modifier_reglages_defis()` (administrateur, tracée au journal), plus deux
-    contrôles insérés dans `creer_defi` et `rejoindre_defi`. Cas 241 à 249.
-    Côté écran restent à faire : la carte de réglage dans l'Administration et le
-    bouton « Défier un ami » sur l'écran élève.
+27. ✅ **Migration 48 — coupe-circuit des défis entre élèves** — appliquée le 16 septembre.
+    Table `reglages_defis_eleves`, `reglages_defis()` et `modifier_reglages_defis()`. Carte de réglage admin et bouton « Défier un ami » branchés.
 
 28. ✅ **Migration 49 — historique des défis dans la fiche élève** — appliquée le 16 septembre.
     Une seule fonction en lecture, `fiche_eleve_defis(p_eleve_id, p_jours)`, ouverte à tout enseignant.
@@ -1279,19 +1255,9 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
       n'avait jamais été refaite derrière le filtre MDM.
       Vérifier aussi `ssl.gstatic.com` et `www.gstatic.com`, servis par la page
       de connexion Google.
-- [ ] **Réveil quotidien (keep-alive) — le workflow est écrit, il reste deux secrets à créer.**
-      Sur l'offre gratuite, un projet inactif sept jours est suspendu, et **il ne
-      redémarre pas tout seul** : il faut aller cliquer. Une semaine de vacances suffit.
-      `.github/workflows/reveil-supabase.yml` appelle `ping()` (migration 34) une fois
-      par jour. À faire : *Settings › Secrets and variables › Actions* et créer
-      `SUPABASE_URL` et `SUPABASE_ANON_KEY` — **la clé anon, jamais `service_role`**.
-      Puis *Actions › Réveil quotidien Supabase › Run workflow* pour vérifier tout de
-      suite qu'il répond `HTTP 200 — "ok"`.
-      Deux secrets de plus, `SUPABASE_URL_PROD` et `SUPABASE_ANON_KEY_PROD`, quand la
-      production existera : tant qu'ils sont vides l'étape passe son tour sans échouer.
-      ⚠️ GitHub désactive les workflows planifiés d'un dépôt resté 60 jours sans commit
-      — exactement la durée des vacances d'été. Un « Run workflow » à la main en juillet
-      le réarme, ou bien doubler avec cron-job.org sur la même adresse.
+- [x] **Réveil quotidien (keep-alive) — en place et actif.**
+      Le workflow `.github/workflows/reveil-supabase.yml` appelle `ping()` quotidiennement à 05h17 UTC.
+      Secrets GitHub configurés et workflow au vert chaque matin.
 - [ ] **Préparer et déployer le passage en production** :
       1. Créer le projet Supabase dédié `calcul-mental-prod` en région européenne (Francfort).
       2. Appliquer les **33** migrations SQL dans l'ordre strict (`supabase/migrations/`), **aucun seed de démo**.
