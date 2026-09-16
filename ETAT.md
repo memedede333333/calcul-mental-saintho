@@ -4,9 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **16 septembre 2026** — **48 migrations appliquées**.
-> La **migration 48 est appliquée sur Supabase** : le coupe-circuit des défis entre
-> élèves. **249 cas de test verts** sur une base reconstruite depuis les 48 migrations.
+> Dernière mise à jour : **16 septembre 2026** — **49 migrations appliquées**.
+> La **migration 49 est appliquée sur Supabase** : l'historique des défis dans la
+> fiche élève. **256 cas de test verts** sur une base reconstruite depuis les 49 migrations.
 
 ---
 
@@ -365,6 +365,34 @@ davantage le contrôle d'unicité de l'adresse, ni l'entrée au journal d'audit.
 LA RÈGLE : on passe par l'écran Administration, pas par le tableau de bord
 Supabase. Depuis le 13 septembre la modale « Modifier » existe aussi pour les
 enseignants, il n'y a donc plus aucune raison d'aller à la main.
+
+**« Qui a accepté » n'existe pas — il n'y a pas d'invitation, seulement un code.**
+*(16 septembre 2026, migration 49.)* Un élève obtient un code et le donne de vive
+voix. Personne n'est invité, donc personne ne refuse. La base connaît trois états,
+et aucun ne veut dire « a refusé » : **entré** (code saisi), **terminé** (un score),
+**entré sans finir**. Un élève qui n'apparaît nulle part n'a peut-être jamais reçu
+le code — l'écran ne doit jamais conclure à un refus.
+
+**Et créer n'est pas jouer.** *(Trouvé en lisant la vraie sortie de la fonction.)*
+`creer_defi` n'inscrit pas son auteur aux présences. Un élève qui lance un défi et
+n'y joue pas n'est donc pas « entré sans finir » : il n'est jamais entré. D'où un
+troisième état pour l'élève lui-même, `pas_joue`. Un mot faux sur un écran de
+suivi, c'est un professeur qui conclut de travers.
+
+**On ne soustrait pas — et ici on n'en a même plus besoin.** La migration 29
+interdisait de soustraire les terminés des rejoints, à cause des défis antérieurs
+à la migration 25 dont les présences sont vides. `fiche_eleve_defis` va plus loin
+que l'interdit : la liste des participants est l'**union** des présences et des
+participations, donc `nb_entres` ne *peut* pas passer sous `nb_termines`, et
+`nb_sans_finir` est compté personne par personne. Une contrainte structurelle vaut
+mieux qu'une règle qu'on doit se rappeler.
+
+**Des noms complets, parce que le lecteur est un enseignant.** `auteur_defi()`
+renvoie « Alice D. » — le nom public, fait pour les classements que voient 350
+élèves. La fiche est un écran de professeur, et toutes ses autres fonctions
+renvoient prénom et nom entiers. Y mettre « Alice D. » serait une fausse
+protection et une vraie gêne : deux Alice dans une classe, et le nom abrégé ne
+désigne plus personne.
 
 **Les défis entre élèves ont un coupe-circuit — et on coupe l'entrée, jamais la
 sortie.** *(16 septembre 2026, migration 48.)* Un administrateur peut suspendre les
@@ -1222,6 +1250,12 @@ visuelle est appliquée**. Il reste le lot 17 et les écrans sans maquette.
     Côté écran restent à faire : la carte de réglage dans l'Administration et le
     bouton « Défier un ami » sur l'écran élève.
 
+28. ✅ **Migration 49 — historique des défis dans la fiche élève** — appliquée le 16 septembre.
+    Une seule fonction en lecture, `fiche_eleve_defis(p_eleve_id, p_jours)`, ouverte à tout enseignant.
+    Aucune table touchée, aucune fonction existante modifiée. Cas 250 à 256.
+    Côté écran : la section est insérée sous les quatre compteurs de l'onglet
+    « Défis & Badges », sans nouvel onglet.
+
 ### Pour l'administrateur — indispensable avant la rentrée
 
 - [ ] **Modèle d'e-mail OTP** : *Authentication › Email Templates › Magic Link*,
@@ -1331,7 +1365,7 @@ archive. Un chat neuf ne doit pas les lire — tout ce qui compte a été revers
 dans `ETAT.md` et `JOURNAL.md`.
 
 **Les deux garde-fous automatiques**, à ne jamais contourner :
-`supabase/tests/run.sh` (249 cas ; toute ligne contenant « ECHEC » est une
+`supabase/tests/run.sh` (256 cas ; toute ligne contenant « ECHEC » est une
 régression) et `frontend/scripts/check-api.mjs`, branché dans `npm run build`,
 qui échoue si une fonction exposée n'est plus appelée par aucun écran.
 

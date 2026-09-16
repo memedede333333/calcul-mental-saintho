@@ -11,7 +11,7 @@
 --
 -- Toute ligne contenant « ECHEC » signale une régression de sécurité.
 --
--- COMPTE EXACT : 249 cas, numérotés jusqu'à 249. Les cas 194 à 211
+-- COMPTE EXACT : 256 cas, numérotés jusqu'à 256. Les cas 194 à 211
 -- couvrent les migrations 39 à 43 (réveil quotidien, modifier_prof,
 -- statut de connexion, import des enseignants, et la règle « un import
 -- ne change jamais un rôle ») ; les cas 212 à 224 la migration 44
@@ -3066,4 +3066,118 @@ select case when exists (select 1 from journal_admin
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'PROF', false);
 select modifier_reglages_defis(p_actif => true, p_niveaux => array[]::text[])->>'actif' as remis;
+reset role;
+
+
+-- ---------------------------------------------------------------------
+-- MIGRATION 49 — l'historique des defis dans la fiche d'un eleve
+-- ---------------------------------------------------------------------
+-- DAVID (6B) sert de second eleve : Alice est detachee de son compte par
+-- le cas 184 et ne peut plus rien rejoindre.
+\set DAVID '55555555-5555-5555-5555-555555555555'
+
+\echo '=== 250. La fiche liste les defis CREES et les defis REJOINTS ==='
+-- Les deux, sans quoi un eleve qui ne cree jamais mais joue tous les
+-- defis de ses camarades aurait une fiche vide.
+reset role;
+select id as e250 from eleves where email = 'bob.martin@demo.saintho.fr' \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select count(*) from fiche_eleve_defis(:'e250'::uuid, 365)
+                   where role = 'createur') > 0
+             and (select count(*) from fiche_eleve_defis(:'e250'::uuid, 365)
+                   where role = 'invite') > 0
+            then 'OK : les defis crees ET les defis rejoints sont la'
+            else 'ECHEC : la fiche n en montre qu une moitie' end as verdict;
+
+\echo '=== 251. CREER N EST PAS JOUER : trois etats, pas deux ==='
+-- Trouve en lisant la vraie sortie. `creer_defi` n inscrit pas son auteur
+-- aux presences : un eleve qui lance un defi et n y joue pas n est PAS
+-- « entre sans finir », il n est jamais entre. Un mot faux sur un ecran
+-- de suivi, c est un professeur qui conclut de travers.
+select case when exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                          where role = 'createur' and mon_etat = 'pas_joue')
+             and not exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                              where mon_etat not in ('termine','entre_sans_finir','pas_joue'))
+            then 'OK : le createur qui n a pas joue est dit « pas joue »'
+            else 'ECHEC : creer et entrer sont confondus' end as verdict;
+
+\echo '=== 252. Le DENOMINATEUR n appartient qu aux defis de professeur ==='
+-- Decision du §3 : « 18 sur 27 » a un sens pour une classe entiere ;
+-- trois amis sur 27 ne sont pas « 3 / 27 ». `attendus` est donc null pour
+-- un defi entre eleves, et l ecran ecrit « 3 ont joue » sans fraction.
+select case when not exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                              where origine = 'eleve' and attendus is not null)
+             and exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                          where origine = 'prof' and attendus > 0)
+            then 'OK : un effectif attendu pour le prof, aucun entre copains'
+            else 'ECHEC : un defi entre eleves affiche un denominateur' end as verdict;
+
+\echo '=== 253. Des noms COMPLETS : le lecteur est un enseignant ==='
+-- `auteur_defi()` renvoie « Alice D. », le nom public fait pour les
+-- classements que voient 350 eleves. Ici l ecran est celui d un
+-- professeur : deux Alice dans une classe, et « Alice D. » ne designe
+-- plus personne.
+select case when exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                          where origine = 'eleve' and auteur_nom = 'Bob Martin')
+             and not exists (select 1 from fiche_eleve_defis(:'e250'::uuid, 365)
+                              where auteur_nom ~ '^[A-Za-zÀ-ÿ]+ [A-Z]\.$')
+            then 'OK : « Bob Martin », et aucun nom abrege'
+            else 'ECHEC : la fiche du professeur masque les noms de famille' end as verdict;
+
+\echo '=== 254. Sprint et Contre-la-montre ne portent pas les memes chiffres ==='
+-- Migration 33 : les 120 questions d un Contre-la-montre sont une reserve
+-- technique, pas un objectif — `nb_questions` est donc null hors Sprint,
+-- et `duree_s` null hors Contre-la-montre.
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select creer_defi('countdown', '{4}'::smallint[], 20, 60, '6A') as d254 \gset
+select set_config('request.jwt.claim.sub', :'DAVID', false);
+select (rejoindre_defi((:'d254'::jsonb)->>'code')->>'ok')::boolean as david_rejoint;
+reset role;
+select id as e254 from eleves where email = 'david.petit@demo.saintho.fr' \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select nb_questions from fiche_eleve_defis(:'e254'::uuid, 365)
+                   where mode = 'countdown' limit 1) is null
+             and (select duree_s from fiche_eleve_defis(:'e254'::uuid, 365)
+                   where mode = 'countdown' limit 1) is not null
+             and (select duree_s from fiche_eleve_defis(:'e254'::uuid, 365)
+                   where mode = 'sprint' limit 1) is null
+            then 'OK : chaque mode ne porte que le chiffre qui le concerne'
+            else 'ECHEC : un chiffre sans signification est affiche' end as verdict;
+
+\echo '=== 255. LE CAS DUR : un defi sans presences ne donne jamais de negatif ==='
+-- La migration 29 interdit de soustraire les termines des rejoints : sur
+-- un defi anterieur a la migration 25, les presences sont vides alors que
+-- les participations existent. Ici la parade est structurelle — la liste
+-- est l UNION des deux tables — donc `nb_entres` ne PEUT pas passer sous
+-- `nb_termines`, et `nb_sans_finir` est compte personne par personne.
+reset role;
+select d.id as d255 from defis d
+  join defis_participants dp on dp.defi_id = d.id
+ order by d.cree_le desc limit 1 \gset
+delete from defis_presences where defi_id = :'d255'::uuid;
+select eleve_id as e255 from defis_participants where defi_id = :'d255'::uuid limit 1 \gset
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'PROF', false);
+select case when (select nb_entres from fiche_eleve_defis(:'e255'::uuid, 365)
+                   where defi_id = :'d255'::uuid)
+             >= (select nb_termines from fiche_eleve_defis(:'e255'::uuid, 365)
+                   where defi_id = :'d255'::uuid)
+             and (select nb_sans_finir from fiche_eleve_defis(:'e255'::uuid, 365)
+                   where defi_id = :'d255'::uuid) >= 0
+             and (select jsonb_array_length(participants) from fiche_eleve_defis(:'e255'::uuid, 365)
+                   where defi_id = :'d255'::uuid)
+               = (select nb_entres from fiche_eleve_defis(:'e255'::uuid, 365)
+                   where defi_id = :'d255'::uuid)
+            then 'OK : presences vides, et pourtant aucun compte negatif'
+            else 'ECHEC : le defi sans presences produit un compte faux' end as verdict;
+
+\echo '=== 256. Reserve aux enseignants ==='
+select set_config('request.jwt.claim.sub', :'BOB', false);
+do $$ declare v uuid; begin
+  select id into v from eleves where email = 'bob.martin@demo.saintho.fr';
+  perform count(*) from fiche_eleve_defis(v, 30);
+  raise notice 'ECHEC : un eleve lit l historique des defis';
+exception when others then raise notice 'OK : refuse (%)', sqlerrm; end $$;
 reset role;

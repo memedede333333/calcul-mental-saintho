@@ -827,6 +827,30 @@ export type Database = {
         Args: { p_eleve_id: string; p_jours?: number }
         Returns: Json
       }
+      fiche_eleve_defis: {
+        Args: { p_eleve_id: string; p_jours?: number }
+        Returns: {
+          defi_id: string
+          code: string
+          cree_le: string
+          mode: string
+          tables: number[]
+          nb_questions: number | null
+          duree_s: number | null
+          origine: string
+          auteur_nom: string
+          classe_visee: string | null
+          attendus: number | null
+          role: string
+          mon_etat: string
+          mon_score: number | null
+          mon_temps_s: number | null
+          nb_entres: number
+          nb_termines: number
+          nb_sans_finir: number
+          participants: Json
+        }[]
+      }
       fiche_eleve_faits: {
         Args: { p_eleve_id: string }
         Returns: {

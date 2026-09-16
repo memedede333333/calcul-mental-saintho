@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ModalFrame } from './Modals';
-import { ficheEleve, ficheEleveRythme, ficheEleveFaits } from '../api';
+import { ficheEleve, ficheEleveRythme, ficheEleveFaits, ficheEleveDefis } from '../api';
 
 /**
  * ModalFicheEleve — Fiche détaillée d'un élève (Lot A)
@@ -113,6 +113,35 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
         }
         return () => { isMounted = false; };
     }, [eleveId, jours]);
+
+    const [defisDetail, setDefisDetail] = useState(null);
+    const [loadingDefis, setLoadingDefis] = useState(false);
+    const [expandedDefis, setExpandedDefis] = useState({});
+
+    useEffect(() => {
+        if (tab === 'defis' && eleveId && eleveId !== ELEVE_ID_MANQUANT) {
+            let isMounted = true;
+            setLoadingDefis(true);
+            ficheEleveDefis(eleveId, jours)
+                .then((res) => {
+                    if (isMounted) {
+                        if (res.ok && Array.isArray(res.data)) {
+                            setDefisDetail(res.data);
+                        } else {
+                            setDefisDetail([]);
+                        }
+                        setLoadingDefis(false);
+                    }
+                })
+                .catch(() => {
+                    if (isMounted) {
+                        setDefisDetail([]);
+                        setLoadingDefis(false);
+                    }
+                });
+            return () => { isMounted = false; };
+        }
+    }, [tab, eleveId, jours]);
 
     const identite = ficheData?.identite;
     const rapidite = ficheData?.rapidite;
@@ -1127,6 +1156,292 @@ export function ModalFicheEleve({ eleveId, onClose, initialJours = 30 }) {
                                                 {defis?.meilleur_score != null ? `${defis.meilleur_score} pts` : '—'}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* ── HISTORIQUE DÉTAILLÉ DES DÉFIS ── */}
+                                    <div style={{
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--bordure)',
+                                        borderRadius: 'var(--r-carte)',
+                                        padding: 20,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 16,
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                            <div>
+                                                <h3 style={{
+                                                    margin: 0,
+                                                    fontFamily: 'var(--titre)',
+                                                    fontWeight: 800,
+                                                    fontSize: 'var(--t-sous)',
+                                                    color: 'var(--indigo)',
+                                                }}>
+                                                    ⚔️ Historique des défis {defisDetail ? `(${defisDetail.length})` : ''}
+                                                </h3>
+                                                <div style={{ fontSize: 'var(--t-minuscule)', color: 'var(--gris)', marginTop: 2 }}>
+                                                    Défis créés et rejoints sur les {jours} derniers jours
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {loadingDefis ? (
+                                            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--gris)', fontSize: 'var(--t-petit)' }}>
+                                                Chargement de l'historique des défis…
+                                            </div>
+                                        ) : !defisDetail || defisDetail.length === 0 ? (
+                                            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--gris)', fontSize: 'var(--t-petit)' }}>
+                                                Aucun défi joué ou créé sur cette période.
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                                {defisDetail.map((d) => {
+                                                    const isExpanded = !!expandedDefis[d.defi_id];
+                                                    const toggle = () => setExpandedDefis((prev) => ({ ...prev, [d.defi_id]: !prev[d.defi_id] }));
+                                                    const modeLabel = d.mode === 'sprint' ? '⚡ Sprint' : '⏱️ Contre-la-montre';
+                                                    const specLabel = d.mode === 'sprint' && d.nb_questions
+                                                        ? `${d.nb_questions} questions`
+                                                        : d.mode === 'countdown' && d.duree_s
+                                                            ? `${d.duree_s} s`
+                                                            : null;
+                                                    const tablesLabel = d.tables && d.tables.length > 0 ? `Tables ${d.tables.join(', ')}` : '';
+                                                    const participationLabel = d.attendus != null
+                                                        ? `${d.nb_termines} / ${d.attendus} ont joué`
+                                                        : `${d.nb_termines} ${d.nb_termines > 1 ? 'ont joué' : 'a joué'}`;
+                                                    const sansFinirLabel = d.nb_sans_finir > 0
+                                                        ? `(${d.nb_sans_finir} non terminé${d.nb_sans_finir > 1 ? 's' : ''})`
+                                                        : null;
+
+                                                    return (
+                                                        <div
+                                                            key={d.defi_id}
+                                                            style={{
+                                                                background: 'var(--surface)',
+                                                                border: '1px solid var(--bordure)',
+                                                                borderRadius: 'var(--r-case)',
+                                                                overflow: 'hidden',
+                                                                boxShadow: 'var(--ombre-douce)',
+                                                                transition: 'border-color 0.15s ease',
+                                                            }}
+                                                        >
+                                                            {/* En-tête du défi (cliquable pour déplier les participants) */}
+                                                            <div
+                                                                onClick={toggle}
+                                                                style={{
+                                                                    padding: '14px 16px',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    flexDirection: 'column',
+                                                                    gap: 8,
+                                                                    background: isExpanded ? 'rgba(32, 34, 107, 0.02)' : 'var(--surface)',
+                                                                }}
+                                                            >
+                                                                {/* Ligne 1 : Mode, tables, code & Date */}
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                        <span style={{ fontWeight: 800, color: 'var(--indigo)', fontSize: 'var(--t-corps)', fontFamily: 'var(--titre)' }}>
+                                                                            {modeLabel}
+                                                                        </span>
+                                                                        {tablesLabel && (
+                                                                            <span style={{ fontSize: 'var(--t-petit)', color: 'var(--indigo-encre)', fontWeight: 700 }}>
+                                                                                · {tablesLabel}
+                                                                            </span>
+                                                                        )}
+                                                                        {specLabel && (
+                                                                            <span style={{ fontSize: 'var(--t-minuscule)', color: 'var(--gris)' }}>
+                                                                                · {specLabel}
+                                                                            </span>
+                                                                        )}
+                                                                        <span style={{
+                                                                            background: 'var(--ivoire)',
+                                                                            color: 'var(--indigo)',
+                                                                            border: '1px solid var(--bordure)',
+                                                                            padding: '1px 6px',
+                                                                            borderRadius: 'var(--r-carre)',
+                                                                            fontSize: 11,
+                                                                            fontWeight: 800,
+                                                                            letterSpacing: '0.05em',
+                                                                        }}>
+                                                                            {d.code}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 'var(--t-minuscule)', color: 'var(--gris)' }}>
+                                                                        {formatDateFr(d.cree_le)}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Ligne 2 : Origine du défi & Résultat de l'élève */}
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                                        {d.origine === 'prof' ? (
+                                                                            <span style={{
+                                                                                background: 'var(--ciel-pale)',
+                                                                                color: 'var(--indigo)',
+                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                fontWeight: 700,
+                                                                                padding: '3px 8px',
+                                                                                borderRadius: 'var(--r-pastille)',
+                                                                            }}>
+                                                                                🎓 Défi de {d.auteur_nom}{d.classe_visee ? ` (${d.classe_visee})` : ''}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span style={{
+                                                                                background: 'rgba(58, 63, 134, 0.1)',
+                                                                                color: 'var(--indigo-doux)',
+                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                fontWeight: 700,
+                                                                                padding: '3px 8px',
+                                                                                borderRadius: 'var(--r-pastille)',
+                                                                            }}>
+                                                                                👥 Défi entre élèves · {d.role === 'createur' ? 'Créé par cet élève' : `Créé par ${d.auteur_nom}`}
+                                                                            </span>
+                                                                        )}
+                                                                        <span style={{ fontSize: 'var(--t-minuscule)', color: 'var(--gris)' }}>
+                                                                            {participationLabel} {sansFinirLabel}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                        {d.mon_etat === 'termine' ? (
+                                                                            <span style={{
+                                                                                background: 'var(--vert-pale)',
+                                                                                color: 'var(--vert)',
+                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                fontWeight: 800,
+                                                                                padding: '3px 10px',
+                                                                                borderRadius: 'var(--r-pastille)',
+                                                                            }}>
+                                                                                {d.mon_score ?? 0} pts{d.mon_temps_s != null ? ` (${Math.round(d.mon_temps_s)}s)` : ''}
+                                                                            </span>
+                                                                        ) : d.mon_etat === 'entre_sans_finir' ? (
+                                                                            <span style={{
+                                                                                background: 'var(--orange-pale)',
+                                                                                color: 'var(--orange)',
+                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                fontWeight: 700,
+                                                                                padding: '3px 10px',
+                                                                                borderRadius: 'var(--r-pastille)',
+                                                                            }}>
+                                                                                Entré sans finir
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span style={{
+                                                                                background: 'var(--ivoire)',
+                                                                                color: 'var(--gris)',
+                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                fontWeight: 700,
+                                                                                padding: '3px 10px',
+                                                                                borderRadius: 'var(--r-pastille)',
+                                                                            }}>
+                                                                                Créé (non joué)
+                                                                            </span>
+                                                                        )}
+
+                                                                        <span style={{
+                                                                            fontSize: 11,
+                                                                            color: 'var(--indigo-doux)',
+                                                                            fontWeight: 700,
+                                                                            marginLeft: 4,
+                                                                        }}>
+                                                                            {isExpanded ? '▲' : '▼'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Dépliant : Liste des participants */}
+                                                            {isExpanded && (
+                                                                <div style={{
+                                                                    borderTop: '1px solid var(--bordure)',
+                                                                    background: 'var(--ivoire)',
+                                                                    padding: '12px 16px',
+                                                                }}>
+                                                                    <div style={{
+                                                                        fontSize: 'var(--t-minuscule)',
+                                                                        fontWeight: 800,
+                                                                        color: 'var(--indigo)',
+                                                                        marginBottom: 8,
+                                                                    }}>
+                                                                        Participants ({d.participants?.length ?? 0})
+                                                                    </div>
+                                                                    {(!d.participants || d.participants.length === 0) ? (
+                                                                        <div style={{ fontSize: 'var(--t-minuscule)', color: 'var(--gris)', fontStyle: 'italic' }}>
+                                                                            Aucun participant enregistré.
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                                            {d.participants.map((p, idx) => {
+                                                                                const isCurrent = p.eleve_id === eleveId;
+                                                                                return (
+                                                                                    <div
+                                                                                        key={p.eleve_id || idx}
+                                                                                        style={{
+                                                                                            display: 'flex',
+                                                                                            justifyContent: 'space-between',
+                                                                                            alignItems: 'center',
+                                                                                            background: isCurrent ? 'rgba(35, 164, 217, 0.12)' : 'var(--surface)',
+                                                                                            border: isCurrent ? '1px solid var(--action)' : '1px solid var(--bordure)',
+                                                                                            borderRadius: 'var(--r-case)',
+                                                                                            padding: '8px 12px',
+                                                                                            fontSize: 'var(--t-petit)',
+                                                                                        }}
+                                                                                    >
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                                            <span style={{
+                                                                                                fontWeight: 800,
+                                                                                                color: idx === 0 && p.etat === 'termine' ? 'var(--podium)' : 'var(--gris)',
+                                                                                                fontSize: 'var(--t-minuscule)',
+                                                                                                width: 20,
+                                                                                            }}>
+                                                                                                #{idx + 1}
+                                                                                            </span>
+                                                                                            <span style={{
+                                                                                                fontWeight: isCurrent ? 800 : 700,
+                                                                                                color: isCurrent ? 'var(--indigo)' : 'var(--indigo-encre)',
+                                                                                            }}>
+                                                                                                {p.prenom} {p.nom}
+                                                                                            </span>
+                                                                                            {p.classe && (
+                                                                                                <span style={{ fontSize: 11, color: 'var(--gris)' }}>
+                                                                                                    ({p.classe})
+                                                                                                </span>
+                                                                                            )}
+                                                                                            {isCurrent && (
+                                                                                                <span style={{
+                                                                                                    fontSize: 10,
+                                                                                                    background: 'var(--action)',
+                                                                                                    color: '#ffffff',
+                                                                                                    padding: '1px 5px',
+                                                                                                    borderRadius: 'var(--r-pastille)',
+                                                                                                    fontWeight: 800,
+                                                                                                }}>
+                                                                                                    Cet élève
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            {p.etat === 'termine' ? (
+                                                                                                <span style={{ fontWeight: 800, color: 'var(--vert)' }}>
+                                                                                                    {p.score ?? 0} pts{p.temps_s != null ? ` · ${Math.round(p.temps_s)} s` : ''}
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span style={{ fontSize: 'var(--t-minuscule)', color: 'var(--orange)', fontWeight: 700 }}>
+                                                                                                    Entré sans finir
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Badges débloqués */}

@@ -821,6 +821,11 @@ export async function ficheEleveFaits(eleveId) {
     return rpc('fiche_eleve_faits', { p_eleve_id: eleveId });
 }
 
+/** Historique des défis d'un élève (créés et rejoints) sur une période glissante (réservé profs). */
+export async function ficheEleveDefis(eleveId, jours = 30) {
+    return rpc('fiche_eleve_defis', { p_eleve_id: eleveId, p_jours: jours });
+}
+
 /** Comparateur d'élèves d'une classe (ou toutes) sur une plage de tables ou une table choisie (réservé profs). */
 export async function comparerEleves({ classe = null, tableMin = 1, tableMax = 10, table = null, jours = 30 } = {}) {
     return rpc('comparer_eleves', {
@@ -864,7 +869,7 @@ export const api = {
     // enseignant
     maitriseClasse, enteteClasse, listeClasses, definirMesClasses, apercuDefiClasse,
     activiteSynthese, activiteClasse,
-    ficheEleve, ficheEleveRythme, ficheEleveFaits,
+    ficheEleve, ficheEleveRythme, ficheEleveFaits, ficheEleveDefis,
     comparerEleves, comparerElevesEntete,
     // administration
     apercuImportEleves, importerEleves, apercuImportProfs, importerProfs, ajouterEleve, modifierEleve, reparerRattachements,

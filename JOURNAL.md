@@ -57,6 +57,49 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-16 — Intégration de l'historique des défis dans la fiche élève
+
+**Fait** — Migration 49 appliquée sur Supabase (`lkukdlspcgqtiimvwlsd`), `database.ts` et `api.js` branchés (`ficheEleveDefis`).
+- `ModalFicheEleve.jsx` : section « Historique des défis » insérée dans l'onglet « Défis & Badges » sous les 4 compteurs KPIs, chargée à la demande (lazy-load) sur la période choisie.
+- Chaque défi affiche son en-tête (date, mode Sprint/Contre-la-montre, tables, code), son origine (prof / élèves avec nom complet), le rôle de l'élève, son résultat propre (`termine` avec score et temps, `entre_sans_finir`, ou `pas_joue`), et la participation sans barre de fraction pour les défis d'élèves.
+- Volet dépliable par défi affichant le classement complet des participants de la partie.
+- 256 cas de tests verts, build validé (88 tokens actifs, 57 RPC).
+
+## 2026-09-16 — Migration 49 : l'historique des défis, et « créer n'est pas jouer »
+
+**Fait** — `supabase/migrations/20260916120000_fiche_eleve_defis.sql` et les cas
+250 à 256. **256 cas verts**, zéro ECHEC, 49 migrations rejouées depuis zéro.
+**Appliquée sur Supabase**. Une seule fonction en lecture, aucune table touchée,
+aucune fonction existante modifiée — le format de la migration 45.
+
+**Constaté en lisant la vraie sortie — trois états, pas deux.** Ma première
+version étiquetait « entré sans finir » un élève qui avait créé un défi sans
+jamais y jouer. Or `creer_defi` n'inscrit pas son auteur aux présences : il n'est
+jamais entré. Le cas 251 fixe les trois états, et je l'ai vérifié dans les deux
+sens — avec l'ancienne version à deux branches, il affiche ECHEC.
+
+Je ne l'aurais pas vu en relisant mon SQL : il fallait regarder un tableau de
+résultats réels et se demander ce que chaque mot voulait dire.
+
+**Décidé — l'union plutôt que l'interdit.** La migration 29 défendait de
+soustraire les terminés des rejoints, parce qu'un défi antérieur à la migration 25
+a des participations sans présences et donnerait un nombre négatif. Ici la liste
+est l'**union** des deux tables : `nb_entres` ne peut structurellement pas passer
+sous `nb_termines`, et `nb_sans_finir` se compte personne par personne. Le cas 255
+vide les présences d'un défi qui a des scores et vérifie qu'aucun compte ne
+dérape. Une contrainte qui rend la faute impossible vaut mieux qu'une règle qu'il
+faut se rappeler.
+
+**Décidé — noms complets.** `auteur_defi()` renvoie le nom public « Alice D. »,
+fait pour les classements élèves. Cette fiche est un écran d'enseignant : la
+réutiliser aurait masqué les noms de famille là où toutes les autres fonctions du
+même écran les donnent. Le cas 253 refuse tout nom au format abrégé.
+
+**Ensuite** — Antigravity : `run.sh` (256 attendus), appliquer la 49, régénérer
+`database.ts`, brancher `ficheEleveDefis`, puis la section sous les quatre
+compteurs de l'onglet « Défis & Badges ».
+
+
 ## 2026-09-16 — Migration 48 appliquée : je m'étais trompé sur le nom des classes
 
 **Constaté** — Antigravity a trouvé un vrai défaut dans ma migration 48 en
