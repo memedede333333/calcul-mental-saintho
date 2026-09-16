@@ -4,10 +4,9 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **16 septembre 2026** — **47 migrations appliquées**.
-> La **migration 48 est écrite et testée, pas encore appliquée** : le coupe-circuit
-> des défis entre élèves. **249 cas de test verts** sur une base reconstruite depuis
-> les 48 migrations.
+> Dernière mise à jour : **16 septembre 2026** — **48 migrations appliquées**.
+> La **migration 48 est appliquée sur Supabase** : le coupe-circuit des défis entre
+> élèves. **249 cas de test verts** sur une base reconstruite depuis les 48 migrations.
 
 ---
 

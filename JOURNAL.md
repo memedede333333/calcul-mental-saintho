@@ -65,13 +65,13 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 - `JoinChallenge.jsx` : gestion propre du code retour `raison === 'suspendu'` avec message d'explication.
 - Validation `npm run build` : zéro erreur ESLint, build Vite ok, validation des tokens CSS (88 tokens actifs) et validation du contrat API RPC (56 RPC, 68 fonctions).
 
-**Ensuite** — Appliquer la migration 48 sur Supabase (Dashboard SQL Editor).
+**Fait aussi** — Migration 48 appliquée sur la base Supabase (`lkukdlspcgqtiimvwlsd`). Détection du niveau ajustée sur le premier chiffre (`^[0-9]`) pour agréger proprement les classes réelles du collège (`61`, `62`, `63` en niveau `6`).
 
 ## 2026-09-16 — Migration 48 : le coupe-circuit des défis entre élèves
 
 **Fait** — `supabase/migrations/20260916100000_coupe_circuit_defis_eleves.sql` et
 les cas 241 à 249. **249 cas verts**, zéro ECHEC, 48 migrations rejouées depuis
-zéro. Pas encore appliquée.
+zéro. **Appliquée sur Supabase**.
 
 Une table à une ligne, quatre fonctions (dont deux internes), et **deux `if`**
 insérés dans le texte existant de `creer_defi` et `rejoindre_defi` — repris de la

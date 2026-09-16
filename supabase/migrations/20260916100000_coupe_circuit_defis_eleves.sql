@@ -57,8 +57,8 @@ immutable
 as $$
   select case
     when p_classe is null or trim(p_classe) = '' then null
-    when trim(p_classe) ~ '^[0-9]+'
-      then (regexp_match(trim(p_classe), '^([0-9]+)'))[1]
+    when trim(p_classe) ~ '^[0-9]'
+      then (regexp_match(trim(p_classe), '^([0-9])'))[1]
     else trim(p_classe)
   end;
 $$;
