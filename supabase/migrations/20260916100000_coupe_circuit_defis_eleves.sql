@@ -57,6 +57,12 @@ immutable
 as $$
   select case
     when p_classe is null or trim(p_classe) = '' then null
+    -- UN SEUL chiffre, et c'est le defaut qu'Antigravity a trouve en
+    -- appliquant : les classes du college s'appellent « 61 », « 62 »,
+    -- « 51 » — 6e 1, 6e 2, 5e 1. Avec `[0-9]+`, « 61 » devenait le niveau
+    -- « 61 » : douze niveaux au lieu de quatre, et un reglage par niveau
+    -- inutilisable. J'avais concu contre les classes de demonstration
+    -- (« 6A », « 5A »), sans regarder comment les vraies sont nommees.
     when trim(p_classe) ~ '^[0-9]'
       then (regexp_match(trim(p_classe), '^([0-9])'))[1]
     else trim(p_classe)

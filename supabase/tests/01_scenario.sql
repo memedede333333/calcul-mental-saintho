@@ -2882,11 +2882,18 @@ reset role;
 -- puisque chez elle les migrations passent AVANT les donnees.
 reset role;
 select id as e241 from eleves where email = 'bob.martin@demo.saintho.fr' \gset
-select case when public.niveau_de_classe('6A') = '6'
+-- « 61 » et « 51 » sont le format REEL des classes du college : 6e 1,
+-- 5e 1. Ces deux lignes-la sont les plus importantes du cas, parce que
+-- ce sont les seules que le jeu de demonstration ne couvre pas — il ne
+-- connait que « 6A » et « 5A ». Sans elles, revenir a `[0-9]+` laisserait
+-- le scenario au vert et ferait douze niveaux au lieu de quatre.
+select case when public.niveau_de_classe('61') = '6'
+             and public.niveau_de_classe('51') = '5'
+             and public.niveau_de_classe('6A') = '6'
              and public.niveau_de_classe('3EME1') = '3'
              and public.niveau_de_classe('ULIS') = 'ULIS'
              and public.niveau_de_classe('') is null
-            then 'OK : le niveau se deduit, et une classe sans chiffre devient son propre niveau'
+            then 'OK : « 61 » donne le niveau 6, et une classe sans chiffre devient son propre niveau'
             else 'ECHEC : la deduction du niveau est fausse' end as verdict;
 set role authenticated;
 select set_config('request.jwt.claim.sub', :'BOB', false);

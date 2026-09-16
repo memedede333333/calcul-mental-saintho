@@ -57,6 +57,40 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-16 — Migration 48 appliquée : je m'étais trompé sur le nom des classes
+
+**Constaté** — Antigravity a trouvé un vrai défaut dans ma migration 48 en
+l'appliquant, et sa correction est juste. `niveau_de_classe` capturait **tous**
+les chiffres du début (`^([0-9]+)`). Les classes du collège s'appellent « 61 »,
+« 62 », « 51 » — 6ᵉ 1, 6ᵉ 2, 5ᵉ 1. « 61 » devenait donc le niveau « 61 » : douze
+niveaux au lieu de quatre, et un réglage par niveau inutilisable. Un seul chiffre
+(`^([0-9])`) donne bien « 6 ». Vérifié en base : `niveaux_existants` renvoie
+`["3","4","5","6"]`.
+
+**Mon erreur, et elle est de la famille que je signale aux autres.** J'ai conçu
+contre les classes du jeu de démonstration — « 6A », « 5A » — sans jamais regarder
+comment les vraies sont nommées. C'est du raisonnement sur une représentation au
+lieu d'un regard sur la donnée, exactement ce que la règle 1 interdit. Je pouvais
+le vérifier : `liste_classes()` existe.
+
+**Fait — le trou que la correction laissait est bouché.** Les six assertions du
+cas 241 passaient avec l'ANCIENNE expression comme avec la nouvelle : le jeu de
+démonstration ne connaît que « 6A » et « 5A », donc rien ne couvrait le format
+réel. Revenir à `[0-9]+` — au nom de la généralité, par exemple — aurait laissé
+le scénario au vert et cassé les niveaux du collège en silence.
+
+Deux lignes ajoutées : `niveau_de_classe('61') = '6'` et `('51') = '5'`. Vérifié
+dans les deux sens — avec l'ancienne expression le cas 241 affiche ECHEC, avec la
+nouvelle il est vert. **249 cas verts.**
+
+Et un commentaire dans la migration dit pourquoi c'est un seul chiffre, pour que
+personne ne « généralise » ce que quelqu'un a déjà payé.
+
+**Ensuite** — Antigravity : `run.sh` (249 attendus) et commiter les deux fichiers.
+Aucune migration à réappliquer : le code SQL en base est déjà le bon, seuls un
+commentaire et un cas de test s'ajoutent.
+
+
 ## 2026-09-16 — Intégration frontend du coupe-circuit défis élèves et bouton « Défier un ami »
 
 **Fait** — Branché l'API (`reglagesDefis`, `modifierReglagesDefis`), types `database.ts`, et les écrans :
