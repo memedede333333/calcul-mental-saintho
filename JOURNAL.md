@@ -57,6 +57,15 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-17 — Harmonisation de la navigation basse enseignant (charte graphique)
+
+**Fait** — Mise en conformité des boutons du bas sur l'accueil professeur (`Home.jsx`) avec la charte graphique :
+- Remplacement des boutons texte 74 px et du lien transparent par le composant standard `footerBtnStyle` (cartes blanches 88 px tactiles iPad, rayon 22 px, ombre douce).
+- Intégration des icônes SVG bicolores dédiées : `IconProf` (Profil), `IconAdmin` (Administration) et nouvelle `IconLogout` (Se déconnecter).
+- Typographie harmonisée (`fontFamily: 'var(--texte)'`, `fontWeight: 700`, `fontSize: 19`).
+- Rédaction du document de cadrage [ORGANISATION_ET_CHANTIERS.md](file:///Users/admin/Documents/Calcul%20mental/ORGANISATION_ET_CHANTIERS.md) récapitulant les acquis de production, les décisions d'architecture (étanchéité des tables profs vs élèves, base miroir de test) et les priorités.
+- `npm run build` exécuté et validé (ESLint, 88 tokens actifs, 57 RPC).
+
 ## 2026-09-16 — Intégration de l'historique des défis dans la fiche élève
 
 **Fait** — Migration 49 appliquée sur Supabase (`lkukdlspcgqtiimvwlsd`), `database.ts` et `api.js` branchés (`ficheEleveDefis`).

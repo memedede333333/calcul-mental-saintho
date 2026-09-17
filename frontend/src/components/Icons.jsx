@@ -191,6 +191,16 @@ export function IconSablier({ size = 24, color = 'var(--gris)', ...props }) {
     );
 }
 
+export function IconLogout({ size = 24, color = 'var(--gris)', actionColor = 'var(--ciel)', ...props }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }} {...props}>
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 17l5-5-5-5" stroke={actionColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 12H9" stroke={actionColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 export function IconLibre({ size = 24, color = 'var(--indigo)', actionColor = 'var(--ciel)', ...props }) {
     return (
         <svg width={size} height={size} viewBox="0 0 44 44" fill="none" style={{ flexShrink: 0 }} {...props}>

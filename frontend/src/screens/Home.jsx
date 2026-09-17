@@ -13,7 +13,7 @@ import MasteryGrid from '../components/MasteryGrid';
 import {
     IconSprint, IconSansFaute, IconChrono, IconMontee,
     IconApprendre, IconClassements, IconMaGrille,
-    IconDefisPasses, IconAdmin, IconProf, IconLibre
+    IconDefisPasses, IconAdmin, IconProf, IconLibre, IconLogout
 } from '../components/Icons';
 
 const AVATAR_OPTIONS = ['🦊', '🦁', '🐼', '🐨', '🐢', '🐙', '🦉', '🐝'];
@@ -452,38 +452,35 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
 
                 <div style={{ flex: 1 }} />
 
-                {/* 5. Navigation basse */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 10, paddingBottom: 24 }}>
+                {/* 5. Navigation basse Enseignant */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 10, paddingBottom: 24 }}>
                     <button
                         onClick={() => onGo('profile')}
-                        style={{
-                            flex: 1, height: 74, borderRadius: 22, background: 'var(--surface)',
-                            boxShadow: 'var(--ombre-carte)', border: 'none', cursor: 'pointer',
-                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)',
-                        }}
+                        style={footerBtnStyle}
                     >
-                        Profil
+                        <IconProf size={28} color="var(--indigo)" actionColor="var(--action)" />
+                        <span style={footerBtnTextStyle}>Profil</span>
                     </button>
                     {(estAdmin || estProf) && (
                         <button
                             onClick={() => onGo('admin')}
-                            style={{
-                                flex: 1, height: 74, borderRadius: 22, background: 'var(--surface)',
-                                boxShadow: 'var(--ombre-carte)', border: 'none', cursor: 'pointer',
-                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 20, color: 'var(--indigo)',
-                            }}
+                            style={footerBtnStyle}
                         >
-                            Administration
+                            <IconAdmin size={28} color="var(--indigo)" actionColor="var(--action)" />
+                            <span style={footerBtnTextStyle}>Administration</span>
                         </button>
                     )}
                     <button
                         onClick={onLogout}
                         style={{
-                            height: 74, padding: '0 22px', border: 'none', background: 'transparent',
-                            cursor: 'pointer', fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 18, color: 'var(--gris)',
+                            ...footerBtnStyle,
+                            flex: (estAdmin || estProf) ? 1 : '0 0 auto',
                         }}
                     >
-                        Se déconnecter
+                        <IconLogout size={26} color="var(--gris)" actionColor="var(--action)" />
+                        <span style={{ ...footerBtnTextStyle, color: 'var(--gris)' }}>
+                            Se déconnecter
+                        </span>
                     </button>
                 </div>
             </div>
