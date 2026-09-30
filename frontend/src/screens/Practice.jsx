@@ -89,7 +89,6 @@ export default function Practice({
             sansFauteMax: r.maxStreak,
             plusHauteTable: null,
             faits,
-            userId: identite?.profil?.user_id || identite?.user_id || null,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;

@@ -138,7 +138,6 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             sansFauteMax: mode === 'flawless' ? (r.maxStreak || 0) : (r.maxStreak || 0),
             plusHauteTable: mode === 'climb' ? (r.highestTable || null) : null,
             faits,
-            userId: identite?.profil?.user_id || identite?.user_id || null,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
@@ -1814,7 +1813,7 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
     }, [type.id, result]);
 
     useEffect(() => {
-        if (isSuccess) {
+        if (isSuccess && !(serverResult?.erreur && !enAttente)) {
             import('canvas-confetti').then(mod => {
                 const style = getComputedStyle(document.documentElement);
                 const colors = ['--mosaique-1', '--mosaique-2', '--mosaique-3', '--mosaique-4', '--mosaique-5']
@@ -1826,7 +1825,7 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                 });
             }).catch(() => { });
         }
-    }, [isSuccess]);
+    }, [isSuccess, serverResult?.erreur, enAttente]);
 
     const targetScore = result ? (result.scorePremierEssai ?? result.score ?? 0) : 0;
     const [countScore, setCountScore] = useState(0);
