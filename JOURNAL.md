@@ -57,6 +57,22 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-30 — Fiabilisation des sessions iPad, file d'attente isolée et vérité des scores
+
+**Fait** — Résolution du problème de session expirée et de score en trompe-l'œil remonté par une élève (cas Vera) :
+1. `api.js` :
+   - Élargissement de la détection des pannes temporaires (`estPanneTemporaire`) aux expirations de session/JWT (`jwt`, `session`, `not authenticated`, `401`). Une partie jouée pendant une session endormie n'est plus jetée mais placée dans la file locale.
+   - Isolation par élève dans `saintho_file_envoi` : chaque entrée porte son `userId`. `viderFile()` ne rejoue que les parties du compte actuellement connecté, éliminant tout risque de pollution croisée sur les iPads partagés. Ne jette plus les parties en cas de panne temporaire.
+   - Ajout de `rafraichirSession()` (`supabase.auth.refreshSession()`) pour forcer le renouvellement actif du jeton.
+2. `Home.jsx` :
+   - Fin du message d'erreur en dur qui masquait la vraie cause technique : affichage du message réel (`res.error`).
+   - Le bouton « Réessayer » rafraîchit d'abord activement le jeton avant de rappeler le profil, évitant les boucles d'échec infinies sur iPad.
+   - Si la session est expirée, affichage direct du bouton « Se reconnecter ».
+3. `Practice.jsx` & `Challenges.jsx` :
+   - Suppression du trompe-l'œil (`pointsGagnes = serverResult?.points ?? score`) : si l'envoi échoue et n'est pas en file d'attente, l'écran de fin n'affiche plus de points fictifs ni de confettis, mais prévient l'élève avec un bandeau clair d'avertissement.
+   - Indication claire des parties gardées hors-ligne `(en attente 📡)`.
+4. Build validé : `npm run build` (ESLint 0 erreur, 88 tokens, 57 RPC, 70 fonctions API exposées et appelées).
+
 ## 2026-09-17 — Harmonisation de la navigation basse enseignant (charte graphique)
 
 **Fait** — Mise en conformité des boutons du bas sur l'accueil professeur (`Home.jsx`) avec la charte graphique :

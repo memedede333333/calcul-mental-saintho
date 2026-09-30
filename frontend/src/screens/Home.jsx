@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     rejoindreDefi, monProfil, mesTablesFaibles, changerAvatar,
     partiesEnAttente, surFileChangee,
-    monProfilProf, mesDefis, maitriseClasse,
+    monProfilProf, mesDefis, maitriseClasse, rafraichirSession,
 } from '../api';
 import { lireDefiEnCours, sauvegarderDefiEnCours, effacerDefiEnCours } from '../logic/defiStorage';
 import { cleFait, masteryColor } from '../logic/mastery';
@@ -186,7 +186,7 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                 setLoadingProfile(false);
             } else {
                 console.error('Erreur monProfil:', res.error || res.message);
-                setProfileError('Connexion perdue. Appuie sur Réessayer.');
+                setProfileError(res.error || res.message || 'Connexion perdue. Appuie sur Réessayer.');
                 setLoadingProfile(false);
             }
         }).catch((err) => {
@@ -205,6 +205,13 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
             setWeakTable(null);
         });
     }, [estProf, idUtilisateur, isDevPreview]);
+
+    const handleReessayerProfil = useCallback(async () => {
+        setLoadingProfile(true);
+        setProfileError(null);
+        await rafraichirSession();
+        chargerDonneesEleve();
+    }, [chargerDonneesEleve]);
 
     useEffect(() => {
         if (!estProf && idUtilisateur && !isDevPreview) {
@@ -607,25 +614,39 @@ export default function Home({ onGo, identite, estProf, estAdmin, onLogout, onRe
                         width: 64, height: 64, borderRadius: 20, background: 'var(--orange-pale)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
                     }}>
-                        ⚠️
+                        {/session|reconnecte|expir/i.test(profileError || '') ? '🔑' : '⚠️'}
                     </div>
                     <div className="font-display" style={{ fontSize: 24, fontWeight: 700, color: 'var(--indigo)' }}>
-                        Connexion perdue
+                        {/session|reconnecte|expir/i.test(profileError || '') ? 'Session expirée' : 'Connexion perdue'}
                     </div>
                     <div style={{ fontFamily: 'var(--texte)', fontSize: 16, lineHeight: 1.45, fontWeight: 600, color: 'var(--gris)', maxWidth: 360 }}>
                         {profileError}
                     </div>
-                    <button
-                        onClick={chargerDonneesEleve}
-                        style={{
-                            marginTop: 8, height: 56, padding: '0 32px', borderRadius: 18,
-                            background: 'var(--action)', color: 'var(--action-texte)',
-                            fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
-                            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                        }}
-                    >
-                        Réessayer
-                    </button>
+                    {/session|reconnecte|expir/i.test(profileError || '') ? (
+                        <button
+                            onClick={onLogout}
+                            style={{
+                                marginTop: 8, height: 56, padding: '0 32px', borderRadius: 18,
+                                background: 'var(--action)', color: 'var(--action-texte)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                            }}
+                        >
+                            Se reconnecter
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleReessayerProfil}
+                            style={{
+                                marginTop: 8, height: 56, padding: '0 32px', borderRadius: 18,
+                                background: 'var(--action)', color: 'var(--action-texte)',
+                                fontFamily: 'var(--texte)', fontWeight: 700, fontSize: 18,
+                                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                            }}
+                        >
+                            Réessayer
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>

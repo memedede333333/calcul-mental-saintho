@@ -138,6 +138,7 @@ export default function Challenges({ onBack, identite, estProf, onPlafondChange,
             sansFauteMax: mode === 'flawless' ? (r.maxStreak || 0) : (r.maxStreak || 0),
             plusHauteTable: mode === 'climb' ? (r.highestTable || null) : null,
             faits,
+            userId: identite?.profil?.user_id || identite?.user_id || null,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
@@ -1947,8 +1948,23 @@ function ChallengeResults({ type, result, serverResult, ancienPlafond, onReplay,
                         fontSize: 13, color: 'var(--text-soft)', fontWeight: 600,
                         textAlign: 'center', marginTop: 14, marginBottom: 14,
                     }}>
-                        Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
+                        📡 Résultat en attente d'envoi — il partira dès que le réseau sera de retour.
                     </p>
+                )}
+
+                {serverResult?.erreur && !enAttente && (
+                    <div style={{
+                        textAlign: 'center', background: 'var(--rouge-pale)',
+                        borderRadius: 16, padding: '12px 16px', marginTop: 14, marginBottom: 14,
+                        border: '1px solid var(--rouge)', color: 'var(--rouge)',
+                    }}>
+                        <p className="font-display" style={{ fontWeight: 800, fontSize: 15, margin: 0 }}>
+                            ⚠️ Partie non enregistrée sur le serveur
+                        </p>
+                        <p style={{ fontSize: 13, fontWeight: 600, margin: '4px 0 0', color: 'var(--rouge-doux)' }}>
+                            {serverResult.erreur || 'Vérifie ta connexion ou recharge la page avant de relancer.'}
+                        </p>
+                    </div>
                 )}
 
                 <button className="btn btn--gold" style={{ width: '100%', marginTop: 16, marginBottom: 10 }} onClick={onReplay}>

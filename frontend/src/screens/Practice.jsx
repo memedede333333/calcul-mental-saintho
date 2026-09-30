@@ -89,6 +89,7 @@ export default function Practice({
             sansFauteMax: r.maxStreak,
             plusHauteTable: null,
             faits,
+            userId: identite?.profil?.user_id || identite?.user_id || null,
         };
 
         const enregistrer = estProf ? enregistrerSessionProf : enregistrerSession;
@@ -2053,6 +2054,8 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
     if (!result) return null;
     const { score, scorePremierEssai, answered, maxStreak, resultats, seconds } = result;
     const modeName = MODE_INFO[mode]?.name || 'Sprint';
+    const aEchoue = !!(serverResult?.erreur && !serverResult?.enAttente);
+    const estEnAttente = !!serverResult?.enAttente;
 
     const premierCount = serverResult?.premier_essai ?? (scorePremierEssai ?? score);
     const rattrapees = serverResult?.rattrapees ?? (score - premierCount);
@@ -2077,6 +2080,7 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
     const nbVertes = faitsTravailles.filter(([_, res]) => res === 'premier').length;
 
     useEffect(() => {
+        if (aEchoue) return;
         import('canvas-confetti').then(mod => {
             const fire = mod.default;
             const style = getComputedStyle(document.documentElement);
@@ -2085,7 +2089,7 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
                 .filter(Boolean);
             fire({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: colors.length ? colors : undefined });
         }).catch(() => {});
-    }, []);
+    }, [aEchoue]);
 
     return (
         <div className="screen-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
@@ -2126,11 +2130,14 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
                     boxShadow: 'var(--ombre-douce)', border: '1px solid var(--bordure)',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 }}>
-                    <span className="font-display" style={{ fontSize: 34, fontWeight: 800, color: 'var(--vert)' }}>
-                        +{pointsGagnes}
+                    <span className="font-display" style={{
+                        fontSize: aEchoue ? 22 : 34, fontWeight: 800,
+                        color: aEchoue ? 'var(--rouge)' : 'var(--vert)',
+                    }}>
+                        {aEchoue ? 'Non comptés' : `+${pointsGagnes}`}
                     </span>
                     <span style={{ fontFamily: 'var(--texte)', fontWeight: 600, fontSize: 14, color: 'var(--gris)' }}>
-                        points
+                        {aEchoue ? 'partie non envoyée' : (estEnAttente ? 'points (en attente 📡)' : 'points')}
                     </span>
                 </div>
                 <div style={{
@@ -2158,6 +2165,31 @@ function Results({ result, serverResult, mode, onReplay, onReviewErrors, onHome,
                     </span>
                 </div>
             </div>
+
+            {aEchoue && (
+                <div style={{
+                    background: 'var(--rouge-pale)', color: 'var(--rouge)',
+                    padding: '14px 18px', borderRadius: 20, fontFamily: 'var(--texte)',
+                    fontWeight: 700, fontSize: 15, textAlign: 'center',
+                    boxShadow: 'var(--ombre-douce)', lineHeight: 1.4,
+                }}>
+                    ⚠️ {serverResult.erreur || 'La partie n’a pas pu être enregistrée sur le serveur.'}
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--rouge-doux)', marginTop: 4 }}>
+                        Recharge la page ou reconnecte-toi avant de rejouer pour enregistrer tes prochains scores.
+                    </div>
+                </div>
+            )}
+
+            {estEnAttente && (
+                <div style={{
+                    background: 'var(--ciel-pale)', color: 'var(--indigo)',
+                    padding: '12px 18px', borderRadius: 20, fontFamily: 'var(--texte)',
+                    fontWeight: 600, fontSize: 14, textAlign: 'center',
+                    boxShadow: 'var(--ombre-douce)', lineHeight: 1.4,
+                }}>
+                    📡 Partie gardée en mémoire sur cet iPad. Tes points seront synchronisés avec le serveur dès le retour de la connexion.
+                </div>
+            )}
 
             {badges.length > 0 && (
                 <div style={{

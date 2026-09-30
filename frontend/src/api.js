@@ -215,6 +215,17 @@ export async function emailSession() {
     return data?.session?.user?.email || null;
 }
 
+/** Force le renouvellement actif du jeton d'authentification Supabase auprès du serveur. */
+export async function rafraichirSession() {
+    try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) return { ok: false, error: messageLisible(error) };
+        return { ok: !!data?.session, session: data?.session };
+    } catch (e) {
+        return { ok: false, error: messageLisible(e) };
+    }
+}
+
 /**
  * Qui est connecté : un élève, un prof, ou personne de reconnu.
  *
@@ -305,9 +316,11 @@ export async function enregistrerSession(s) {
 
     const r = await rpc('enregistrer_session', params);
 
-    // Réseau coupé : on met de côté plutôt que de perdre la partie.
-    if (!r.ok && estPanneReseau(r.error)) {
-        mettreEnAttente('enregistrer_session', params);
+    // Réseau coupé ou session expirée/déconnectée : on met de côté plutôt que de perdre la partie.
+    if (!r.ok && estPanneTemporaire(r.error)) {
+        const { data: sess } = await supabase.auth.getSession();
+        const userId = s.userId || sess?.session?.user?.id || null;
+        mettreEnAttente('enregistrer_session', params, userId);
         return { ok: true, enAttente: true, data: { nouveaux_badges: [] } };
     }
     return r;
@@ -343,8 +356,8 @@ export async function enregistrerSessionProf(s) {
 
 const FILE = 'saintho_file_envoi';
 
-function estPanneReseau(msg = '') {
-    return /connexion|réseau|network|fetch|wifi/i.test(msg);
+function estPanneTemporaire(msg = '') {
+    return /connexion|réseau|network|fetch|wifi|jwt|session|not authenticated|unauthorized|401/i.test(msg);
 }
 
 function lireFile() {
@@ -356,9 +369,9 @@ function ecrireFile(f) {
     try { localStorage.setItem(FILE, JSON.stringify(f)); } catch { /* quota, mode privé */ }
 }
 
-function mettreEnAttente(fonction, params) {
+function mettreEnAttente(fonction, params, userId = null) {
     const f = lireFile();
-    f.push({ fonction, params, le: Date.now() });
+    f.push({ fonction, params, userId, le: Date.now() });
     // Au-delà de 50, quelque chose ne va pas : on garde les plus récentes.
     ecrireFile(f.slice(-50));
     signaler();
@@ -371,7 +384,8 @@ export function partiesEnAttente() {
 
 /**
  * Rejoue la file. À appeler au démarrage et au retour du réseau.
- * S'arrête à la première erreur pour préserver l'ordre des parties.
+ * S'arrête à la première erreur temporaire pour préserver l'ordre des parties.
+ * Isole les parties par élève : ne rejoue que celles du compte connecté.
  */
 export async function viderFile() {
     let f = lireFile();
@@ -383,21 +397,34 @@ export async function viderFile() {
     // silence. On sort avant : la file attend la prochaine connexion.
     const { data: sess } = await supabase.auth.getSession();
     if (!sess?.session) return { ok: true, envoyees: 0, restantes: f.length };
+    const currentUserId = sess.session.user?.id;
 
     let envoyees = 0;
-    while (f.length) {
-        const { error } = await supabase.rpc(f[0].fonction, f[0].params);
-        if (error) {
-            if (estPanneReseau(error.message)) break;   // toujours hors-ligne
-            f.shift();                                   // refus définitif : on jette
+    const restantes = [];
+    for (let i = 0; i < f.length; i++) {
+        const item = f[i];
+        // Isolation par élève (iPads partagés) :
+        // Si l'entrée a été enregistrée sous un autre utilisateur, on la conserve pour sa prochaine session
+        if (item.userId && currentUserId && item.userId !== currentUserId) {
+            restantes.push(item);
             continue;
         }
-        f.shift();
+
+        const { error } = await supabase.rpc(item.fonction, item.params);
+        if (error) {
+            if (estPanneTemporaire(error.message)) {
+                // Panne réseau ou token temporairement expiré : on s'arrête et on garde tout le reste
+                restantes.push(...f.slice(i));
+                break;
+            }
+            // Refus définitif (ex: données corrompues ou défi expiré depuis 24h) : on ne garde pas
+            continue;
+        }
         envoyees++;
     }
-    ecrireFile(f);
+    ecrireFile(restantes);
     signaler();
-    return { ok: true, envoyees, restantes: f.length };
+    return { ok: true, envoyees, restantes: restantes.length };
 }
 
 const ecouteurs = new Set();
@@ -460,13 +487,11 @@ export async function terminerDefi({ defiId, score, tempsS, erreurs = 0,
 
     const r = await rpc('terminer_defi', params);
 
-    // Réseau coupé : on met de côté dans la file plutôt que de perdre le défi.
-    // Limite acceptée (Lot 26) : un défi expire au bout de 24 h. Si l'iPad reste
-    // hors-ligne jusqu'au lendemain, terminer_defi refusera « Ce défi est déjà terminé »
-    // et la file jettera l'entrée. C'est assumé : defis_participants a une clé primaire
-    // (defi_id, eleve_id) et refuse les doublons si la requête partait deux fois.
-    if (!r.ok && estPanneReseau(r.error)) {
-        mettreEnAttente('terminer_defi', params);
+    // Réseau coupé ou session expirée : on met de côté dans la file plutôt que de perdre le défi.
+    if (!r.ok && estPanneTemporaire(r.error)) {
+        const { data: sess } = await supabase.auth.getSession();
+        const userId = sess?.session?.user?.id || null;
+        mettreEnAttente('terminer_defi', params, userId);
         return { ok: true, enAttente: true, data: { maitrise: {} } };
     }
     return r;
