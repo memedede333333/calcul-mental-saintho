@@ -4,9 +4,12 @@
 > nouveau chat. Les autres documents sont des références vers lesquelles
 > celui-ci renvoie.
 >
-> Dernière mise à jour : **16 septembre 2026** — **49 migrations appliquées**.
+> Dernière mise à jour : **30 septembre 2026** — **49 migrations appliquées**.
 > La **migration 49 est appliquée sur Supabase** : l'historique des défis dans la
 > fiche élève. **256 cas de test verts** sur une base reconstruite depuis les 49 migrations.
+> Depuis le 30 septembre, aucune migration nouvelle : les deux derniers lots
+> (`3dd2368`, `81882b7`) ne touchent que le frontend — file hors-ligne,
+> sessions iPad et vérité de l'écran de fin. Voir §3.
 
 ---
 
@@ -30,7 +33,7 @@ d'interface se juge à cette aune.
 
 | Chantier | État |
 |---|---|
-| Base de données, sécurité, logique métier | ✅ **33 migrations**, 176 cas de test verts |
+| Base de données, sécurité, logique métier | ✅ **49 migrations**, 256 cas de test verts |
 | Client API (`frontend/src/api.js`) | ✅ point de passage unique, ~45 appels RPC |
 | Types TypeScript (`database.ts`) | ✅ régénérés à chaque migration |
 | **Connexion Google (mode Interne)** | ✅ **validée derrière le filtre MDM, le 10 septembre**, sur iPad et avec de vrais comptes élèves — après ajout de `accounts.google.fr` dans Jamf. Avant cet ajout, la connexion échouait pour TOUS les élèves : `accounts.google.com` seul ne suffit pas. |
@@ -42,6 +45,10 @@ d'interface se juge à cette aune.
 | Écrans enseignant — accueil, profil, s'entraîner, lancer un défi | ✅ |
 | Écran Administration — élèves, enseignants, import, journal | ✅ |
 | Données de démonstration nettoyées de la base de dev | ✅ |
+| Navigation basse enseignant alignée sur la charte | ✅ **17 septembre** |
+| **Vérité de l'écran de fin** | ✅ **30 septembre** — une partie refusée par le serveur affiche « Non comptés », sans confettis ni points fabriqués |
+| **File hors-ligne** | ✅ limitée aux vraies coupures réseau, non cloisonnée par élève (iPads attitrés — voir §3) |
+| **Session iPad expirée** | ✅ message réel affiché, bouton « Se reconnecter » au lieu d'un « Réessayer » en boucle |
 
 ### Ce qui n'a pas encore été éprouvé
 
@@ -940,6 +947,60 @@ Le mot « actif » disparaît de tous les écrans quand il parle de quelqu'un qu
 
 **`ma_place_progression` garantit la cohérence du rang.** L'élève voit sa ligne épinglée en bas de classement avec son rang, ses points et `ecart_au_dessus`. L'écart est calculé par le serveur avec exactement les mêmes filtres et CTE que `classement_progression`, sans soustraction locale côté React.
 
+### La file hors-ligne et la vérité de l'écran — 30 septembre
+
+**Une partie refusée par le serveur n'est jamais annoncée comme comptée.**
+*(30 septembre 2026, commits `3dd2368` puis `81882b7`.)*
+Une élève a signalé que ses points n'apparaissaient pas sur sa grille de
+maîtrise. Ses parties étaient bien en base : le défaut était ailleurs. L'écran
+de fin calculait `pointsGagnes = serverResult?.points ?? score`. Quand le
+serveur refusait l'envoi, `points` était absent et l'écran retombait sur le
+score calculé par le navigateur : il affichait « +X points » et lançait les
+confettis pour une partie que le serveur n'avait jamais reçue. C'est la règle 3
+du brief — un écran ne fabrique aucun chiffre — appliquée aux points, et l'erreur
+allait comme toujours dans le sens rassurant. Le message d'erreur, lui, était
+rangé dans `serverResult.erreur` et affiché nulle part.
+Désormais : « Non comptés · partie non envoyée », pas de confettis, et le vrai
+message du serveur dans un bandeau.
+
+**La file hors-ligne ne retient que les vraies coupures réseau.**
+*(30 septembre 2026.)*
+`estPanneReseau` reste limitée à `/connexion|réseau|network|fetch|wifi/i`. Une
+partie refusée pour session expirée n'entre donc pas en file : elle est perdue.
+C'est assumé parce qu'elle est annoncée. L'élargir aux refus d'authentification
+a été essayé, puis retiré : `viderFile()` s'arrête à la première erreur retenue,
+donc un refus permanent en tête de file bloquait toutes les parties suivantes,
+pendant que l'élève lisait « en attente 📡 » et se croyait à jour.
+
+**La file n'est pas cloisonnée par élève, et c'est volontaire.**
+*(30 septembre 2026, arbitrage d'Aymeri.)*
+Les iPads élèves sont attitrés, un par élève, gérés en Jamf. Le scénario de
+tablette partagée — la partie d'un élève créditée au suivant qui se connecte —
+n'existe pas au collège. Et le cloisonnement aurait exigé d'exposer `auth.uid()`
+dans `qui_suis_je()`, donc une migration sur la base de production pour un
+risque théorique : `profil.id` est l'identifiant de la table `eleves`, pas celui
+de l'authentification, et les comparer ne marche pas. Le code reste sobre, la
+base reste sanctuarisée. Ne pas reproposer l'isolation tant que les iPads ne
+sont pas partagés.
+
+**L'ordre des tests de `messageLisible()` fait partie du contrat.**
+*(30 septembre 2026.)*
+`permission denied | 42501` est testé AVANT le motif d'authentification, et
+celui-ci s'écrit `\bsession\b`. Raison : la fonction s'appelle
+`enregistrer_session`. Avec le mot `session` nu et testé en premier, un vrai
+refus de droits — `permission denied for function enregistrer_session`, message
+vérifié sur un PostgreSQL réel — était annoncé à l'élève comme « Ta session a
+expiré. Reconnecte-toi. », et la branche « Tu n'as pas les droits » était
+inatteignable pour cette fonction. Toute fonction dont le nom contient un mot du
+classificateur rouvre ce piège.
+
+**Dans `Home.jsx`, le bouton dépend de la phrase affichée.**
+*(30 septembre 2026.)*
+L'écran d'erreur choisit entre « Réessayer » et « Se reconnecter » en testant
+`/session|reconnecte|expir/i` sur le message affiché. Changer une phrase de
+`messageLisible()` change donc le bouton proposé à l'élève. Les deux endroits
+sont liés : si l'un bouge, vérifier l'autre.
+
 ### Méthode
 
 **Les tests SQL ne voient pas ce qui disparaît d'un écran.**
@@ -1073,6 +1134,20 @@ existantes**, jamais de couleurs en dur.
 ## 5. Ce qui reste à faire
 
 ### Pour l'agent
+
+**Deux points mineurs ouverts, hérités du 30 septembre.** Signalés, non
+bloquants, à prendre dans un lot où l'on touche déjà `api.js`.
+
+1. `messageLisible()` n'a pas de filet final en français. Un message serveur
+   non reconnu est affiché tel quel à l'élève, en anglais — par exemple
+   « function enregistrer_session(unknown) does not exist » le jour d'un
+   changement de signature. Le `|| 'Une erreur est survenue.'` existant ne se
+   déclenche que si le message est vide. Visible vaut mieux que rassurant, donc
+   ce n'est pas urgent, mais un dernier test qui renvoie « Erreur du serveur,
+   préviens ton professeur » coûte une ligne.
+2. Le lien entre `messageLisible()` et le choix du bouton dans `Home.jsx` n'est
+   commenté dans aucun des deux fichiers. Voir §3, « Dans `Home.jsx`, le bouton
+   dépend de la phrase affichée ». Deux commentaires croisés suffisent.
 
 **Les quatre lots de construction sont terminés** (`ANTIGRAVITY_BRIEF.md` §6 :
 fondations, modes solo, défis, finitions), les corrections aussi, **et la passe

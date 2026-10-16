@@ -57,7 +57,68 @@ ne pas avoir noté. Un bug contourné sans trace revient toujours.
 
 ## Entrées
 
+## 2026-09-30 (fin de journée) — Retour en arrière sobre sur la file hors-ligne
+
+**Contexte** — L'entrée suivante (commit `3dd2368`) décrit un état qui n'existe
+plus. Trois de ses mesures ont été retirées le même jour par `81882b7`, sur
+arbitrage d'Aymeri. Cette entrée dit ce qui a été défait et ce qui reste vrai.
+
+**Défait**
+
+1. L'élargissement de la détection aux expirations de session. La fonction
+   redevient `estPanneReseau`, limitée aux vraies coupures de connectivité :
+   `/connexion|réseau|network|fetch|wifi/i`.
+2. L'isolation par élève de `saintho_file_envoi`. Les entrées ne portent plus de
+   `userId`, et `viderFile()` ne filtre plus par compte.
+3. « Ne jette plus les parties en cas de panne temporaire ». Un refus qui n'est
+   pas une panne réseau est de nouveau jeté par `viderFile()`.
+
+**Pourquoi** — Les iPads élèves sont attitrés, un par élève, gérés en Jamf. Le
+scénario de tablette partagée que l'isolation protégeait n'existe pas au
+collège. Et le cloisonnement ne fonctionnait pas : `Practice.jsx` lisait
+`identite?.profil?.user_id`, que `qui_suis_je()` ne renvoie pas — elle renvoie
+`profil.id`, l'identifiant de la table `eleves`, pas celui de
+l'authentification. Il aurait fallu une migration sur la base de production pour
+exposer `auth.uid()`. Décision : le code reste sobre, la base reste
+sanctuarisée.
+
+**Conséquence assumée** — Une partie refusée parce que la session a expiré n'est
+pas mise en file : elle est perdue. Mais elle est désormais ANNONCÉE — l'écran
+de fin affiche « Non comptés · partie non envoyée » avec un bandeau rouge et le
+message réel du serveur. Perte visible plutôt que perte silencieuse. L'élève
+doit rejouer la partie, et c'est ce qu'il faut lui dire.
+
+**Ce qui reste vrai de l'entrée suivante** — `rafraichirSession()`, le vrai
+message d'erreur affiché dans `Home.jsx`, le bouton « Se reconnecter » (il
+appelle `onLogout`, donc il n'y a plus de boucle d'échec), et la fin du
+trompe-l'œil sur l'écran de fin dans `Practice.jsx` et `Challenges.jsx`.
+
+**Corrigé au passage** — `messageLisible()` testait le mot `session` avant
+`permission denied`. Comme la fonction s'appelle `enregistrer_session`, un vrai
+refus de droits était annoncé à l'élève comme « Ta session a expiré ». Le
+message exact a été vérifié sur un PostgreSQL réel :
+`permission denied for function enregistrer_session`. L'ordre des tests est
+inversé, et le motif est devenu `\bsession\b`, qui ne correspond plus dans
+`enregistrer_session` puisque `_` est un caractère de mot.
+
+**Pourquoi ce détail comptait** — tant que la file retenait ces refus, un
+`grant execute` oublié aurait bloqué la file entière. `viderFile()` s'arrête à
+la première erreur retenue : une partie impossible à envoyer bloquait toutes les
+suivantes, pendant que l'élève lisait « en attente 📡 » à chaque partie et se
+croyait à jour. C'est le piège de la migration 38, qui a déjà coûté six
+incidents.
+
+**Vérifié** — classification réexécutée sur les cinq messages réalistes contre
+le code déployé : les trois messages de défaut de migration sont jetés (donc
+aucun blocage possible), `JWT expired` est jeté mais annoncé, seul
+`Failed to fetch` est gardé en file.
+
 ## 2026-09-30 — Fiabilisation des sessions iPad, file d'attente isolée et vérité des scores
+
+> ⚠️ **Partiellement défait le même jour** par `81882b7`. L'isolation par
+> `userId` et l'élargissement de la détection aux expirations de session ont
+> été retirés. Voir l'entrée « Retour en arrière sobre sur la file
+> hors-ligne » ci-dessus.
 
 **Fait** — Résolution du problème de session expirée et de score en trompe-l'œil remonté par une élève (cas Vera) :
 1. `api.js` :
